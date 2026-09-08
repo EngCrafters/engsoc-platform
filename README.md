@@ -66,3 +66,16 @@ first jobs assigned to Salim, Ibrahim, and Zaher.
   Nothing goes to production without Hisham's review while at Level 1–2.
 - Conventional Commits, one review before merge, every module documented.
   Full list in `CLAUDE.md`.
+
+## Enforced, not just written down
+
+- **Commit messages** are checked by a git hook (`.husky/commit-msg`), a
+  non-conventional commit is rejected before it's made.
+- **Lint** runs automatically before every commit (`.husky/pre-commit`).
+- **CI** (`.github/workflows/ci.yml`) re-runs lint, a full type-check, and a
+  production build on every push and pull request.
+- **Pull requests** use `.github/PULL_REQUEST_TEMPLATE.md`, which asks for
+  the UC number and a definition-of-done checklist.
+
+Run `npm install` once after cloning, the git hooks install automatically
+via the `prepare` script.
