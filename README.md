@@ -20,16 +20,20 @@ and already knows all of the above.
 
 ## Stack
 
-Next.js (Cloudflare Pages) · Cloudflare D1 (database) · Cloudflare R2 (file
-storage) · Better Auth (authentication) · Resend (email)
+Next.js (Vercel) · Supabase (Postgres, auth, storage) · Drizzle ORM · Resend
+(email)
 
-See `docs/Technical_Blueprint.pdf` for why.
+Supabase's MCP server is connected in Claude Code, so Claude can inspect
+the schema and query the database directly. See `docs/Technical_Blueprint.pdf`
+for the full reasoning, including the earlier Cloudflare-based stack this
+replaced.
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in real values, see comments in the file
+cp .env.example .env.local   # fill in real values from your Supabase project
+npm run db:migrate           # applies db/schema.ts to your Supabase database
 npm run dev
 ```
 
@@ -38,9 +42,10 @@ npm run dev
 ```
 app/                  Next.js App Router pages and routes
 db/schema.ts           The full data model, matches the ER diagram exactly
+db/index.ts             Drizzle client, server-only
+lib/supabase.ts         Supabase client helpers (browser + server)
 docs/                   The four governing PDFs, read these first
 .claude/skills/         Claude Code skills for this project
-wrangler.toml           Cloudflare Pages / D1 / R2 configuration
 drizzle.config.ts       Database migration config
 ```
 

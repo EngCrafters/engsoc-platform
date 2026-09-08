@@ -37,16 +37,20 @@ flagging it first.
 
 ## Stack
 
-- **Next.js** (App Router, TypeScript, Tailwind), deployed on **Cloudflare
-  Pages**.
-- **Cloudflare D1** (SQLite) via **Drizzle ORM** — schema in `db/schema.ts`.
-- **Cloudflare R2** for file storage (certificates, archive uploads).
-- **Better Auth** for authentication, open source, runs in-app, not a
-  vendor service.
+- **Next.js** (App Router, TypeScript, Tailwind), deployed on **Vercel**.
+- **Supabase**: Postgres database, authentication, and file storage, all in
+  one project.
+- **Drizzle ORM** for typed database access — schema in `db/schema.ts`,
+  client in `db/index.ts`.
 - **Resend** for transactional email.
 
-Full reasoning for every choice, including the alternative we considered
-(our own VPS) and why we set it aside: `/docs/Technical_Blueprint.pdf`.
+Supabase's MCP server is connected in Claude Code for this project, so
+Claude can inspect the schema, run queries, and manage auth/storage
+directly, ask it to check something in the database rather than opening
+the Supabase dashboard.
+
+Full reasoning for every choice, including the earlier Cloudflare-based
+stack this replaced and why: `/docs/Technical_Blueprint.pdf`.
 
 ## Data model
 
