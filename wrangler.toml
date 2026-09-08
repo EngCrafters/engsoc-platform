@@ -1,0 +1,24 @@
+name = "engsoc-platform"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+# Run `wrangler d1 create engsoc-platform-db` then paste the resulting
+# database_id below. See docs/Technical_Blueprint.pdf, ADR-03.
+[[d1_databases]]
+binding = "DB"
+database_name = "engsoc-platform-db"
+database_id = "REPLACE_AFTER_WRANGLER_D1_CREATE"
+
+# Run `wrangler r2 bucket create engsoc-platform-files` first.
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "engsoc-platform-files"
+
+[env.staging]
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+[env.production.vars]
+ENVIRONMENT = "production"
