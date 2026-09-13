@@ -53,11 +53,3 @@ Each use case's own document defines when it's actually finished (open
 decisions resolved, all assigned tasks complete, behavior matches the
 diagram). Don't consider a use case done because the code runs, check it
 against that list explicitly.
-
-## 6. Working with a Level 1/2 teammate
-
-If you're pairing with Salim, Ibrahim, or Zaher: narrate *why* a piece of
-code satisfies a specific step in the main flow or handles a specific
-alternate flow, don't just produce working code silently. The goal of each
-session is that they could explain the finished piece back to the group,
-not just that it works.

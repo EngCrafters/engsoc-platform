@@ -15,13 +15,28 @@
 // (auth.users.id), authentication itself is handled by Supabase Auth, not
 // modeled as a table here.
 
-import { pgTable, text, integer, boolean, timestamp, uuid, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  integer,
+  boolean,
+  timestamp,
+  uuid,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 
 export const memberStatus = pgEnum("member_status", ["member", "graduate"]);
-export const eventStatus = pgEnum("event_status", ["draft", "published", "full"]);
+export const eventStatus = pgEnum("event_status", [
+  "draft",
+  "published",
+  "full",
+]);
 export const archiveType = pgEnum("archive_type", ["project", "magazine"]);
 export const archiveSource = pgEnum("archive_source", ["native", "migrated"]);
-export const mentorshipStatus = pgEnum("mentorship_status", ["requested", "confirmed"]);
+export const mentorshipStatus = pgEnum("mentorship_status", [
+  "requested",
+  "confirmed",
+]);
 
 // ---------------------------------------------------------------------------
 // Member — the central record. Every other table connects back to this one.
@@ -41,7 +56,9 @@ export const members = pgTable("members", {
   year: integer("year"),
   major: text("major"),
   status: memberStatus("status").notNull().default("member"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
@@ -62,23 +79,43 @@ export const events = pgTable("events", {
   description: text("description"),
   eventDate: timestamp("event_date", { withTimezone: true }).notNull(),
   location: text("location"),
-  committeeId: uuid("committee_id").notNull().references(() => committees.id),
+  committeeId: uuid("committee_id")
+    .notNull()
+    .references(() => committees.id),
   status: eventStatus("status").notNull().default("draft"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
 // Registration — joins Member + Event. The busiest table in the system:
 // registration, attendance, and (indirectly) certificates all pass through
 // here. See UC-02 and UC-03.
+//
+// memberId is nullable on purpose: UC-02 (event registration) is being built
+// before UC-01 (member profiles), so a registration must be able to exist
+// with no Member row yet. attendeeName/attendeeEmail capture who the person
+// is in that case. When UC-01 ships, a person will be able to link past
+// registrations to their new profile (likely matched by email) — that
+// linking flow isn't built yet. See CLAUDE.md, "Current build decision" and
+// docs/adr/0004-nullable-member-id-on-registration.md. Any code reading
+// memberId must handle the null case (certificate generation, attendance
+// display, etc.) — don't assume it's always present.
 // ---------------------------------------------------------------------------
 export const registrations = pgTable("registrations", {
   id: uuid("id").primaryKey().defaultRandom(),
-  memberId: uuid("member_id").notNull().references(() => members.id),
-  eventId: uuid("event_id").notNull().references(() => events.id),
+  memberId: uuid("member_id").references(() => members.id),
+  eventId: uuid("event_id")
+    .notNull()
+    .references(() => events.id),
+  attendeeName: text("attendee_name").notNull(),
+  attendeeEmail: text("attendee_email").notNull(),
   attended: boolean("attended").notNull().default(false),
   checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
-  registeredAt: timestamp("registered_at", { withTimezone: true }).notNull().defaultNow(),
+  registeredAt: timestamp("registered_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
@@ -89,8 +126,13 @@ export const registrations = pgTable("registrations", {
 // ---------------------------------------------------------------------------
 export const certificates = pgTable("certificates", {
   id: uuid("id").primaryKey().defaultRandom(),
-  registrationId: uuid("registration_id").notNull().unique().references(() => registrations.id),
-  issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  registrationId: uuid("registration_id")
+    .notNull()
+    .unique()
+    .references(() => registrations.id),
+  issuedAt: timestamp("issued_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   certificateUrl: text("certificate_url").notNull(), // Supabase Storage object URL
 });
 
@@ -105,10 +147,14 @@ export const archiveItems = pgTable("archive_items", {
   year: integer("year").notNull(),
   team: text("team"),
   fileUrl: text("file_url").notNull(), // Supabase Storage object URL
-  uploadedBy: uuid("uploaded_by").notNull().references(() => members.id),
+  uploadedBy: uuid("uploaded_by")
+    .notNull()
+    .references(() => members.id),
   source: archiveSource("source").notNull().default("native"),
   driveBackupUrl: text("drive_backup_url"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 // ---------------------------------------------------------------------------
@@ -117,8 +163,14 @@ export const archiveItems = pgTable("archive_items", {
 // ---------------------------------------------------------------------------
 export const mentorshipConnections = pgTable("mentorship_connections", {
   id: uuid("id").primaryKey().defaultRandom(),
-  graduateId: uuid("graduate_id").notNull().references(() => members.id),
-  memberId: uuid("member_id").notNull().references(() => members.id),
+  graduateId: uuid("graduate_id")
+    .notNull()
+    .references(() => members.id),
+  memberId: uuid("member_id")
+    .notNull()
+    .references(() => members.id),
   status: mentorshipStatus("status").notNull().default("requested"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
