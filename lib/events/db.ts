@@ -1,7 +1,22 @@
 // Hidden implementation of the events domain — queries against
 // db/schema.ts's `events` table. Nothing outside lib/events/ should import
 // this file directly; go through index.ts instead.
-//
-// Empty for now. This base commit only lays out the folder shape described
-// in CLAUDE.md; UC-02 feature code (querying, creating, publishing events)
-// is separate, scoped work that comes after this base is verified.
+
+import { asc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { events } from "@/db/schema";
+import type { PublishedEvent } from "./types";
+
+export async function selectPublishedEvents(): Promise<PublishedEvent[]> {
+  return db
+    .select({
+      id: events.id,
+      title: events.title,
+      description: events.description,
+      eventDate: events.eventDate,
+      location: events.location,
+    })
+    .from(events)
+    .where(eq(events.status, "published"))
+    .orderBy(asc(events.eventDate));
+}

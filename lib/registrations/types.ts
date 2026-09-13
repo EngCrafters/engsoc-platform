@@ -1,8 +1,35 @@
 // Shared types for the registrations domain. Re-exported from index.ts.
-//
-// Kept empty for now — UC-02 isn't built yet in this repo. When it is, this
-// is where the public-facing shape of a Registration lives, including the
-// nullable-memberId / attendeeName / attendeeEmail shape described in
-// CLAUDE.md's "Current build decision".
 
-export {};
+/**
+ * What the Server Action needs to attempt a registration. `ipAddress` isn't
+ * user input — the caller (the Server Action) reads it from request headers
+ * and passes it in for rate limiting; see docs/adr/0005.
+ */
+export type RegisterForEventInput = {
+  eventId: string;
+  attendeeName: string;
+  attendeeEmail: string;
+  ipAddress: string;
+};
+
+/**
+ * Maps directly onto UC-02's flows:
+ * - "event_not_published" / "event_full" are the two named exception
+ *   flows ("Approval required" and "Event full").
+ * - "rate_limited" is docs/adr/0005's abuse protection, not in the use
+ *   case doc itself.
+ * - "invalid_name" / "invalid_email" / "invalid_event" are basic input
+ *   validation, not a use-case flow, just the minimum needed before
+ *   trusting the input enough to write it.
+ */
+export type RegisterForEventError =
+  | "invalid_name"
+  | "invalid_email"
+  | "invalid_event"
+  | "event_not_found"
+  | "event_not_published"
+  | "event_full"
+  | "rate_limited";
+
+export type RegisterForEventResult =
+  { ok: true } | { ok: false; error: RegisterForEventError };

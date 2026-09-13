@@ -37,12 +37,54 @@ npm run db:migrate           # applies db/schema.ts to your Supabase database
 npm run dev
 ```
 
+## Working on the public site (`app/(marketing)/`)
+
+This section is for someone outside the core team helping with just the
+public-facing site — you don't need any of the context above to be
+productive here.
+
+**What `app/(marketing)/` is.** It's the landing page and event
+registration flow: everything a visitor sees without logging in. It lives
+in this same repo (not a separate one) specifically so it can read events
+directly from the database code the rest of the app uses
+(`lib/events`'s `getPublishedEvents`) instead of calling a separate API.
+**You only need to work inside `app/(marketing)/`.** Everything else in
+this repo — `db/`, `lib/`, the admin dashboard when it exists — is core
+team scope. If a change you're making would touch something outside that
+folder, that's worth a message to Hisham first, not a judgment call.
+
+**Running it locally.** Ask Hisham for the staging environment's values
+(a `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+`DATABASE_URL`) — these point at a separate staging Supabase project with
+its own fake seeded events, not the real one. You will never be given a
+service role key or a production credential; you don't need either to work
+on the public site.
+
+```bash
+npm install
+cp .env.example .env.local   # paste in the staging values Hisham gives you
+npm run dev
+```
+
+Then open `http://localhost:3000` — you should see the seeded staging
+events and be able to submit the registration form against the staging
+database.
+
+**Opening a PR.** Push your branch and open a pull request as normal.
+Vercel automatically builds a live preview link and posts it on the PR
+within a minute or two — you don't need your own Vercel account or any
+Vercel access to get one. Hisham reviews every PR (see `CODEOWNERS`)
+before it merges to `main`.
+
 ## Project structure
 
 ```
-app/                  Next.js App Router pages and routes
+app/                    Next.js App Router pages and routes
+app/(marketing)/        The public site — see "Working on the public site" below
 db/schema.ts           The full data model, matches the ER diagram exactly
 db/index.ts             Drizzle client, server-only
+lib/events/             Domain module: reading/publishing events
+lib/registrations/      Domain module: registering for an event
 lib/supabase.ts         Supabase client helpers (browser + server)
 docs/                   The four governing PDFs, read these first
 .claude/skills/         Claude Code skills for this project

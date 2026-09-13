@@ -5,8 +5,17 @@ about registering for an event, including the no-member-profile-yet case
 (`memberId` nullable, `attendeeName`/`attendeeEmail` required — see CLAUDE.md,
 "Current build decision").
 
-Not implemented yet — this base commit only sets up the folder shape. UC-02
-(event announcement + registration) is the use case that fills this in.
+Exports one function: `registerForEvent(input)`. It validates the input,
+applies the rate limit described in `docs/adr/0005-registration-rate-limiting.md`
+(more than 5 attempts from one IP in 10 minutes gets rejected), checks the
+event is actually open for registration (UC-02's "Approval required" and
+"Event full" exception flows), then writes the `registrations` row.
+
+This function takes plain data in (`eventId`, `attendeeName`, `attendeeEmail`,
+`ipAddress`) and returns a plain result — no `FormData`, no `headers()`, no
+framework code. `app/(marketing)/actions.ts`'s Server Action is a thin
+wrapper that adapts a form submission into this shape; the actual rules live
+here, not in the action.
 
 Import from `./index.ts` only. `./db.ts` (queries) and `./types.ts` (shapes)
 are implementation details of this module and shouldn't be imported directly

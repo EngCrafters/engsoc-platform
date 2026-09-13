@@ -23,6 +23,8 @@ import {
   timestamp,
   uuid,
   pgEnum,
+  inet,
+  index,
 } from "drizzle-orm/pg-core";
 
 export const memberStatus = pgEnum("member_status", ["member", "graduate"]);
@@ -156,6 +158,35 @@ export const archiveItems = pgTable("archive_items", {
     .notNull()
     .defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// Registration attempt — abuse protection for the public registration form,
+// nothing else. Not part of the ER diagram's domain model (it doesn't
+// represent a real-world thing, just a request log), but still a real table
+// so it needs the same write-it-down treatment. See UC-02 and
+// docs/adr/0005-registration-rate-limiting.md.
+//
+// One row per registration attempt (successful or not). The Server Action
+// counts rows for an IP in the last 10 minutes before deciding whether to
+// allow another one. No cleanup job exists yet — this table grows
+// unbounded until one is added; see the ADR's Consequences section.
+// ---------------------------------------------------------------------------
+export const registrationAttempts = pgTable(
+  "registration_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ipAddress: inet("ip_address").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("registration_attempts_ip_created_idx").on(
+      table.ipAddress,
+      table.createdAt
+    ),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // Mentorship connection — Phase 4. Not built yet. Defined here only so the
