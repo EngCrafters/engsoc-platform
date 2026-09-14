@@ -40,6 +40,9 @@ is optional and does not replace the direct-main workflow.
   remain for exceptional PRs.
 - Vercel's GitHub integration remains the sole deployment path. Production is
   deployed from `main`; preview deployments are optional.
+- Commits pushed to `main` must use the authorized `EngCrafters` GitHub
+  identity. Vercel blocks Git-triggered deployments when a commit author is
+  not entitled to deploy for the `Eng_Crafters` team.
 - Conventional Commits, hooks, test suites, RLS, secret protection, and
   database migration discipline remain mandatory.
 - GitHub protections should allow authorized authenticated direct pushes to
