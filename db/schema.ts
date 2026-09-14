@@ -74,6 +74,14 @@ export const committees = pgTable("committees", {
 
 // ---------------------------------------------------------------------------
 // Event — one thing on the calendar. See UC-02.
+//
+// RLS (staging only — see docs/adr/0006-staging-rls-for-anon-landing-page.md):
+// the `anon` role may SELECT rows where status = 'published'. A draft or
+// full event is invisible to the anon key entirely — not an error, just an
+// empty result (see CLAUDE.md's RLS note on that failure mode). No policy
+// exists for `authenticated` yet; there's no real login (UC-01) to scope it
+// for. Production does not have this policy yet — that's a deliberate,
+// tracked asymmetry, not drift.
 // ---------------------------------------------------------------------------
 export const events = pgTable("events", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -104,6 +112,16 @@ export const events = pgTable("events", {
 // docs/adr/0004-nullable-member-id-on-registration.md. Any code reading
 // memberId must handle the null case (certificate generation, attendance
 // display, etc.) — don't assume it's always present.
+//
+// RLS (staging only — see docs/adr/0006-staging-rls-for-anon-landing-page.md):
+// the `anon` role may INSERT a row only when member_id IS NULL and eventId
+// references a currently-published event — both enforced at the database
+// level, not just in application code, so a raw REST call that skips the
+// app's own validation still can't register for a draft event or attach a
+// member_id. No SELECT policy: the anon-key landing page never reads
+// registrations back, so it isn't granted read access it doesn't use.
+// Production does not have this policy yet — same tracked asymmetry as
+// above.
 // ---------------------------------------------------------------------------
 export const registrations = pgTable("registrations", {
   id: uuid("id").primaryKey().defaultRandom(),

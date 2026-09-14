@@ -53,3 +53,21 @@ Each use case's own document defines when it's actually finished (open
 decisions resolved, all assigned tasks complete, behavior matches the
 diagram). Don't consider a use case done because the code runs, check it
 against that list explicitly.
+
+## 6. If this use case touches a public-facing table, RLS is part of done
+
+Any table reachable through the anon-key client (see CLAUDE.md's "Row-level
+security is not optional") needs its policies written and tested in the
+same piece of work, not as a follow-up:
+
+- Write the RLS policy alongside the migration, same commit.
+- Write an automated test that runs as the anon role, proving what it can
+  and correctly cannot do, not just testing against the privileged
+  connection.
+- If a query unexpectedly returns empty during testing, check the policy
+  first, this is RLS's most common failure mode, not a sign the migration
+  itself is broken.
+
+A use case with a public-facing table is not finished until this exists,
+regardless of whether the feature "works" when tested with privileged
+access.

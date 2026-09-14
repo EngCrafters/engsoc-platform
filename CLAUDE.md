@@ -234,3 +234,32 @@ happens when someone deliberately edits this file.
 - **Closing a use case includes updating this line**, in the same PR that
   finishes the last piece, or a dedicated `docs: move to UC-0X` commit
   right after. A use case isn't actually closed until this file says so.
+
+## Row-level security is not optional
+
+Any table reachable through an anon-key client (the marketing/public data
+layer) is protected by Postgres Row Level Security, not by application
+code being careful. This has caused real confusion before, RLS fails
+silently, a missing or wrong policy just returns empty results, not an
+error, so treat it as a required, tested part of the schema, never an
+afterthought.
+
+Rules:
+
+- **Policies ship in the same migration as the table or column they
+  protect.** A public-facing table without its RLS policies in the same
+  commit is not done, don't add "write the policy later."
+- **Every public-facing table needs an automated test that runs as the
+  anon role specifically**, not the privileged service connection. The
+  test must prove both directions: what anon is allowed to do, and at
+  least one thing it's correctly blocked from doing (e.g. reading a draft
+  event, or writing to a field it shouldn't touch). A migration without
+  this test is not done either.
+- **Document each policy next to the field comments already in
+  db/schema.ts**, in plain language: what it allows, for which role, and
+  why. Someone should be able to read the schema file and understand the
+  access rules without reverse-engineering the SQL.
+- **If a query using the anon client returns unexpectedly empty, check
+  the policy before assuming the data is missing.** This is the most
+  common failure mode with RLS, silent, not an error, easy to mistake for
+  a data problem when it's actually a permissions one.

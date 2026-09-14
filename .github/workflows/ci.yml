@@ -12,7 +12,7 @@ on:
 
 jobs:
   lint-and-build:
-    name: Lint, type-check, build
+    name: Lint, type-check, test, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +29,14 @@ jobs:
 
       - name: Type-check
         run: npm run typecheck
+
+      - name: Test (staging RLS — see docs/adr/0006)
+        run: npm run test
+        env:
+          # Public by design (the anon key, protected by RLS, not secrecy)
+          # — same reasoning as the NEXT_PUBLIC_* values below.
+          STAGING_SUPABASE_URL: https://wnrdgnmmcdedmilnzzsl.supabase.co
+          STAGING_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InducmRnbm1tY2RlZG1pbG56enNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMTMzMDksImV4cCI6MjEwNDg4OTMwOX0.RShOwe-amyW6vsR-clcgBmhhYChXpsx_qJZw80UOZJ8
 
       - name: Build
         run: npm run build
