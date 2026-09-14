@@ -40,8 +40,9 @@ is not finished.
 
 ## 4. Keep changes traceable
 
-- Reference the UC number in commit messages and PR descriptions, e.g.
-  `feat(uc-01): add duplicate email check`.
+- Reference the UC number in commit messages, e.g.
+  `feat(uc-01): add duplicate email check`. Include it in an exceptional PR
+  description when a PR is actually used.
 - If you touch `db/schema.ts`, the comment above the changed table should
   already explain which use case it serves, keep that comment accurate.
 - Don't add fields, tables, or routes that aren't backed by something in

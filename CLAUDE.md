@@ -65,12 +65,11 @@ it:
 
 ## How we work
 
-This project is built by a small team with a single technical lead who
-reviews and approves all work before it merges. Other contributors are
-still building technical skill and work through a structured process:
-small, AI-assisted tasks first, then drafting real pieces under review,
-then light independence once several pieces have gone through cleanly.
-Full model: `/docs/Phase0_Team_Playbook.pdf`.
+Codex is the primary technical implementation agent and owns routine
+engineering work end-to-end. The historical team-learning model remains in
+`/docs/Phase0_Team_Playbook.pdf`; its former branch/review process is
+superseded for current development by
+`docs/adr/0007-direct-main-development-workflow.md`.
 
 When working with a contributor who is still learning: favor small,
 well-explained changes over large ones. Explain _why_, not just _what_, in
@@ -113,26 +112,26 @@ ADR note first, then a schema change. Not the other way around.
 These are enforced by tooling, not just written down, see `.husky/` and
 `.github/workflows/ci.yml`.
 
-- Git: feature branches, [Conventional Commits](https://www.conventionalcommits.org/)
-  (`feat:`, `fix:`, `docs:`). A commit that doesn't follow this format is
-  rejected locally by the `commit-msg` hook before it's even made.
+- Git: work directly on `main` using small,
+  [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
+  `fix:`, `docs:`, etc.). A commit that doesn't follow this format is rejected
+  locally by the `commit-msg` hook before it's even made.
 - `npm run lint` runs automatically before every commit (`pre-commit` hook).
-  CI re-runs lint, a full type-check, and a production build on every push
-  and pull request, so a broken build can't reach `main` even if a hook was
-  bypassed locally.
-- One review from the technical lead before merging to `main`, no
-  exceptions for contributors still building skill. Use
-  `.github/PULL_REQUEST_TEMPLATE.md`, it's applied automatically, don't
-  delete the checklist.
+  Before a meaningful push, Codex self-reviews the diff and runs the relevant
+  lint, type-check, tests, migration/RLS validation, and production build.
+  CI repeats the required checks on every push to `main`.
+- Pull requests are exceptional, not routine. The optional template remains
+  available for an exceptional collaboration change; it is not a merge gate.
 - Every module/feature gets a short `README.md` in its folder: what it does,
   how it connects to the rest of the system.
 - Separate environments: never run migrations or seed data against
   production.
 - Role-based access: a committee can only manage its own events and data.
 
-Deployment itself runs through Vercel's own GitHub integration (auto-deploy
-on push to `main`, preview deploys on PRs), not a custom Actions workflow,
-don't build a second deploy pipeline that fights with it.
+Deployment runs through Vercel's GitHub integration: a push to `main`
+deploys production. Inspect GitHub Actions and the Vercel deployment after
+every meaningful push; diagnose and repair failures without adding a second
+deployment pipeline. Preview deployments for exceptional PRs are optional.
 
 ## Prompting practices
 
@@ -178,16 +177,12 @@ These come directly from the ER diagram and ADRs in
 
 ## Working with Claude Code specifically
 
-- Keep tool-use confirmations on. Do not run in a fully auto-accepting
-  mode while contributors are still building skill, each confirmation is
-  a checkpoint where the person driving should understand what's about to
-  happen before it happens.
-- Prefer opening a branch and a pull request over committing directly to
-  `main`, even for small changes, the PR template's checklist is part of
-  the review process, not paperwork.
-- If a request is ambiguous about scope, ask before touching multiple use
-  cases or modules at once. Small, reviewable diffs over large, sweeping
-  ones.
+- Follow the same direct-main workflow as Codex: self-review, validate,
+  commit coherent changes to `main`, push, then verify CI and Vercel.
+- Do not routinely create branches or PRs, and do not wait for routine human
+  approval. Use the optional PR template only for exceptional collaboration.
+- If scope or product policy is genuinely ambiguous, use the approved docs;
+  do not silently invent a decision.
 
 ## Skills
 
@@ -209,8 +204,8 @@ update, not a silent code change.
 Currently active: **UC-02, Website event & workshop announcement +
 registration, plus the new admin dashboard scope described above.**
 UC-02's original spec is in `/docs/Idea_and_Requirements_Document.pdf`;
-there is no deep-dive doc for it yet, write one (mirroring
-`UC-01_Deep_Dive.pdf`) before building the dashboard specifically.
+its implementation deep dive is `docs/UC-02_Deep_Dive.md`. Resolve its
+explicit open decisions before building affected dashboard behavior.
 
 **UC-01 (member registration & profile) is deferred, not cancelled.** Its
 existing deep-dive doc (`/docs/UC-01_Deep_Dive.pdf`) is still accurate for
@@ -231,8 +226,8 @@ happens when someone deliberately edits this file.
 - **Before closing out a use case**: check its definition of done in the
   matching deep-dive doc. Every box needs to be checked, not just "the
   code runs."
-- **Closing a use case includes updating this line**, in the same PR that
-  finishes the last piece, or a dedicated `docs: move to UC-0X` commit
+- **Closing a use case includes updating this line**, in the same coherent
+  commit that finishes the last piece, or a dedicated `docs: move to UC-0X` commit
   right after. A use case isn't actually closed until this file says so.
 
 ## Row-level security is not optional

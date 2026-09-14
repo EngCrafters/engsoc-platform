@@ -26,9 +26,10 @@ Vercel. This supersedes the earlier Cloudflare Pages decision.
   to keep in sync with framework releases.
 - Vercel's free tier comfortably covers a society-sized platform, so this
   costs nothing at current scale.
-- Deployment runs through Vercel's own GitHub integration (auto-deploy on
-  push to `main`, preview deploys on PRs) — no custom CI/CD pipeline to
-  build or maintain alongside it.
+- Deployment runs through Vercel's GitHub integration. A push to `main`
+  creates the production deployment; preview deployments are optional for
+  exceptional PRs. No custom CI/CD pipeline competes with it. See ADR 0007
+  for the current direct-main engineering workflow.
 - The Cloudflare option isn't gone for good. If the team outgrows Vercel's
   free tier or needs something Vercel can't do, that door stays open — see
   `docs/Technical_Blueprint.pdf`, Part 1.

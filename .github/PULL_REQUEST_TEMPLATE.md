@@ -1,3 +1,7 @@
+<!-- Optional: PRs are not the normal delivery path. Routine Codex work is
+committed directly to main after validation. Use this template only for an
+exceptional collaboration or review request. -->
+
 ## What this changes
 
 <!-- One or two sentences. What does this PR actually do? -->
@@ -15,8 +19,6 @@
 - [ ] `npm run lint` and `npm run build` pass locally
 - [ ] Commit messages follow Conventional Commits
 
-## For the reviewer (Hisham)
+## Exceptional-review context
 
-<!-- Anything you specifically want checked, or context the diff alone
-     won't explain. If a teammate is at Level 1–2, note what they drove
-     themselves vs. what was paired. -->
+<!-- Why is a PR useful for this exceptional change? -->

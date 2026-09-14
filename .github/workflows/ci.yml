@@ -1,8 +1,7 @@
 name: CI
 
-# Runs on every push and pull request. This is what stands between a broken
-# commit and main, it's the automated half of the review process described
-# in CLAUDE.md, Hisham's review is the human half.
+# Direct pushes to main are the normal delivery path. CI validates every such
+# push; pull-request runs remain available for exceptional collaboration.
 
 on:
   push:
@@ -50,7 +49,6 @@ jobs:
   commitlint:
     name: Check commit messages
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,4 +61,15 @@ jobs:
 
       - run: npm ci
 
-      - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+      - name: Validate pushed commits
+        if: github.event_name == 'push'
+        run: |
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            npx commitlint --last --verbose
+          else
+            npx commitlint --from "${{ github.event.before }}" --to "${{ github.sha }}" --verbose
+          fi
+
+      - name: Validate pull-request commits
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose

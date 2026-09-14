@@ -41,19 +41,17 @@ npm run dev
 
 ## Working on the public site (`app/(marketing)/`)
 
-This section is for someone outside the core team helping with just the
-public-facing site — you don't need any of the context above to be
-productive here.
+This is the public event-discovery and registration surface. It is part of
+the same application and data model as the rest of the platform.
 
 **What `app/(marketing)/` is.** It's the landing page and event
 registration flow: everything a visitor sees without logging in. It lives
 in this same repo (not a separate one) specifically so it can read events
 directly from the database code the rest of the app uses
 (`lib/events`'s `getPublishedEvents`) instead of calling a separate API.
-**You only need to work inside `app/(marketing)/`.** Everything else in
-this repo — `db/`, `lib/`, the admin dashboard when it exists — is core
-team scope. If a change you're making would touch something outside that
-folder, that's worth a message to Hisham first, not a judgment call.
+Domain and database behavior lives in `lib/` and `db/`; do not duplicate it
+in this route group. Follow the active UC-02 specification and its open
+decisions before changing those boundaries.
 
 **Running it locally.** Ask Hisham for the staging environment's values
 (a `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
@@ -72,11 +70,10 @@ Then open `http://localhost:3000` — you should see the seeded staging
 events and be able to submit the registration form against the staging
 database.
 
-**Opening a PR.** Push your branch and open a pull request as normal.
-Vercel automatically builds a live preview link and posts it on the PR
-within a minute or two — you don't need your own Vercel account or any
-Vercel access to get one. Hisham reviews every PR (see `CODEOWNERS`)
-before it merges to `main`.
+**Delivery.** Routine work is committed directly to `main` after self-review
+and validation. Pushes to `main` run GitHub Actions and trigger Vercel's
+production deployment; inspect both and repair failures. Pull requests are
+reserved for exceptional collaboration, not the normal delivery path.
 
 ## Project structure
 
@@ -107,20 +104,20 @@ not cancelled. See `CLAUDE.md` for the build-order decision and
 
 - One use case at a time, whole team together, not split into separate
   areas. See the Phase0 Team Playbook for the reasoning.
-- Level 1 → 2 → 3 learning ladder for teammates new to building software.
-  Nothing goes to production without Hisham's review while at Level 1–2.
-- Conventional Commits, one review before merge, every module documented.
-  Full list in `CLAUDE.md`.
+- The historical learning model is preserved in the Phase 0 playbook; the
+  current engineering workflow is direct-main and documented in ADR 0007.
+- Conventional Commits, autonomous self-review, and module documentation.
+  Full current rules are in `CLAUDE.md` and `AGENTS.md`.
 
 ## Enforced, not just written down
 
 - **Commit messages** are checked by a git hook (`.husky/commit-msg`), a
   non-conventional commit is rejected before it's made.
 - **Lint** runs automatically before every commit (`.husky/pre-commit`).
-- **CI** (`.github/workflows/ci.yml`) re-runs lint, a full type-check, and a
-  production build on every push and pull request.
-- **Pull requests** use `.github/PULL_REQUEST_TEMPLATE.md`, which asks for
-  the UC number and a definition-of-done checklist.
+- **CI** (`.github/workflows/ci.yml`) re-runs lint, type-checks, tests, and a
+  production build on every push to `main`.
+- **Pull requests** are optional exceptional-collaboration artifacts; their
+  template is not part of the normal delivery path.
 
 Run `npm install` once after cloning, the git hooks install automatically
 via the `prepare` script.

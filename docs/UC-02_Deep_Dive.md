@@ -36,7 +36,7 @@ The following fields already exist in `db/schema.ts` and are the complete approv
 
 `registrations.memberId` must remain nullable. Do not create a fake Member for an anonymous attendee and do not add an Attendee entity. The future historical-linking flow belongs to UC-01 follow-up work, not UC-02.
 
-`registration_attempts` exists in the development database and in open PR #2, backed by `docs/adr/0005-registration-rate-limiting.md`; it is technical abuse-prevention data, not a new UC-02 business entity. It has not yet merged to `main`, so `db/schema.ts`, migration history, and development are currently out of sync. Treat that as a merge-order reconciliation item, not as an implicit approval for additional schema changes.
+`registration_attempts`, backed by `docs/adr/0005-registration-rate-limiting.md`, is technical abuse-prevention data, not a new UC-02 business entity. Its schema and migration are part of the current codebase; do not treat its existence as approval for additional business data.
 
 ## 3. Public screens and behavior
 
@@ -98,7 +98,7 @@ Public data access follows least privilege:
 - An anon visitor may not list registrations, members, committees, drafts, certificates, archive records, or mentorship data.
 - Attendee email is never public data.
 
-Open PR #3 implements and tests that minimal policy set on the separate staging project. Production/development RLS and committee authorization are not yet designed; this is a tracked environmental asymmetry, not permission to use a service-role key from the browser. Any production-facing policy ships with an anon-role test proving both an allowed and a denied operation.
+The staging migration and its automated anon-role test implement that minimal policy set on the separate staging project. Production/development RLS and committee authorization are not yet designed; this is a tracked environmental asymmetry, not permission to use a service-role key from the browser. Any production-facing policy ships with an anon-role test proving both an allowed and a denied operation.
 
 Rate limiting may reduce naive spam but does not replace RLS, authorization, or input validation. The staged direct-anon integration bypasses the server-action rate limiter documented in ADR 0005; a public deployment must not claim that limiter protects direct PostgREST writes unless the boundary is changed and verified.
 
@@ -131,7 +131,7 @@ Administration is ready for review only when the authorization, audit, and priva
 
 ## 8. Delivery order
 
-1. Reconcile and review the existing public-flow and staging-RLS PRs before relying on their database changes. Ensure migrations, Drizzle schema, migration journal, and the intended development project agree.
+1. Keep migrations, Drizzle schema, migration journal, and the intended development project aligned before relying on database changes.
 2. Resolve waitlist, duplicate-registration, and event-capacity policy; record any resulting data-model change before coding it.
 3. Complete and test the public UC-02 flow against the approved policies.
 4. Resolve committee authorization, review, exports, and audit requirements.
