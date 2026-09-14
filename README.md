@@ -13,7 +13,9 @@ Start here, in order:
    with the reasoning behind every technical decision.
 3. **`docs/Phase0_Team_Playbook.pdf`** — who's on the team, how we work, and
    the learning model for teammates who are still non-technical.
-4. **`docs/UC-01_Deep_Dive.pdf`** — the use case we're building right now.
+4. **`docs/UC-02_Deep_Dive.md`** — the active use case's implementation
+   specification and its explicitly open decisions. UC-01's deep dive remains
+   authoritative when that deferred work resumes.
 
 If you're using Claude Code in this repo, it reads `CLAUDE.md` automatically
 and already knows all of the above.
@@ -86,7 +88,7 @@ db/index.ts             Drizzle client, server-only
 lib/events/             Domain module: reading/publishing events
 lib/registrations/      Domain module: registering for an event
 lib/supabase.ts         Supabase client helpers (browser + server)
-docs/                   The four governing PDFs, read these first
+docs/                   Governing PDFs and use-case implementation specifications
 .claude/skills/         Claude Code skills for this project
 drizzle.config.ts       Database migration config
 ```
@@ -96,9 +98,10 @@ drizzle.config.ts       Database migration config
 **Phase 0 (Foundation):** done, except this repo, which is what you're
 looking at right now.
 
-**Phase 1 (Registration):** starting now. Working on UC-01 as a whole team
-before moving to UC-02. See `docs/UC-01_Deep_Dive.pdf` for the three
-first jobs assigned to Salim, Ibrahim, and Zaher.
+**Phase 1 (Registration):** UC-02 (public event announcement and registration)
+is the active use case. UC-01 (member profiles) is deliberately deferred,
+not cancelled. See `CLAUDE.md` for the build-order decision and
+`docs/UC-02_Deep_Dive.md` for the implementation scope and open decisions.
 
 ## How we work
 
