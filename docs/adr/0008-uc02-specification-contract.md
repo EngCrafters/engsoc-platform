@@ -2,10 +2,13 @@
 
 ## Status
 
-Specification checkpoint, September 15, 2026. The owner requires a complete
-design gate before additional UC-02 application implementation.
-O-01 (publication approval authority) remains owner-dependent.
-This ADR does not authorize a migration or certify a completed freeze.
+Accepted; specification frozen September 15, 2026. O-01 (publication approval
+authority) was answered by the owner: per-committee two-manager review
+(deep dive section 11). The freeze checklist passed at commit
+`9c5b7330ac0af49ce316c6631f1dcbc0902e650b`, verified green in CI:
+https://github.com/EngCrafters/engsoc-platform/actions/runs/34987629797.
+This ADR still does not itself authorize a migration or production change;
+those remain M1+ actions under the dependency-ordered roadmap.
 
 ## Context
 
@@ -56,10 +59,10 @@ unchanged. No historical PDF or applied migration is rewritten.
 
 ## Consequences
 
-Application work is paused by the explicit specification gate until O-01 and
-its dependent design are settled. Independent specification work proceeds.
-After complete freeze, commit/push/verify it, then implement the first
-dependency-ordered milestone automatically under ADR 0007.
+The specification gate is satisfied: O-01 is settled and its dependent design
+is committed and CI-verified. Implementation of the first dependency-ordered
+milestone (M1, environment and migration rehearsal) proceeds automatically
+under ADR 0007.
 Production RLS and database cutover are explicit release prerequisites.
 Neither an existing live deployment nor green compilation proves those
 boundaries safe.

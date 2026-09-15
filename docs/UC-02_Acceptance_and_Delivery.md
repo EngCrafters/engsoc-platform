@@ -195,8 +195,12 @@ and main-project RLS were inspected. No new application code or migration
 has been created. Existing tests cover only the historical staging policy.
 All new acceptance tests above remain TO IMPLEMENT.
 
-Final freeze evidence must record: owner O-01 answer, final spec commit SHA,
-CI URL/result, and completed consistency review. Implementation completion
-must record the migration versions per environment, runtime role test results,
-app/CI/deployment SHA, E2E results and any independently blocked release action.
-Never mark a blanket-deny policy as completion of an intended allow behavior.
+**Freeze evidence:** owner O-01 answer recorded September 15, 2026
+(per-committee two-manager review, deep dive section 11); final specification
+commit `9c5b7330ac0af49ce316c6631f1dcbc0902e650b`; CI run verified green:
+https://github.com/EngCrafters/engsoc-platform/actions/runs/34987629797;
+cross-document consistency review completed (deep dive section 15). This
+closes M0. Implementation completion must still record the migration versions
+per environment, runtime role test results, app/CI/deployment SHA, E2E results
+and any independently blocked release action. Never mark a blanket-deny
+policy as completion of an intended allow behavior.

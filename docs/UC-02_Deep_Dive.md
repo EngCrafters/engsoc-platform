@@ -510,9 +510,10 @@ Passing the specification gate does not mean those implementation tests pass.
 - [x] Acceptance criteria, test matrix and milestone prerequisites written.
 - [x] O-01 answered and dependent admin flow/lifecycle/fields/permissions/tests finalized.
 - [x] Final cross-document review confirms no unresolved required behavior.
-- [ ] Complete specification committed/pushed and CI verified.
+- [x] Complete specification committed/pushed and CI verified.
 
-The last box is checked in a follow-up commit once the pushed specification
-commit is confirmed green in CI (recorded in the acceptance/delivery
-completion evidence ledger and ADR 0008). Until then this revision is
-committed but not yet a confirmed freeze; M1 does not start before it is.
+**Freeze confirmed.** Specification commit `9c5b7330ac0af49ce316c6631f1dcbc0902e650b`
+verified green in CI:
+https://github.com/EngCrafters/engsoc-platform/actions/runs/34987629797.
+See the acceptance/delivery completion evidence ledger and ADR 0008 for the
+recorded evidence. M1 (environment and migration rehearsal) may now begin.
