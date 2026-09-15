@@ -14,7 +14,8 @@ Start here, in order:
 3. **`docs/Phase0_Team_Playbook.pdf`** — who's on the team, how we work, and
    the learning model for teammates who are still non-technical.
 4. **`docs/UC-02_Deep_Dive.md`** — the active use case's implementation
-   specification and its explicitly open decisions. UC-01's deep dive remains
+   specification, linked data/security contract, test plan, and freeze gate.
+   UC-01's deep dive remains
    authoritative when that deferred work resumes.
 
 If you're using Claude Code in this repo, it reads `CLAUDE.md` automatically
@@ -35,9 +36,13 @@ replaced.
 ```bash
 npm install
 cp .env.example .env.local   # fill in real values from your Supabase project
-npm run db:migrate           # applies db/schema.ts to your Supabase database
+npm run db:migrate           # replays journaled migrations; confirm a DEVELOPMENT target first
 npm run dev
 ```
+
+Do not run migrations during the UC-02 specification gate. The historical
+staging-only 0002 SQL is not in the Drizzle journal; the UC-02 data contract
+specifies its forward reconciliation. A schema file is not itself a migration.
 
 ## Working on the public site (`app/(marketing)/`)
 
@@ -80,7 +85,7 @@ reserved for exceptional collaboration, not the normal delivery path.
 ```
 app/                    Next.js App Router pages and routes
 app/(marketing)/        The public site — see "Working on the public site" below
-db/schema.ts           The full data model, matches the ER diagram exactly
+db/schema.ts            Implemented schema; UC-02 target ER addendum is in docs/
 db/index.ts             Drizzle client, server-only
 lib/events/             Domain module: reading/publishing events
 lib/registrations/      Domain module: registering for an event

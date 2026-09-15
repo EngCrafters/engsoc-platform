@@ -1,5 +1,10 @@
 # registrations
 
+Implementation status: current code does not enforce duplicate uniqueness,
+capacity concurrency or event-start closure, and has no waitlist.
+`docs/UC-02_Deep_Dive.md` and its companions specify the target and mandatory
+freeze gate. The behavior below describes existing code, not UC-02 completion.
+
 Domain module for the `registrations` table (`db/schema.ts`). Owns everything
 about registering for an event, including the no-member-profile-yet case
 (`memberId` nullable, `attendeeName`/`attendeeEmail` required — see CLAUDE.md,

@@ -1,5 +1,9 @@
 # app/(marketing)
 
+The current inline list/form is a partial implementation. The target
+list/detail/waitlist UX and specification gate are in
+`docs/UC-02_Deep_Dive.md` and its companion contracts.
+
 The public marketing site — UC-02's landing page and registration flow.
 A route group, so `(marketing)` doesn't appear in the URL: `page.tsx` here
 is the site's `/`.

@@ -14,6 +14,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 context; `docs/adr/0007-direct-main-development-workflow.md` is the current
 engineering-workflow decision.
 
+UC-02 has a mandatory specification gate. Read all three documents linked from
+`docs/UC-02_Deep_Dive.md` and its freeze checklist before application changes.
+Resolve its owner decisions and commit/verify the completed specification first;
+then continue the dependency-ordered implementation automatically.
+
 - Work directly on `main`. Codex owns the routine lifecycle: understand,
   implement, validate, self-review, commit, push, inspect CI and production
   deployment, and repair failures. Do not routinely create branches or PRs

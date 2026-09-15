@@ -45,9 +45,9 @@ the smaller, more honest change.
 - Every place that currently assumes `registration.memberId` is always
   present (certificate generation, attendance display, and any future UC-02
   admin dashboard views) must handle the null case explicitly.
-- `docs/Technical_Blueprint.pdf`'s ER diagram (Part 2) is now out of date on
-  this one point and should be updated to match; this ADR is the record of
-  why it no longer matches until that happens.
+- `docs/Technical_Blueprint.pdf`'s historical ER diagram (Part 2) predates
+  this decision. `docs/UC-02_Data_and_Security.md` now contains the UC-02 ER
+  addendum with the optional Member relationship.
 - No `Attendee` entity is introduced. If a real need for one emerges later,
   that's a new ADR, not an assumption baked in now.
 

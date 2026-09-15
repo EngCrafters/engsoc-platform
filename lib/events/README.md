@@ -1,5 +1,10 @@
 # events
 
+Implementation status: the existing published-only query is partial.
+The target public/full/past lifecycle, pagination and admin rules live in
+`docs/UC-02_Deep_Dive.md` and its companions. Follow their specification gate
+before changing this module; the README below describes current code only.
+
 Domain module for the `events` table (`db/schema.ts`). Owns everything about
 an event: creating, publishing, and reading them.
 

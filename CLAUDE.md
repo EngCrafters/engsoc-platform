@@ -3,8 +3,10 @@
 # Engineering Society Platform
 
 Read this before doing anything in this repo. It's the short version of documents
-that already exist and are approved, not a new source of truth, if something here
-ever conflicts with the PDFs in `/docs`, the PDFs win and this file is out of date.
+that already exist and are approved. The PDFs in `/docs` are the baseline;
+later explicit owner decisions recorded in ADRs and use-case specifications
+supersede only the details they identify. An unresolved contradiction remains
+open rather than being silently decided by implementation.
 
 ## What this project is
 
@@ -54,14 +56,17 @@ is new scope beyond what UC-02's original spec covered (which only
 described the public-facing announce-and-register flow). Before building
 it:
 
-- Write a proper deep-dive for this (mirror `UC-01_Deep_Dive.pdf`'s
-  format: fields, every real situation, open decisions). Don't build
-  from a one-line description.
+- Read the existing `docs/UC-02_Deep_Dive.md` and its data/security and
+  acceptance/delivery companions. They now specify the dashboard.
 - At minimum it needs: event list (draft/published/full), create/edit
   event, and a per-event registration list with attendee count.
-- Decide and document: who can see which committee's events (this is
-  where NFR-03's role-based access actually gets implemented for the
-  first time), and whether registration data can be exported.
+- Committee-scoped access and event-scoped CSV are specified there.
+  Publication approval authority (O-01) remains owner-dependent.
+
+The current milestone is **UC-02 specification freeze**. No additional UC-02
+application functionality or migration may be implemented until every item in
+the deep dive's freeze checklist passes. Complete and verify the specification
+commit first; then implement its dependency-ordered roadmap autonomously.
 
 ## How we work
 
@@ -96,12 +101,12 @@ stack this replaced and why: `/docs/Technical_Blueprint.pdf`.
 
 ## Data model
 
-`db/schema.ts` is the full, current schema. It was a direct implementation
-of the ER diagram in `/docs/Technical_Blueprint.pdf`, Part 2, **that
-diagram is now out of date on one point**: `registrations.memberId` is
-shown there as required. It isn't anymore, see "Current build decision"
-above. Update the ER diagram to match before this drifts further, the
-diagram should describe reality, not the other way around.
+`db/schema.ts` describes the implemented schema. The historical ER diagram in
+`/docs/Technical_Blueprint.pdf`, Part 2, predates nullable Member links.
+`docs/UC-02_Data_and_Security.md` is the UC-02 ER addendum and target data
+contract; it distinguishes existing fields from planned post-freeze changes.
+See ADRs 0004 and 0008. A target specification is not proof that the live
+database or applied migrations already match.
 
 **Never add a column or table that isn't backed by a written decision.** If
 a feature needs new data, that's a new entry in the ER diagram and a short
@@ -204,8 +209,9 @@ update, not a silent code change.
 Currently active: **UC-02, Website event & workshop announcement +
 registration, plus the new admin dashboard scope described above.**
 UC-02's original spec is in `/docs/Idea_and_Requirements_Document.pdf`;
-its implementation deep dive is `docs/UC-02_Deep_Dive.md`. Resolve its
-explicit open decisions before building affected dashboard behavior.
+its implementation deep dive is `docs/UC-02_Deep_Dive.md`. The current
+specification gate applies to all additional UC-02 functionality, not just
+dashboard work. Follow its owner-decision register and freeze checklist.
 
 **UC-01 (member registration & profile) is deferred, not cancelled.** Its
 existing deep-dive doc (`/docs/UC-01_Deep_Dive.pdf`) is still accurate for

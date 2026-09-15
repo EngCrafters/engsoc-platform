@@ -4,6 +4,10 @@
 
 Accepted
 
+Historical implementation baseline. ADR 0008 and the UC-02 data/security
+contract specify the post-freeze replacement for the race, retention and
+deferred-RLS limitations below; the five-per-ten-minute rule remains.
+
 ## Context
 
 UC-02's registration form (`app/(marketing)/`) is public and unauthenticated

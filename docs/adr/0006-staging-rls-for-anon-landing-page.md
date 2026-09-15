@@ -2,9 +2,11 @@
 
 ## Status
 
-Accepted — scoped to the staging Supabase project only. Production RLS
-remains the separate, still-open decision noted in `CLAUDE.md`'s "Open flag"
-section; this ADR does not resolve it.
+Accepted historical baseline — scoped to the staging Supabase project only.
+ADR 0008 and `docs/UC-02_Data_and_Security.md` specify the target replacement,
+including removal of direct anon INSERT. That design is not yet applied;
+production RLS remains a release prerequisite. The historical context below
+does not authorize reviving a separate application or bypassing the new gate.
 
 ## Context
 
