@@ -1,9 +1,10 @@
 # UC-02 data and security contract
 
-Revision 2, September 15, 2026. Companion to [the deep dive](UC-02_Deep_Dive.md).
-**Target design, not current deployed schema. Freeze blocked by O-01.**
+Revision 3, September 15, 2026. Companion to [the deep dive](UC-02_Deep_Dive.md).
+**Target design, not current deployed schema. O-01 answered; approval fields
+below are approved design, generated as part of M2, not yet an applied
+migration.**
 The deep dive owns product rules; this file specifies their representation.
-Approval-dependent fields and operations are not approved migrations.
 
 ## 1. Entity relationships
 
@@ -36,23 +37,34 @@ All dates crossing an API boundary are ISO 8601 strings with UTC Z.
 
 ## 2. Event contract
 
-| Field / PostgreSQL type           | Null/default         | Contract and reason                                                               |
-| --------------------------------- | -------------------- | --------------------------------------------------------------------------------- |
-| id / uuid PK                      | N, gen_random_uuid() | Immutable public event identifier                                                 |
-| title / text                      | N                    | Trimmed 1–200 code points, no controls                                            |
-| description / text                | ?                    | Blank -> null in draft; max 10,000; required on publication; plain text           |
-| event_date / timestamptz          | N                    | Start instant, minute precision for new admin input; existing precision preserved |
-| location / text                   | ?                    | Trimmed max 500; blank -> null; no controls                                       |
-| committee_id / uuid FK committees | N                    | Owning committee, immutable after creation                                        |
-| status / event_status             | N, draft             | Existing draft/published/full enum retained                                       |
-| capacity / integer                | ?, null              | NEW; positive if present; optional numerical seat limit                           |
-| created_at / timestamptz          | N, now()             | Immutable creation time                                                           |
-| revision / integer                | N, 1                 | NEW; increment once per domain mutation for stale edit rejection                  |
-| archived_at / timestamptz         | ?, null              | NEW; records non-destructive archive action                                       |
+| Field / PostgreSQL type           | Null/default         | Contract and reason                                                                |
+| --------------------------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| id / uuid PK                      | N, gen_random_uuid() | Immutable public event identifier                                                  |
+| title / text                      | N                    | Trimmed 1–200 code points, no controls                                             |
+| description / text                | ?                    | Blank -> null in draft; max 10,000; required on publication; plain text            |
+| event_date / timestamptz          | N                    | Start instant, minute precision for new admin input; existing precision preserved  |
+| location / text                   | ?                    | Trimmed max 500; blank -> null; no controls                                        |
+| committee_id / uuid FK committees | N                    | Owning committee, immutable after creation                                         |
+| status / event_status             | N, draft             | Existing draft/published/full enum retained                                        |
+| capacity / integer                | ?, null              | NEW; positive if present; optional numerical seat limit                            |
+| created_at / timestamptz          | N, now()             | Immutable creation time                                                            |
+| revision / integer                | N, 1                 | NEW; increment once per domain mutation for stale edit rejection                   |
+| archived_at / timestamptz         | ?, null              | NEW; records non-destructive archive action                                        |
+| review_required / boolean         | N, false             | NEW (O-01); owning manager flags a draft as needing a different manager's approval |
+| flagged_by / uuid FK auth.users   | ?, null              | NEW (O-01); manager who set review_required true; null when never flagged          |
+| approved_by / uuid FK auth.users  | ?, null              | NEW (O-01); different manager who approved the current revision                    |
+| approved_at / timestamptz         | ?, null              | NEW (O-01); approval time                                                          |
+| approved_revision / integer       | ?, null              | NEW (O-01); revision value at approval; publish requires it to equal revision      |
 
 CHECKs: bounded trimmed title; valid optional text lengths; capacity > 0;
 revision > 0; status other than draft requires nonempty description.
-Multirow/time-dependent checks belong in mutation routines, not volatile CHECKs.
+review_required = (flagged_by IS NOT NULL). When review_required is false,
+approved_by/approved_at/approved_revision are all null (unflagging clears any
+prior approval along with flagged_by). approved_by, approved_at and
+approved_revision are all null or all non-null together. When approved_by is
+set it is not equal to flagged_by (self-approval denied at the data layer as
+well as in the routine). Multirow/time-dependent checks belong in mutation
+routines, not volatile CHECKs.
 Prevent changing committeeId/id/createdAt through any ordinary update routine.
 Event date immutability and capacity floor use all history/confirmed count
 respectively as defined by the deep dive.
@@ -64,10 +76,12 @@ No stored attendee count or capacity-derived status. “Full” label is derived
 from manual full OR confirmed count >= capacity OR pending waitlist.
 Past and active/archive filters derive from eventDate/archivedAt.
 
-O-01 may require reviewRequired, approvedRevision, approvedBy and approvedAt
-or a separate approval record. These are NOT accepted fields yet. The owner
-answer must select one precise model, review invalidation rules and immutable
-audit representation before freeze; no provisional columns may be generated.
+O-01 selected the five review_required/flagged_by/approved_by/approved_at/
+approved_revision columns above over a separate approval-record table: the
+fields are few, always 1:1 with the event row, and the append-only audit
+table (section 5) already carries the durable history, so a side table would
+duplicate that without adding a guarantee. See deep dive section 11 for the
+full behavior.
 
 ## 3. Registration contract
 
@@ -137,22 +151,24 @@ not an application role. Grant/revoke changes are audited.
 
 New private.uc02_audit:
 
-| Field                              | Null/default      | Meaning                                                                                                                                                                                 |
-| ---------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| id / uuid PK                       | N, random         | Audit identity                                                                                                                                                                          |
-| occurred_at / timestamptz          | N, database clock | Mutation time                                                                                                                                                                           |
-| committee_id / uuid FK             | N                 | Scope for authorized reads                                                                                                                                                              |
-| event_id / uuid FK                 | ?                 | Null for committee grant changes                                                                                                                                                        |
-| registration_id / uuid FK          | ?                 | Subject when registration changes                                                                                                                                                       |
-| actor_kind / text CHECK            | N                 | anonymous, authenticated, maintenance, migration                                                                                                                                        |
-| actor_user_id / uuid FK auth.users | ?                 | Required for authenticated/maintenance; null for anonymous/migration                                                                                                                    |
-| action / text CHECK                | N                 | event.created/updated/published/held/reopened/archived/restored, registration.created/waitlisted/promoted/superseded, grant.activated/revoked, registrations.exported, history.imported |
-| changes / jsonb object             | N                 | Allowlisted old/new changed fields or export metadata                                                                                                                                   |
+| Field                              | Null/default      | Meaning                                                                                                                                                                                                                          |
+| ---------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id / uuid PK                       | N, random         | Audit identity                                                                                                                                                                                                                   |
+| occurred_at / timestamptz          | N, database clock | Mutation time                                                                                                                                                                                                                    |
+| committee_id / uuid FK             | N                 | Scope for authorized reads                                                                                                                                                                                                       |
+| event_id / uuid FK                 | ?                 | Null for committee grant changes                                                                                                                                                                                                 |
+| registration_id / uuid FK          | ?                 | Subject when registration changes                                                                                                                                                                                                |
+| actor_kind / text CHECK            | N                 | anonymous, authenticated, maintenance, migration                                                                                                                                                                                 |
+| actor_user_id / uuid FK auth.users | ?                 | Required for authenticated/maintenance; null for anonymous/migration                                                                                                                                                             |
+| action / text CHECK                | N                 | event.created/updated/published/held/reopened/archived/restored/review_flagged/review_unflagged/approved, registration.created/waitlisted/promoted/superseded, grant.activated/revoked, registrations.exported, history.imported |
+| changes / jsonb object             | N                 | Allowlisted old/new changed fields or export metadata                                                                                                                                                                            |
 
-Approval action names are finalized with O-01. Event/registration creation
-stores subject references and creation facts; identity edits are outside runtime
-scope. Existing PII is not copied on every unrelated mutation. Superseding
-records the target; promotion records prior/new status and contact attestation.
+Event/registration creation stores subject references and creation facts;
+identity edits are outside runtime scope. Existing PII is not copied on every
+unrelated mutation. Superseding records the target; promotion records
+prior/new status and contact attestation. event.approved records
+approvedBy/approvedRevision; event.review_flagged records flaggedBy; an
+idempotent re-approval or re-publish writes no second row (deep dive section 11).
 Export logs selected status, snapshot time and row count, not CSV contents.
 Do not put raw IPs, tokens or unbounded user-provided objects in audit JSON.
 Immutable append-only privileges; no runtime UPDATE/DELETE/TRUNCATE.
@@ -176,33 +192,35 @@ column means a manager with no grant for the target event's committee.
 Authenticated users without a grant have only the public column's capabilities.
 Board/technical titles without an explicit grant also have only public access.
 
-| Resource/action                         | Public/anon | Owning manager       | Other committee | Board without target grant |
-| --------------------------------------- | ----------- | -------------------- | --------------- | -------------------------- |
-| Public event list/view, visible rows    | ALLOW       | ALLOW                | ALLOW           | ALLOW                      |
-| Admin event list/view, drafts, archived | DENY        | ALLOW own            | DENY            | DENY                       |
-| Create draft                            | DENY        | ALLOW own            | DENY            | DENY                       |
-| Edit event details                      | DENY        | ALLOW guarded        | DENY            | DENY                       |
-| Publish/reopen                          | DENY        | DENY pending O-01    | DENY            | DENY                       |
-| Approve required review                 | DENY        | DENY pending O-01    | DENY            | DENY                       |
-| Mark manually full                      | DENY        | ALLOW guarded        | DENY            | DENY                       |
-| Archive/restore                         | DENY        | ALLOW guarded        | DENY            | DENY                       |
-| Hard delete                             | DENY        | DENY                 | DENY            | DENY                       |
-| Create own public entry via action      | ALLOW       | ALLOW as public      | ALLOW as public | ALLOW as public            |
-| Bulk/admin attendee creation            | NS          | NS                   | NS              | NS                         |
-| Read/list registrations and counts      | DENY        | ALLOW own event      | DENY            | DENY                       |
-| Promote FIFO waitlist entry             | DENY        | ALLOW guarded        | DENY            | DENY                       |
-| Modify identity/cancel/transfer entry   | NS          | NS                   | NS              | NS                         |
-| Event-scoped CSV                        | DENY        | ALLOW own            | DENY            | DENY                       |
-| Platform-wide export                    | DENY        | DENY                 | DENY            | DENY                       |
-| Read scoped event audit                 | DENY        | ALLOW own via server | DENY            | DENY                       |
-| Rewrite/remove audit                    | DENY        | DENY                 | DENY            | DENY                       |
-| Grant/revoke committee access           | DENY        | DENY                 | DENY            | DENY                       |
-| Attendance read/update workflow         | NS          | NS                   | NS              | NS                         |
-| Certificate issuance/access workflow    | NS          | NS                   | NS              | NS                         |
-| Historical Member linking               | NS          | NS                   | NS              | NS                         |
+| Resource/action                         | Public/anon | Owning manager               | Other committee | Board without target grant |
+| --------------------------------------- | ----------- | ---------------------------- | --------------- | -------------------------- |
+| Public event list/view, visible rows    | ALLOW       | ALLOW                        | ALLOW           | ALLOW                      |
+| Admin event list/view, drafts, archived | DENY        | ALLOW own                    | DENY            | DENY                       |
+| Create draft                            | DENY        | ALLOW own                    | DENY            | DENY                       |
+| Edit event details                      | DENY        | ALLOW guarded                | DENY            | DENY                       |
+| Publish/reopen                          | DENY        | ALLOW guarded (O-01)         | DENY            | DENY                       |
+| Approve required review                 | DENY        | ALLOW guarded, not flaggedBy | DENY            | DENY                       |
+| Mark manually full                      | DENY        | ALLOW guarded                | DENY            | DENY                       |
+| Archive/restore                         | DENY        | ALLOW guarded                | DENY            | DENY                       |
+| Hard delete                             | DENY        | DENY                         | DENY            | DENY                       |
+| Create own public entry via action      | ALLOW       | ALLOW as public              | ALLOW as public | ALLOW as public            |
+| Bulk/admin attendee creation            | NS          | NS                           | NS              | NS                         |
+| Read/list registrations and counts      | DENY        | ALLOW own event              | DENY            | DENY                       |
+| Promote FIFO waitlist entry             | DENY        | ALLOW guarded                | DENY            | DENY                       |
+| Modify identity/cancel/transfer entry   | NS          | NS                           | NS              | NS                         |
+| Event-scoped CSV                        | DENY        | ALLOW own                    | DENY            | DENY                       |
+| Platform-wide export                    | DENY        | DENY                         | DENY            | DENY                       |
+| Read scoped event audit                 | DENY        | ALLOW own via server         | DENY            | DENY                       |
+| Rewrite/remove audit                    | DENY        | DENY                         | DENY            | DENY                       |
+| Grant/revoke committee access           | DENY        | DENY                         | DENY            | DENY                       |
+| Attendance read/update workflow         | NS          | NS                           | NS              | NS                         |
+| Certificate issuance/access workflow    | NS          | NS                           | NS              | NS                         |
+| Historical Member linking               | NS          | NS                           | NS              | NS                         |
 
-There are no implicit global application roles. O-01 cells are explicit
-temporary denials and are incomplete design gates, not a finalized approval model.
+There are no implicit global application roles, including for approval: an
+approver is simply a second committee_managers grant holder for the event's
+own committee, distinct from whoever flagged the draft (flaggedBy). Board
+participants use the same grant mechanism, not a separate role.
 The owner maintenance identity can provision/revoke through a separate audited
 procedure; ordinary application credentials cannot invoke that operation.
 
@@ -298,7 +316,10 @@ expired attempts; it has no public endpoint. An immutable-delete trigger
 rejects runtime business deletion in addition to grants.
 Published visibility, field invariants, revision and audit generation are
 tested through routines and raw client denials, not solely privileged queries.
-O-01 must extend the publish routine and its private validation before freeze.
+The publish routine's private validation checks review_required/approved_by/
+approved_revision/flagged_by (deep dive section 11) before the existing
+lifecycle guards; approve is a separate routine with the same grant/lock
+discipline as edit.
 
 ## 8. Transaction and concurrency contracts
 
@@ -366,23 +387,26 @@ No time-of-check/time-of-use gap between ownership check and mutation.
 Domain Date objects may be used internally; serialize ISO timestamps at the
 client boundary and derive DTO field types from the canonical schema where safe.
 
-| Operation                 | Accepted input                                                                    | Returned data                                     |
-| ------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------- |
-| listPublicEvents          | period upcoming/past, cursor?, limit default 20/max 50                            | PublicEvent[] and nextCursor?                     |
-| getPublicEvent            | UUID                                                                              | PublicEvent or null, never draft metadata         |
-| registerForEvent          | public fields and trusted IP                                                      | Public result code/field errors only              |
-| listAdminEvents           | verified user, permitted committee?, filter, cursor?, limit 20/max 50             | AdminEvent[] and nextCursor?                      |
-| createEvent               | verified user, permitted committee and draft fields                               | Event UUID/revision or admin result               |
-| edit/hold/archive/restore | verified user, UUID, expectedRevision, operation-specific fields                  | New revision or admin result                      |
-| publish/reopen/approve    | Pending O-01; no provisional callable contract                                    | Pending                                           |
-| listRegistrations         | verified user, event UUID, status confirmed/waitlisted, cursor?, limit 50/max 100 | AdminRegistration[] plus nextCursor? and counts   |
-| promoteWaitlist           | verified user, event UUID, registration UUID, contactConfirmed=true               | Admin result                                      |
-| exportRegistrations       | verified user, event UUID, selected status                                        | CSV from a single scoped snapshot or safe failure |
+| Operation                 | Accepted input                                                                    | Returned data                                                                |
+| ------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| listPublicEvents          | period upcoming/past, cursor?, limit default 20/max 50                            | PublicEvent[] and nextCursor?                                                |
+| getPublicEvent            | UUID                                                                              | PublicEvent or null, never draft metadata                                    |
+| registerForEvent          | public fields and trusted IP                                                      | Public result code/field errors only                                         |
+| listAdminEvents           | verified user, permitted committee?, filter, cursor?, limit 20/max 50             | AdminEvent[] and nextCursor?                                                 |
+| createEvent               | verified user, permitted committee and draft fields                               | Event UUID/revision or admin result                                          |
+| edit/hold/archive/restore | verified user, UUID, expectedRevision, operation-specific fields                  | New revision or admin result                                                 |
+| flagReview/unflagReview   | verified user, UUID, expectedRevision                                             | New revision or admin result                                                 |
+| publish/reopen            | verified user, UUID, expectedRevision                                             | New revision or admin result (APPROVAL_REQUIRED if unresolved)               |
+| approve                   | verified user, UUID, expectedRevision                                             | New approval state or admin result (SELF_APPROVAL_DENIED, CONFLICT if stale) |
+| listRegistrations         | verified user, event UUID, status confirmed/waitlisted, cursor?, limit 50/max 100 | AdminRegistration[] plus nextCursor? and counts                              |
+| promoteWaitlist           | verified user, event UUID, registration UUID, contactConfirmed=true               | Admin result                                                                 |
+| exportRegistrations       | verified user, event UUID, selected status                                        | CSV from a single scoped snapshot or safe failure                            |
 
 PublicEvent = id, title, description (non-null for visible events), eventDate,
 location nullable, availability (open/waitlist/closed). No committeeId,
 registration data, raw capacity, count or approval metadata.
 AdminEvent adds committeeId, status, capacity, revision, archivedAt,
+reviewRequired, flaggedBy, approvedBy, approvedAt, approvedRevision,
 confirmedCount and waitlistedCount. AdminRegistration = id, attendeeName,
 attendeeEmail, status, registeredAt; Member link is not needed in this DTO.
 

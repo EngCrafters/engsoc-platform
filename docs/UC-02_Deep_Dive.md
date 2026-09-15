@@ -1,10 +1,10 @@
 # UC-02: Event announcement, registration, and committee administration
 
-**Specification revision:** 2, September 15, 2026.
-**Gate:** NOT FROZEN — OWNER DECISION REQUIRED: O-01 (publication approval).
-No additional UC-02 application functionality or migrations may be implemented
-until O-01 is answered, its dependent contracts are finalized, and the entire
-gate in section 15 passes. Silence is not approval of the proposed policy.
+**Specification revision:** 3, September 15, 2026.
+**Gate:** O-01 answered by the owner (per-committee two-manager review, section
+11). Application implementation may begin once this revision, its dependent
+data/security and acceptance/delivery contracts, and the checklist in section
+15 are committed, pushed, and confirmed green in CI.
 
 ## 1. Authority, evidence, and current implementation
 
@@ -62,29 +62,30 @@ where no contrary approved decision exists).
 D = INDUSTRY-DERIVED DEFAULT selected under the owner's gap-resolution authority;
 it is a project choice, not a claim that every event platform behaves this way.
 
-| ID  | Decision                                                                                                                                              | Basis                                                     |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| P01 | Accountless registration, exactly name/email; memberId nullable, no fake Member, no historical linking                                                | ADR 0004                                                  |
-| P02 | One active entry per event and normalized email; repeat produces a safe result without overwriting identity                                           | Owner baseline                                            |
-| P03 | Required title/date/description at publication; committee ownership required                                                                          | FR-03, UC-02, existing FK                                 |
-| P04 | Optional positive capacity; confirmed entries alone consume seats; no capacity means no numerical limit                                               | Owner baseline                                            |
-| P05 | Retain persisted draft/published/full enum; full is a manual admission hold; numerical fullness is derived                                            | Existing deliberate enum; section 4 disambiguates         |
-| P06 | Waitlist option is required; opt-in is explicit, not a silent substitute for a seat                                                                   | UC-02 p7; D02                                             |
-| P07 | Close registration and waitlist joining at event start; no new deadline field                                                                         | Owner baseline                                            |
-| P08 | Committee managers can view/manage only their own scope; event-scoped CSV allowed                                                                     | NFR-03/04, owner baseline                                 |
-| P09 | No domain hard deletion; every domain mutation and export is audited                                                                                  | NFR-01/02                                                 |
-| P10 | Registration confirmation is on-page; no UC-02 registration email, email queue, or Resend dependency                                                  | UC-02 p7, Blueprint p3, ADR 0003                          |
-| P11 | No UC-03 check-in or UC-04 issuance UI; both must use Registration identity in the future                                                             | Current build order, ADR 0004                             |
-| D01 | Platform event timezone Asia/Muscat; store UTC instant, display explicitly in Oman time                                                               | SQU context; one timezone avoids ambiguous local input    |
-| D02 | FIFO waitlist; manager promotes one at a time after confirming contact; no automatic offers/expiry                                                    | Required waitlist, smallest operator-assisted fulfillment |
-| D03 | Supabase Auth identities plus explicit committee manager grants, independent of Member                                                                | NFR-03 and UC-01 deferral                                 |
-| D04 | Future published events retain public visibility when full; past events have a separate browsable list                                                | UC-02 discovery, permanent history                        |
-| D05 | Archive drafts or past events; no future published archive, cancellation, self-cancellation, transfers, or rescheduling after first entry in UC-02    | Minimal reversible lifecycle                              |
-| D06 | Event details frozen at first entry except title/description/location corrections and safe capacity changes; audit and contact warning on corrections | Protect existing attendee commitments                     |
-| D07 | Anonymous writes only through the trusted Server Action and restricted database operation, never raw anon INSERT                                      | Closes observed rate-limit bypass                         |
-| D08 | Database row locks serialize seats and edits; normalized partial uniqueness handles duplicate races                                                   | PostgreSQL guarantee, NFR-06                              |
-| D09 | Small cursor pages and event-scoped snapshot CSV; no global export or analytics                                                                       | Owner baseline, NFR-07                                    |
-| D10 | Required technical logging is isolated from attendee history; raw IP attempts expire after one hour                                                   | ADR 0005 explicitly anticipates cleanup                   |
+| ID  | Decision                                                                                                                                                                                                                                                                         | Basis                                                     |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| P01 | Accountless registration, exactly name/email; memberId nullable, no fake Member, no historical linking                                                                                                                                                                           | ADR 0004                                                  |
+| P02 | One active entry per event and normalized email; repeat produces a safe result without overwriting identity                                                                                                                                                                      | Owner baseline                                            |
+| P03 | Required title/date/description at publication; committee ownership required                                                                                                                                                                                                     | FR-03, UC-02, existing FK                                 |
+| P04 | Optional positive capacity; confirmed entries alone consume seats; no capacity means no numerical limit                                                                                                                                                                          | Owner baseline                                            |
+| P05 | Retain persisted draft/published/full enum; full is a manual admission hold; numerical fullness is derived                                                                                                                                                                       | Existing deliberate enum; section 4 disambiguates         |
+| P06 | Waitlist option is required; opt-in is explicit, not a silent substitute for a seat                                                                                                                                                                                              | UC-02 p7; D02                                             |
+| P07 | Close registration and waitlist joining at event start; no new deadline field                                                                                                                                                                                                    | Owner baseline                                            |
+| P08 | Committee managers can view/manage only their own scope; event-scoped CSV allowed                                                                                                                                                                                                | NFR-03/04, owner baseline                                 |
+| P09 | No domain hard deletion; every domain mutation and export is audited                                                                                                                                                                                                             | NFR-01/02                                                 |
+| P10 | Registration confirmation is on-page; no UC-02 registration email, email queue, or Resend dependency                                                                                                                                                                             | UC-02 p7, Blueprint p3, ADR 0003                          |
+| P11 | No UC-03 check-in or UC-04 issuance UI; both must use Registration identity in the future                                                                                                                                                                                        | Current build order, ADR 0004                             |
+| P12 | O-01: per-committee two-manager review. Owning manager flags a draft review-required; a different manager holding an active grant on the same committee approves the current revision; editing reviewed fields invalidates approval; non-flagged drafts publish with one manager | Owner decision, September 15, 2026, section 11            |
+| D01 | Platform event timezone Asia/Muscat; store UTC instant, display explicitly in Oman time                                                                                                                                                                                          | SQU context; one timezone avoids ambiguous local input    |
+| D02 | FIFO waitlist; manager promotes one at a time after confirming contact; no automatic offers/expiry                                                                                                                                                                               | Required waitlist, smallest operator-assisted fulfillment |
+| D03 | Supabase Auth identities plus explicit committee manager grants, independent of Member                                                                                                                                                                                           | NFR-03 and UC-01 deferral                                 |
+| D04 | Future published events retain public visibility when full; past events have a separate browsable list                                                                                                                                                                           | UC-02 discovery, permanent history                        |
+| D05 | Archive drafts or past events; no future published archive, cancellation, self-cancellation, transfers, or rescheduling after first entry in UC-02                                                                                                                               | Minimal reversible lifecycle                              |
+| D06 | Event details frozen at first entry except title/description/location corrections and safe capacity changes; audit and contact warning on corrections                                                                                                                            | Protect existing attendee commitments                     |
+| D07 | Anonymous writes only through the trusted Server Action and restricted database operation, never raw anon INSERT                                                                                                                                                                 | Closes observed rate-limit bypass                         |
+| D08 | Database row locks serialize seats and edits; normalized partial uniqueness handles duplicate races                                                                                                                                                                              | PostgreSQL guarantee, NFR-06                              |
+| D09 | Small cursor pages and event-scoped snapshot CSV; no global export or analytics                                                                                                                                                                                                  | Owner baseline, NFR-07                                    |
+| D10 | Required technical logging is isolated from attendee history; raw IP attempts expire after one hour                                                                                                                                                                              | ADR 0005 explicitly anticipates cleanup                   |
 
 **Excluded:** payments, ticket types, attachments/posters, private invitation
 events, recurring events, public accounts, public attendee lookup, marketing
@@ -200,17 +201,17 @@ for registration purposes. There is no end time in the approved model.
 | full, starts in future                                       | Full (manual hold)        | Deny                | Allow                         |
 | published or full, start <= database time                    | Past, registration closed | Deny                | Deny                          |
 
-| Transition/action              | Actor and guard                                                                            |
-| ------------------------------ | ------------------------------------------------------------------------------------------ |
-| Create -> draft                | Owning manager; all create fields valid                                                    |
-| draft -> published             | Owning publisher; future start; nonempty description; O-01 approval predicate unresolved   |
-| published -> full              | Owning manager; future event; confirmation warns that normal registration stops            |
-| full -> published              | Owning publisher; future event; O-01 predicate; capacity and queue still control admission |
-| published/full -> draft        | Only before any registration/waitlist entry; otherwise deny                                |
-| draft/past -> archived         | Owning manager; explicit confirmation; retain status, identity and history                 |
-| archived -> previous status    | Owning manager; restore draft or past only; never reopens a past event                     |
-| Edit event                     | Owning manager; expected revision matches; rules below                                     |
-| Hard delete event/registration | Deny all application actors                                                                |
+| Transition/action              | Actor and guard                                                                                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Create -> draft                | Owning manager; all create fields valid                                                                                                      |
+| draft -> published             | Owning publisher; future start; nonempty description; reviewRequired false, or approvedBy set by a different manager at the current revision |
+| published -> full              | Owning manager; future event; confirmation warns that normal registration stops                                                              |
+| full -> published              | Owning publisher; future event; same review predicate as draft->published; capacity and queue still control admission                        |
+| published/full -> draft        | Only before any registration/waitlist entry; otherwise deny                                                                                  |
+| draft/past -> archived         | Owning manager; explicit confirmation; retain status, identity and history                                                                   |
+| archived -> previous status    | Owning manager; restore draft or past only; never reopens a past event                                                                       |
+| Edit event                     | Owning manager; expected revision matches; rules below                                                                                       |
+| Hard delete event/registration | Deny all application actors                                                                                                                  |
 
 Create requires title (trimmed 1–200 code points), eventDate (valid future
 minute-precision instant), committeeId from a current manager grant; description
@@ -236,7 +237,10 @@ Capacity changes take the same event lock as registration/promotion and cannot
 go below the confirmed count. Removing capacity means unlimited, but preserves
 waitlist priority. No bulk automatic promotion on increasing capacity.
 All mutations use an expected integer revision and return CONFLICT if stale.
-No silent last-write-wins overwrite. Approval invalidation depends on O-01.
+No silent last-write-wins overwrite. Editing title/description/location/
+eventDate/capacity while reviewRequired is true clears approvedBy/approvedAt/
+approvedRevision under the same lock, forcing re-approval of the new revision;
+reviewRequired and flaggedBy are untouched by that edit.
 
 ## 5. Committee identity and administration
 
@@ -264,13 +268,13 @@ After login, an account without a live grant sees “No committee access assigne
 Logout clears cookies; expired sessions redirect to login with only an allowlisted
 internal return path. Authorization runs again inside every action/export.
 
-| Screen                           | Fields, states and operations                                                                                                                   |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| /admin/login                     | Email/password, pending, generic invalid credentials, reset request; no signup                                                                  |
-| /admin/events                    | Authorized committee selector, title/date/status, confirmed and waitlisted counts; filter draft/published/full/past/archived; cursor navigation |
-| /admin/events/new                | Title, description, Oman date/time, location, capacity, authorized committee; save draft                                                        |
-| /admin/events/[id]               | Current revision, edit form, publish/full/reopen/archive/restore, confirmation; approval area blocked by O-01                                   |
-| /admin/events/[id]/registrations | Confirmed/waitlisted tabs, name/email/time, counts, CSV; FIFO promotion in waitlist tab                                                         |
+| Screen                           | Fields, states and operations                                                                                                                             |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| /admin/login                     | Email/password, pending, generic invalid credentials, reset request; no signup                                                                            |
+| /admin/events                    | Authorized committee selector, title/date/status, confirmed and waitlisted counts; filter draft/published/full/past/archived; cursor navigation           |
+| /admin/events/new                | Title, description, Oman date/time, location, capacity, authorized committee; save draft                                                                  |
+| /admin/events/[id]               | Current revision, edit form, mark/unmark review-required, approve (only a different committee manager), publish/full/reopen/archive/restore, confirmation |
+| /admin/events/[id]/registrations | Confirmed/waitlisted tabs, name/email/time, counts, CSV; FIFO promotion in waitlist tab                                                                   |
 
 No search in first release: pagination plus event/status filters satisfy current
 scope without indexing attendee names/emails for speculative search.
@@ -342,12 +346,14 @@ active duplicate, start time, admission/intent, atomic commit.
 Admin precedence: authentication, scoped authorization (missing/foreign -> NOT_FOUND),
 validation, revision, business guards, commit. Admin codes: SUCCESS,
 AUTH_REQUIRED, FORBIDDEN (no grants), NOT_FOUND, VALIDATION_ERROR, CONFLICT,
-APPROVAL_REQUIRED (pending O-01), INVALID_TRANSITION, CAPACITY_BELOW_COUNT,
-QUEUE_ORDER_CONFLICT, REGISTRATION_CLOSED, EVENT_FULL, EXPORT_LIMIT_EXCEEDED,
-SERVER_ERROR.
+APPROVAL_REQUIRED (reviewRequired true and not approved at the current
+revision), SELF_APPROVAL_DENIED (actor equals flaggedBy), INVALID_TRANSITION,
+CAPACITY_BELOW_COUNT, QUEUE_ORDER_CONFLICT, REGISTRATION_CLOSED, EVENT_FULL,
+EXPORT_LIMIT_EXCEEDED, SERVER_ERROR.
 Promoting an already-confirmed row returns SUCCESS with no second audit mutation;
-stale form edits return CONFLICT and require reloading. Authorization always
-precedes this idempotency check.
+stale form edits return CONFLICT and require reloading. Re-approving an
+already-current approval is likewise SUCCESS with no second audit row.
+Authorization always precedes these idempotency checks.
 
 ## 8. Abuse protection, privacy and audit
 
@@ -431,27 +437,43 @@ Consulted September 15, 2026:
 
 No industry source selects the society's board/committee approval authority.
 
-## 11. Owner decision required
+## 11. O-01 — finalized approval model
 
 **O-01 — Which events need approval, and who approves?**
 Requirements p7 says some events may require board or committee approval.
-No current document defines the classification or who has that authority.
+Answered by the owner on September 15, 2026: per-committee two-manager review,
+the concrete proposal below. This section is now the specification for that
+behavior, not an open question; the companion contracts implement it.
 
-Concrete proposal (NOT ADOPTED until answered): the owning manager marks a
-draft review-required; a different currently authorized manager of that
-committee approves the current revision; board participants need an explicit
-committee grant rather than global access. Changes to reviewed event details
-invalidate approval. A required-review event cannot publish with one manager
-only. Non-review drafts may publish directly.
+- `reviewRequired` is a boolean on the draft, default false, set by the owning
+  manager. Setting/unsetting it uses the same guard as any other draft edit
+  (an active grant on the event's committee) and is audited like any edit; it
+  is not a separate privileged capability.
+- Publishing (draft->published or full->published) requires `reviewRequired`
+  false, OR `approvedBy` set by a manager who is not `flaggedBy`, with
+  `approvedRevision` equal to the event's current `revision`. Otherwise the
+  operation returns APPROVAL_REQUIRED.
+- Approve is a distinct admin action, separate from edit and publish. It
+  requires an active grant on the event's committee, `reviewRequired` true,
+  and the actor is not `flaggedBy` (self-approval returns SELF_APPROVAL_DENIED).
+  It sets `approvedBy`/`approvedAt`/`approvedRevision` to the actor, now, and
+  the current revision. Re-approving an already-current approval is idempotent
+  SUCCESS with no second audit row, matching the waitlist-promotion pattern.
+- Editing title/description/location/eventDate/capacity while `reviewRequired`
+  is true clears `approvedBy`/`approvedAt`/`approvedRevision` under the same
+  lock as the edit ("invalidation"). `reviewRequired` and `flaggedBy` are
+  untouched, so the same reviewer relationship stands but must re-approve the
+  new revision.
+- Board participants are not a separate role: approving requires the same
+  explicit `committee_managers` grant on that exact committee as any other
+  manager action (D03). There is no global board override and no
+  deny-by-default placeholder counts as completing this workflow.
+- Audit action names: `event.review_flagged`, `event.review_unflagged`,
+  `event.approved` (data contract section 5).
 
-Alternative: require independent review of every event. The owner may instead
-specify event categories or named board approvers.
-
-Depends on this answer: review-required determination, approval actor matrix,
-review fields/constraints, revision invalidation after publication, draft
-submission/approval UI, approval RLS, publish operation and its tests.
-These items are deliberately pending in the companion contracts. No deny-by-default
-placeholder counts as having completed the required approval workflow.
+Exact fields, constraints, RLS cells, routine changes and test IDs are in the
+[data/security contract](UC-02_Data_and_Security.md) and the
+[acceptance/delivery plan](UC-02_Acceptance_and_Delivery.md).
 
 ## 12. Release prerequisites (not new product defaults)
 
@@ -486,10 +508,11 @@ Passing the specification gate does not mean those implementation tests pass.
 - [x] Non-approval data contracts, schema changes and state transitions explicit.
 - [x] Non-approval authorization/RLS matrices and positive/negative tests explicit.
 - [x] Acceptance criteria, test matrix and milestone prerequisites written.
-- [ ] O-01 answered and dependent admin flow/lifecycle/fields/permissions/tests finalized.
-- [ ] Final cross-document review confirms no unresolved required behavior.
+- [x] O-01 answered and dependent admin flow/lifecycle/fields/permissions/tests finalized.
+- [x] Final cross-document review confirms no unresolved required behavior.
 - [ ] Complete specification committed/pushed and CI verified.
 
-Until all boxes pass, this revision is a specification checkpoint, not a
-completed freeze. Continue independent specification work; application
-implementation remains gated by the owner's explicit session instruction.
+The last box is checked in a follow-up commit once the pushed specification
+commit is confirmed green in CI (recorded in the acceptance/delivery
+completion evidence ledger and ADR 0008). Until then this revision is
+committed but not yet a confirmed freeze; M1 does not start before it is.

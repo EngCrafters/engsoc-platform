@@ -1,9 +1,11 @@
 # UC-02 acceptance criteria, tests, and delivery plan
 
-Revision 2, September 15, 2026. Behavior:
+Revision 3, September 15, 2026. Behavior:
 [deep dive](UC-02_Deep_Dive.md). Fields/security:
 [data contract](UC-02_Data_and_Security.md).
-**Specification checkpoint; O-01 approval policy prevents freeze.**
+**O-01 answered September 15, 2026 (per-committee two-manager review); freeze
+confirmed once this commit is pushed and CI is verified green (deep dive
+section 15).**
 Test definitions below are requirements, not claims of implemented coverage.
 
 ## 1. Acceptance criteria
@@ -82,21 +84,21 @@ These pairs are mandatory, even when business operations have unit tests.
 Use actual anon and authenticated clients/JWTs; setup authority never counts
 as an authorization assertion. No private production fixtures.
 
-| Boundary                  | Positive assertion                                 | Negative assertion                                                       |
-| ------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
-| Public event rows/columns | Read safe fields of published/full event           | Draft/archive/private column inaccessible (A03/A29)                      |
-| Anonymous write route     | Valid action persists accountless entry            | Raw API and private routine cannot bypass limiter (A04/A28/A58)          |
-| Capacity lock             | Last eligible place confirms                       | Competing seat is denied; post-start lock wait denied (A12/A23)          |
-| Email uniqueness          | Different event/email can register                 | Same normalized event/email concurrent insert cannot duplicate (A08–A11) |
-| Auth identity             | Provisioned manager sees own committee             | Invalid/no-grant/forged metadata denied (A30–A34)                        |
-| Manager scope             | Own events/registrations/export visible            | Other committee rows/joins/counts absent (A30)                           |
-| Membership table          | User can read own grants                           | Cannot read others or self-grant/reactivate (A31/A32)                    |
-| Waitlist                  | Explicit joining and first-person promotion work   | Queue jump/capacity bypass/member attachment denied (A15–A21/A28)        |
-| Audit                     | Authorized mutation creates one audit              | Runtime rewrite/delete denied; failed audit aborts change (A40/A58)      |
-| Private bookkeeping       | Trusted limiter records and job expires attempts   | anon/auth cannot read IPs or reset limiter (A25/A52/A58)                 |
-| Future tables             | Authorized maintenance can verify fixture presence | anon/auth cannot read or mutate Member/Certificate/Archive/Mentorship    |
-| Export                    | Own scoped snapshot downloads                      | Cross-scope, formula execution and partial failure blocked (A43–A46)     |
-| Publication approval      | Pending O-01                                       | Pending O-01; not satisfied by universal deny                            |
+| Boundary                  | Positive assertion                                       | Negative assertion                                                       |
+| ------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Public event rows/columns | Read safe fields of published/full event                 | Draft/archive/private column inaccessible (A03/A29)                      |
+| Anonymous write route     | Valid action persists accountless entry                  | Raw API and private routine cannot bypass limiter (A04/A28/A58)          |
+| Capacity lock             | Last eligible place confirms                             | Competing seat is denied; post-start lock wait denied (A12/A23)          |
+| Email uniqueness          | Different event/email can register                       | Same normalized event/email concurrent insert cannot duplicate (A08–A11) |
+| Auth identity             | Provisioned manager sees own committee                   | Invalid/no-grant/forged metadata denied (A30–A34)                        |
+| Manager scope             | Own events/registrations/export visible                  | Other committee rows/joins/counts absent (A30)                           |
+| Membership table          | User can read own grants                                 | Cannot read others or self-grant/reactivate (A31/A32)                    |
+| Waitlist                  | Explicit joining and first-person promotion work         | Queue jump/capacity bypass/member attachment denied (A15–A21/A28)        |
+| Audit                     | Authorized mutation creates one audit                    | Runtime rewrite/delete denied; failed audit aborts change (A40/A58)      |
+| Private bookkeeping       | Trusted limiter records and job expires attempts         | anon/auth cannot read IPs or reset limiter (A25/A52/A58)                 |
+| Future tables             | Authorized maintenance can verify fixture presence       | anon/auth cannot read or mutate Member/Certificate/Archive/Mentorship    |
+| Export                    | Own scoped snapshot downloads                            | Cross-scope, formula execution and partial failure blocked (A43–A46)     |
+| Publication approval      | Different-manager approval at current revision publishes | Self-approval, stale-revision, or unresolved review denied (A57)         |
 
 For future-scope tables, the positive control uses fixture existence under
 maintenance authority only to prove the negative query isn't testing an empty
