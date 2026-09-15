@@ -200,7 +200,23 @@ All new acceptance tests above remain TO IMPLEMENT.
 commit `9c5b7330ac0af49ce316c6631f1dcbc0902e650b`; CI run verified green:
 https://github.com/EngCrafters/engsoc-platform/actions/runs/34987629797;
 cross-document consistency review completed (deep dive section 15). This
-closes M0. Implementation completion must still record the migration versions
-per environment, runtime role test results, app/CI/deployment SHA, E2E results
-and any independently blocked release action. Never mark a blanket-deny
-policy as completion of an intended allow behavior.
+closes M0.
+
+**M1 evidence (September 15, 2026):** environment map confirmed staging
+(`wnrdgnmmcdedmilnzzsl`, 3 migrations applied, RLS + 2 policies, 4 events / 11
+registrations / 1 committee) and main (`rbeyqrfypowyocmnmvwu`, 2 migrations
+applied, RLS disabled on all 8 tables, 0 rows everywhere — confirms the
+existing release blocker, not a new one). A54/A55/A60 preflight proof
+recorded in the data/security contract §10. Two open follow-ups from this
+rehearsal, neither blocking M2: (1) the local `.env.local` currently points
+`DATABASE_URL`/`NEXT_PUBLIC_SUPABASE_URL` at the main project rather than
+staging, contrary to the README's own contributor instructions — recommend
+repointing local dev at staging and reserving main's credentials for
+controlled migration work only; (2) `tests/rls-staging-anon.test.ts`'s
+already-documented fixture leak (11 rows and growing) should be resolved by
+adding a staging service-role key as a CI secret, or the accumulated rows
+purged, before it affects M2's duplicate-migration preflight. Implementation
+completion must still record the migration versions per environment, runtime
+role test results, app/CI/deployment SHA, E2E results and any independently
+blocked release action. Never mark a blanket-deny policy as completion of an
+intended allow behavior.

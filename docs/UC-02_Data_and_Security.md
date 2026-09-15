@@ -453,9 +453,32 @@ cross public rendering boundaries. API success never means just “query queued.
    with migration actor, never a fabricated human or date.
 6. Create executor/runtime privileges, fixed routines, all RLS, audit and
    immutable-domain guards in the same migration set. Revoke legacy anon
-   INSERT atomically with the replacement boundary.
+   INSERT atomically with the replacement boundary. M1 rehearsal (below)
+   confirmed anon/authenticated currently hold Supabase's platform-default
+   ALL-privileges grant on every public table on both staging and main; this
+   grant is not produced by any tracked migration (0000/0001/0002 grant
+   nothing to these roles), so a fresh environment built from our history
+   alone would not reproduce it. This migration must explicitly REVOKE those
+   default grants from anon/authenticated on every business table, not only
+   add the new restricted routine, or the safety boundary continues to rest
+   entirely on RLS default-deny rather than on grants the migration owns.
 7. Verify constraints/grants with actual anon/authenticated/runtime roles.
    Reconcile Supabase/Drizzle applied versions in a committed deployment record.
+
+**M1 rehearsal evidence (September 15, 2026):** a disposable local Postgres 17
+container (matching both projects' engine version) replayed 0000/0001/0002
+after creating the anon/authenticated/service_role roles Supabase provisions
+by default; resulting RLS-enabled state, the 2 existing policies, and full
+column/type/default shape matched staging's live schema exactly (A55). A
+second isolated container received a pg_dump/pg_restore of the first,
+including seeded fixture rows; RLS, policies and row data (including a null
+memberId) survived intact with zero writes to any hosted project (A60). A
+duplicate-group preflight against staging's live registrations (A54) found
+exactly one group — 11 rows, all the RLS test suite's own documented
+`vitest-rls-test@example.com` fixture (tests/rls-staging-anon.test.ts, which
+already notes it cannot clean up without a staging service-role key) — no
+other ambiguous or real duplicate exists. Both containers were removed after
+the rehearsal; no artifact was left running.
 
 Apply first to a disposable test database and the confirmed staging project.
 Production remains a separate authorized release action; current operating
