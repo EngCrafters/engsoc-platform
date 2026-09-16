@@ -66,6 +66,11 @@ for the full contract these implement.
 change: it serializes attempts per IP with a transaction advisory lock and
 enforces the rolling five-attempt limit inside the trusted database boundary.
 
+`0006_uc02_enable_rls_all_tables.sql` reconciles the historical environment
+split: main did not receive staging-only migration `0002`, so this forward
+migration enables and forces RLS across all public domain tables. Deferred
+tables have no policies and are therefore default-deny.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.
