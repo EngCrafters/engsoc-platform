@@ -59,6 +59,7 @@ jobs:
           # this project.
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          APP_RUNTIME_DATABASE_URL: postgres://app_runtime:placeholder@127.0.0.1:5432/uc02_test
 
   commitlint:
     name: Check commit messages

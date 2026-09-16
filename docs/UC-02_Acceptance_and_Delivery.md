@@ -263,6 +263,16 @@ check, and production build pass. Deployment remains gated on configuring the
 restricted runtime credential in the serving environment and applying the
 forward routine migration there through the approved database procedure.
 
+**M3 completion evidence (September 16, 2026):** application runtime now
+requires `APP_RUNTIME_DATABASE_URL`; `DATABASE_URL` remains migration/admin
+tooling only. The action rejects duplicate or unexpected domain form keys,
+accepts only Vercel's protected `x-vercel-forwarded-for` in production, ignores
+generic forwarding headers, and returns the safe invalid-IP result for
+missing/malformed protected values; development uses loopback. Server Action
+bodies are capped at 64 KiB. Dedicated action-boundary tests cover singular and
+duplicate inputs, trusted/spoofed headers, development behavior, safe routine
+errors, and retry outcomes; the database/RLS regression suite remains green.
+
 **Staging follow-up (September 16, 2026):** `0005` was applied to staging
 after Supabase MCP OAuth was reauthorized. A freshly rotated staging
 `app_runtime` credential was tested through the shared transaction pooler:

@@ -12,16 +12,21 @@ import * as schema from "./schema";
 // connection being handed to a different backend session between queries,
 // so they must stay unnamed. See the Supabase Postgres best-practices skill,
 // "Use Prepared Statements Correctly with Pooling."
-const client = postgres(
-  process.env.APP_RUNTIME_DATABASE_URL ?? process.env.DATABASE_URL!,
-  {
-    // Vercel functions are short-lived and this URL targets Supabase's
-    // transaction pooler: cap each warm instance at one connection, do not
-    // use prepared statements, and refuse an unencrypted connection.
-    max: 1,
-    prepare: false,
-    ssl: "require",
-  }
-);
+const runtimeDatabaseUrl = process.env.APP_RUNTIME_DATABASE_URL;
+
+if (!runtimeDatabaseUrl) {
+  throw new Error(
+    "APP_RUNTIME_DATABASE_URL is required for runtime database access."
+  );
+}
+
+const client = postgres(runtimeDatabaseUrl, {
+  // Vercel functions are short-lived and this URL targets Supabase's
+  // transaction pooler: cap each warm instance at one connection, do not
+  // use prepared statements, and refuse an unencrypted connection.
+  max: 1,
+  prepare: false,
+  ssl: "require",
+});
 
 export const db = drizzle(client, { schema });

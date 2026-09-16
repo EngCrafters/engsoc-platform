@@ -31,27 +31,53 @@ export const initialRegisterActionState: RegisterActionState = {
 // in local dev, where nothing sets this header; every local request then
 // shares one rate-limit bucket, which is fine, this only matters once
 // there's a real proxy in front of the app.
-function getClientIp(headersList: Awaited<ReturnType<typeof headers>>): string {
-  const forwardedFor = headersList.get("x-forwarded-for");
-  if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first && isIP(first) !== 0) return first;
-  }
-  const realIp = headersList.get("x-real-ip");
-  if (realIp && isIP(realIp) !== 0) return realIp;
+async function getClientIp(headersList: Headers): Promise<string> {
+  const forwardedFor = headersList.get("x-vercel-forwarded-for")?.trim();
+  if (forwardedFor && isIP(forwardedFor) !== 0) return forwardedFor;
   return process.env.NODE_ENV === "development" ? "127.0.0.1" : "invalid";
+}
+
+function getSingleTextField(
+  formData: FormData,
+  name: string
+): string | undefined {
+  const values = formData.getAll(name);
+  return values.length === 1 && typeof values[0] === "string"
+    ? values[0]
+    : undefined;
+}
+
+function hasUnexpectedDomainFields(formData: FormData) {
+  const allowed = new Set([
+    "eventId",
+    "attendeeName",
+    "attendeeEmail",
+    "intent",
+  ]);
+  return [...formData.keys()].some(
+    (name) => !allowed.has(name) && !name.startsWith("$ACTION_")
+  );
 }
 
 export async function registerForEventAction(
   _prevState: RegisterActionState,
   formData: FormData
 ): Promise<RegisterActionState> {
-  const eventId = String(formData.get("eventId") ?? "");
-  const attendeeName = String(formData.get("attendeeName") ?? "");
-  const attendeeEmail = String(formData.get("attendeeEmail") ?? "");
-  const intentValue = String(formData.get("intent") ?? "register");
+  const eventId = getSingleTextField(formData, "eventId");
+  const attendeeName = getSingleTextField(formData, "attendeeName");
+  const attendeeEmail = getSingleTextField(formData, "attendeeEmail");
+  const intentValue = getSingleTextField(formData, "intent");
+  if (
+    !eventId ||
+    !attendeeName ||
+    !attendeeEmail ||
+    !intentValue ||
+    hasUnexpectedDomainFields(formData)
+  ) {
+    return { status: "error", error: "invalid_input" };
+  }
   const intent = intentValue === "join_waitlist" ? "join_waitlist" : "register";
-  const ipAddress = getClientIp(await headers());
+  const ipAddress = await getClientIp(await headers());
 
   const result = await registerForEvent({
     eventId,
