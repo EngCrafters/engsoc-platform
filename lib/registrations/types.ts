@@ -40,7 +40,8 @@ export type RegisterForEventError =
   | "invalid_intent"
   | "invalid_ip"
   | "invalid_input"
-  | "server_error";
+  | "server_error"
+  | "registration_available";
 
 export type RegisterForEventSuccess =
   { ok: true; waitlisted?: false } | { ok: true; waitlisted: true };

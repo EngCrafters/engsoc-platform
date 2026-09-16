@@ -258,6 +258,16 @@ check, and production build pass. Deployment remains gated on configuring the
 restricted runtime credential in the serving environment and applying the
 forward routine migration there through the approved database procedure.
 
+**M4 public experience evidence (September 16, 2026):** the public list now
+links each event to a dynamic `/events/[id]` detail page with Muscat timezone
+formatting, accessible registration copy, and explicit register/waitlist
+submit intents. Unknown or non-public IDs resolve through the same public
+not-found boundary. The routine contract returns `REGISTRATION_AVAILABLE` when
+a stale waitlist action is submitted after capacity reopens. Local lint,
+type-check, unit tests, and production build pass; browser E2E remains in the
+planned test matrix and runtime registration remains gated by the serving
+database credential/migration prerequisites above.
+
 Implementation completion must still record the migration versions per
 environment, runtime role test results, app/CI/deployment SHA, E2E results
 and any independently blocked release action. Never mark a blanket-deny

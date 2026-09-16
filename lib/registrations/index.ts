@@ -65,6 +65,8 @@ export async function registerForEvent(
         return { ok: false, error: "registration_closed" };
       case "EVENT_FULL":
         return { ok: false, error: "event_full" };
+      case "REGISTRATION_AVAILABLE":
+        return { ok: false, error: "registration_available" };
       case "RATE_LIMITED":
         return { ok: false, error: "rate_limited" };
       case "VALIDATION_ERROR":

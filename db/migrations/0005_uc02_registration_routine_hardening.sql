@@ -19,6 +19,7 @@ DECLARE
   v_recent_attempts integer;
   v_confirmed_count integer;
   v_waitlist_pending boolean;
+  v_event_full boolean;
   v_existing record;
   v_new_id uuid;
   v_status public.registration_status;
@@ -72,14 +73,19 @@ BEGIN
     WHERE event_id = p_event_id AND status = 'waitlisted'
   ) INTO v_waitlist_pending;
 
+  v_event_full := v_event.status = 'full'
+    OR (v_event.capacity IS NOT NULL AND v_confirmed_count >= v_event.capacity)
+    OR v_waitlist_pending;
+
   IF p_intent = 'register' THEN
-    IF v_event.status = 'full'
-       OR (v_event.capacity IS NOT NULL AND v_confirmed_count >= v_event.capacity)
-       OR v_waitlist_pending THEN
+    IF v_event_full THEN
       RETURN jsonb_build_object('code', 'EVENT_FULL');
     END IF;
     v_status := 'confirmed';
   ELSE
+    IF NOT v_event_full THEN
+      RETURN jsonb_build_object('code', 'REGISTRATION_AVAILABLE');
+    END IF;
     v_status := 'waitlisted';
   END IF;
 

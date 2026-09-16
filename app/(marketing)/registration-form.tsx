@@ -25,9 +25,16 @@ const ERROR_MESSAGES: Record<RegisterForEventError, string> = {
   invalid_ip: "We couldn't verify this request. Try again.",
   invalid_input: "Check the form and try again.",
   server_error: "We couldn't confirm the result. Try again.",
+  registration_available: "Registration is open — choose Register instead.",
 };
 
-export function RegistrationForm({ eventId }: { eventId: string }) {
+export function RegistrationForm({
+  eventId,
+  showWaitlist = false,
+}: {
+  eventId: string;
+  showWaitlist?: boolean;
+}) {
   const [state, formAction, isPending] = useActionState(
     registerForEventAction,
     initialRegisterActionState
@@ -65,11 +72,24 @@ export function RegistrationForm({ eventId }: { eventId: string }) {
       />
       <button
         type="submit"
+        name="intent"
+        value="register"
         disabled={isPending}
         className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {isPending ? "Registering…" : "Register"}
       </button>
+      {showWaitlist ? (
+        <button
+          type="submit"
+          name="intent"
+          value="join_waitlist"
+          disabled={isPending}
+          className="rounded border border-neutral-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          {isPending ? "Submitting…" : "Join waitlist"}
+        </button>
+      ) : null}
       {state.status === "error" ? (
         <p className="text-sm text-red-600 sm:basis-full">
           {ERROR_MESSAGES[state.error]}

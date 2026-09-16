@@ -4,6 +4,7 @@
 // repo instead of a separate one.
 
 import { getPublishedEvents } from "@/lib/events";
+import Link from "next/link";
 import { RegistrationForm } from "./registration-form";
 
 // Without this, Next.js would statically prerender this page at build
@@ -34,7 +35,11 @@ export default async function MarketingHomePage() {
               key={event.id}
               className="rounded-lg border border-neutral-200 p-4"
             >
-              <h2 className="font-medium">{event.title}</h2>
+              <h2 className="font-medium">
+                <Link href={`/events/${event.id}`} className="underline">
+                  {event.title}
+                </Link>
+              </h2>
               <p className="text-sm text-neutral-500">
                 {event.eventDate.toLocaleString("en-US", {
                   dateStyle: "medium",
