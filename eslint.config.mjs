@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local agent skills are intentionally untracked workspace tooling, not
+    // application source. Keep ESLint focused on the repository contract.
+    ".agents/**",
+    ".claude/skills/**",
+    ".codex/**",
   ]),
 ]);
 

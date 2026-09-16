@@ -13,6 +13,19 @@ jobs:
   lint-and-build:
     name: Lint, type-check, test, build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: uc02_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d uc02_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +45,7 @@ jobs:
       - name: Test (staging RLS — see docs/adr/0006)
         run: npm run test
         env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/uc02_test
           # Public by design (the anon key, protected by RLS, not secrecy)
           # — same reasoning as the NEXT_PUBLIC_* values below.
           STAGING_SUPABASE_URL: https://wnrdgnmmcdedmilnzzsl.supabase.co

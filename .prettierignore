@@ -1,4 +1,11 @@
-node_modules
-.next
-db/migrations
-public
+# User-local agent skills are not repository source. Keep formatting checks
+# deterministic without deleting or rewriting local tooling.
+.agents/
+.claude/skills/*
+!.claude/skills/README.md
+!.claude/skills/implement-use-case/
+!.claude/skills/implement-use-case/SKILL.md
+.codex/
+.next/
+node_modules/
+skills-lock.json

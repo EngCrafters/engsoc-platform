@@ -11,9 +11,10 @@ Object.assign(process.env, loadEnv("", process.cwd(), ""));
 export default defineConfig({
   test: {
     environment: "node",
+    globalSetup: ["./tests/db/global-setup.ts"],
     // These tests hit the real staging Supabase project over the network
     // (see tests/rls-staging-anon.test.ts) — the default 5s timeout is
     // sometimes too tight for that.
-    testTimeout: 15000,
+    testTimeout: 30000,
   },
 });

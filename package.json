@@ -12,7 +12,9 @@
     "db:studio": "drizzle-kit studio",
     "prepare": "husky",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "format:check": "prettier --check .",
+    "db:check": "drizzle-kit check"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

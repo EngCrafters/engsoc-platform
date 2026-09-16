@@ -80,12 +80,8 @@
           "name": "archive_items_uploaded_by_members_id_fk",
           "tableFrom": "archive_items",
           "tableTo": "members",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -133,12 +129,8 @@
           "name": "certificates_registration_id_registrations_id_fk",
           "tableFrom": "certificates",
           "tableTo": "registrations",
-          "columnsFrom": [
-            "registration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registration_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -148,9 +140,7 @@
         "certificates_registration_id_unique": {
           "name": "certificates_registration_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "registration_id"
-          ]
+          "columns": ["registration_id"]
         }
       },
       "policies": {},
@@ -182,9 +172,7 @@
         "committees_name_unique": {
           "name": "committees_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -254,12 +242,8 @@
           "name": "events_committee_id_committees_id_fk",
           "tableFrom": "events",
           "tableTo": "committees",
-          "columnsFrom": [
-            "committee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["committee_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -333,16 +317,12 @@
         "members_email_unique": {
           "name": "members_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         },
         "members_university_id_unique": {
           "name": "members_university_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "university_id"
-          ]
+          "columns": ["university_id"]
         }
       },
       "policies": {},
@@ -394,12 +374,8 @@
           "name": "mentorship_connections_graduate_id_members_id_fk",
           "tableFrom": "mentorship_connections",
           "tableTo": "members",
-          "columnsFrom": [
-            "graduate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["graduate_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -407,12 +383,8 @@
           "name": "mentorship_connections_member_id_members_id_fk",
           "tableFrom": "mentorship_connections",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -485,12 +457,8 @@
           "name": "registrations_member_id_members_id_fk",
           "tableFrom": "registrations",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -498,12 +466,8 @@
           "name": "registrations_event_id_events_id_fk",
           "tableFrom": "registrations",
           "tableTo": "events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -519,43 +483,27 @@
     "public.archive_source": {
       "name": "archive_source",
       "schema": "public",
-      "values": [
-        "native",
-        "migrated"
-      ]
+      "values": ["native", "migrated"]
     },
     "public.archive_type": {
       "name": "archive_type",
       "schema": "public",
-      "values": [
-        "project",
-        "magazine"
-      ]
+      "values": ["project", "magazine"]
     },
     "public.event_status": {
       "name": "event_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "published",
-        "full"
-      ]
+      "values": ["draft", "published", "full"]
     },
     "public.member_status": {
       "name": "member_status",
       "schema": "public",
-      "values": [
-        "member",
-        "graduate"
-      ]
+      "values": ["member", "graduate"]
     },
     "public.mentorship_status": {
       "name": "mentorship_status",
       "schema": "public",
-      "values": [
-        "requested",
-        "confirmed"
-      ]
+      "values": ["requested", "confirmed"]
     }
   },
   "schemas": {},

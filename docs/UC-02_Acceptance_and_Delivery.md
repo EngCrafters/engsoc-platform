@@ -167,10 +167,11 @@ order; no split-repository implementation.
 
 ## 5. Quality and release gates
 
-Repository commands: npm run lint; npm run typecheck; npm run test;
-npm run build; npx drizzle-kit check --config drizzle.config.ts.
-Use Prettier on changed docs and git diff --check. Add future database/E2E
-commands when their test runners are implemented; do not claim they exist now.
+Repository commands: npm run format:check; npm run lint; npm run typecheck;
+npm run test; npm run db:check; npm run build. The database suite is a
+reproducible isolated PostgreSQL 17 harness documented in `tests/db/README.md`;
+it applies the actual migration chain and never targets a Supabase project.
+Use Prettier on changed docs and git diff --check.
 CI must require the applicable new suites before UC-02 completion.
 
 Real environment prerequisites:
@@ -191,9 +192,9 @@ Real environment prerequisites:
 ## 6. Completion evidence ledger
 
 At this checkpoint: source PDFs/diagrams, code, migrations, staging schema/RLS
-and main-project RLS were inspected. No new application code or migration
-has been created. Existing tests cover only the historical staging policy.
-All new acceptance tests above remain TO IMPLEMENT.
+and main-project RLS were inspected. M2 database/security regression coverage
+is maintained as executable evidence; later public/admin acceptance coverage
+remains dependency-gated by its owning milestone.
 
 **Freeze evidence:** owner O-01 answer recorded September 15, 2026
 (per-committee two-manager review, deep dive section 11); final specification
@@ -240,8 +241,12 @@ M1-finding default grants are revoked, not just narrowed by RLS) and passes
 8/8 against live staging. `lib/registrations` was updated to translate the
 new partial-unique-index violation into `already_registered` instead of
 crashing (M2 changed database behavior that pre-existing app code didn't
-anticipate). Lint, typecheck, `drizzle-kit check`, and production build all
-pass. Main was not touched. This closes M2's atomic database contract; M3
+anticipate). The durable regression suite applies migrations `0000` through
+`0006` to a fresh PostgreSQL 17 test database and proves actual runtime grants,
+authenticated committee RLS, routines, audit rollback, normalized duplicate
+races, final-seat concurrency, and FIFO promotion. The historical live staging
+anon-RLS suite remains separate and runs unchanged. This closes M2's atomic
+database contract; M3
 (public server boundary) wires `lib/events`/`lib/registrations` to call
 these routines through `app_runtime` instead of the direct privileged
 connection.
