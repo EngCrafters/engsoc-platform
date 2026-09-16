@@ -266,6 +266,19 @@ execute only the fixed registration routine (a non-existent event safely
 returned `EVENT_NOT_FOUND`). No credential is recorded in source, logs, or
 this document. The serving main database remains intentionally unchanged.
 
+**Serving-environment cutover (September 16, 2026):** after confirming it
+contained zero events and registrations, main received the UC-02 forward
+migration chain (`0003` through `0006`). `0006` closes the historical
+staging/main RLS gap by enabling and forcing RLS on every domain table.
+`app_runtime` was immediately rotated to a fresh secret and independently
+verified through the transaction pooler: it cannot directly read events or
+insert registrations, but it can execute `private.register_for_event` and
+receives the safe `EVENT_NOT_FOUND` result for an unknown ID. The credential
+is production-only in Vercel and never recorded in source. The redeployed
+production URL returned HTTP 200; an unknown event route returned HTTP 404.
+The main event catalog is intentionally empty, so no production attendee or
+registration mutation was made during this verification.
+
 **M4 public experience evidence (September 16, 2026):** the public list now
 links each event to a dynamic `/events/[id]` detail page with Muscat timezone
 formatting, accessible registration copy, and explicit register/waitlist
