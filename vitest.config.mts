@@ -1,5 +1,6 @@
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
+import path from "node:path";
 
 // Vitest doesn't read .env.local the way Next.js does — load it explicitly
 // so tests/rls-staging-anon.test.ts can see STAGING_SUPABASE_URL /
@@ -9,6 +10,9 @@ import { defineConfig } from "vitest/config";
 Object.assign(process.env, loadEnv("", process.cwd(), ""));
 
 export default defineConfig({
+  resolve: {
+    alias: { "@": path.resolve(import.meta.dirname) },
+  },
   test: {
     exclude: ["tests/e2e/**", "node_modules/**"],
     environment: "node",

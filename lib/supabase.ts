@@ -1,11 +1,11 @@
-// Two clients, on purpose:
+// Public and privileged infrastructure clients, on purpose:
 //
 // - `supabaseBrowser`: uses the public anon key, safe to use in client
 //   components, respects Row Level Security.
-// - `supabaseServer`: uses the service role key, full access, only ever use
-//   this on the server (route handlers, server actions), never in a client
-//   component. This is what bypasses Row Level Security, so it's exactly
-//   the kind of thing Hisham reviews carefully.
+// - `supabaseServer`: uses the service role key. It is reserved for explicit
+//   maintenance tooling. Normal application runtime access uses the restricted
+//   `app_runtime` connection in `lib/db.ts`; logged-in admin requests use the
+//   caller-scoped cookie client in `lib/auth/server.ts`.
 
 import { createClient } from "@supabase/supabase-js";
 

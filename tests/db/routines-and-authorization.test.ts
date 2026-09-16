@@ -228,6 +228,38 @@ describe("UC-02 private routines and authorization", () => {
     });
   });
 
+  it("re-evaluates a revoked manager grant and prevents self-grant changes", async () => {
+    const fixture = await createFixture(admin, { status: "published" });
+
+    const beforeRevocation = await asAuthenticated(
+      admin,
+      fixture.managerId,
+      async () =>
+        admin`SELECT id FROM public.events WHERE id = ${fixture.eventId}`
+    );
+    expect(beforeRevocation).toHaveLength(1);
+
+    await asAuthenticated(admin, fixture.managerId, async () => {
+      await expect(
+        admin`UPDATE public.committee_managers SET revoked_at = now(), revoked_by = ${fixture.managerId} WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}`
+      ).rejects.toMatchObject({ code: "42501" });
+    });
+
+    await admin`
+      UPDATE public.committee_managers
+      SET revoked_at = now(), revoked_by = ${fixture.managerId}
+      WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}
+    `;
+
+    const afterRevocation = await asAuthenticated(
+      admin,
+      fixture.managerId,
+      async () =>
+        admin`SELECT id FROM public.events WHERE id = ${fixture.eventId}`
+    );
+    expect(afterRevocation).toHaveLength(0);
+  });
+
   it("writes one audit row on success, none on failed transitions, and rolls back audit with business data", async () => {
     const fixture = await createFixture(admin, { status: "published" });
     const before =

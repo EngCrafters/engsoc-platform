@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import postgres from "postgres";
-import type { FullConfig } from "@playwright/test";
 import databaseSetup from "../db/global-setup";
 import {
   E2E_COMMITTEE,
@@ -40,7 +39,7 @@ function runToCompletion(
   });
 }
 
-export default async function globalSetup(_config: FullConfig) {
+export default async function globalSetup() {
   const teardownDatabase = await databaseSetup();
   const admin = postgres(process.env.TEST_DATABASE_URL!, {
     max: 1,
