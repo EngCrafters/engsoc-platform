@@ -21,6 +21,9 @@ export type RegisterForEventInput = {
  * - "invalid_name" / "invalid_email" / "invalid_event" are basic input
  *   validation, not a use-case flow, just the minimum needed before
  *   trusting the input enough to write it.
+ * - "already_registered" surfaces the partial unique index added in M2
+ *   (docs/UC-02_Data_and_Security.md section 3) — a genuine concurrent
+ *   duplicate insert, not something this code decides on its own.
  */
 export type RegisterForEventError =
   | "invalid_name"
@@ -29,7 +32,8 @@ export type RegisterForEventError =
   | "event_not_found"
   | "event_not_published"
   | "event_full"
-  | "rate_limited";
+  | "rate_limited"
+  | "already_registered";
 
 export type RegisterForEventResult =
   { ok: true } | { ok: false; error: RegisterForEventError };

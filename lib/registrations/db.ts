@@ -43,18 +43,39 @@ export async function findEventForRegistration(
   return rows[0] ?? null;
 }
 
+/** Postgres SQLSTATE for a unique_violation — see the `postgres` driver's error shape. */
+const UNIQUE_VIOLATION = "23505";
+
 export async function insertRegistration(input: {
   eventId: string;
   attendeeName: string;
   attendeeEmail: string;
-}): Promise<void> {
+}): Promise<{ duplicate: boolean }> {
   // memberId left null on purpose — see docs/adr/0004 and CLAUDE.md's
   // "Current build decision": UC-01 (member profiles) doesn't exist yet,
   // so every registration is captured this way for now.
-  await db.insert(registrations).values({
-    eventId: input.eventId,
-    attendeeName: input.attendeeName,
-    attendeeEmail: input.attendeeEmail,
-    memberId: null,
-  });
+  //
+  // The M2 partial unique index (docs/UC-02_Data_and_Security.md section 3)
+  // now enforces one active row per (event_id, attendee_email) at the
+  // database level — a concurrent duplicate raises 23505 here rather than
+  // silently creating a second row, which the old pre-M2 schema allowed.
+  try {
+    await db.insert(registrations).values({
+      eventId: input.eventId,
+      attendeeName: input.attendeeName,
+      attendeeEmail: input.attendeeEmail,
+      memberId: null,
+    });
+    return { duplicate: false };
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === UNIQUE_VIOLATION
+    ) {
+      return { duplicate: true };
+    }
+    throw error;
+  }
 }

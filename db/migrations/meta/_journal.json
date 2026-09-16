@@ -15,6 +15,27 @@
       "when": 1789317433542,
       "tag": "0001_sparkling_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789412984000,
+      "tag": "0002_staging_rls_anon_landing_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789535255353,
+      "tag": "0003_uc02_security_foundation_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789535400000,
+      "tag": "0004_uc02_security_foundation",
+      "breakpoints": true
     }
   ]
 }

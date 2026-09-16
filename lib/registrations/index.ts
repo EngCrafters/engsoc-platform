@@ -70,10 +70,13 @@ export async function registerForEvent(
     return { ok: false, error: "event_full" };
   }
 
-  await insertRegistration({
+  const { duplicate } = await insertRegistration({
     eventId: input.eventId,
     attendeeName,
     attendeeEmail,
   });
+  if (duplicate) {
+    return { ok: false, error: "already_registered" };
+  }
   return { ok: true };
 }

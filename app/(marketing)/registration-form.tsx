@@ -17,6 +17,7 @@ const ERROR_MESSAGES: Record<RegisterForEventError, string> = {
   event_full: "This event is full.",
   rate_limited:
     "Too many attempts from this connection — try again in a few minutes.",
+  already_registered: "This email is already registered for this event.",
 };
 
 export function RegistrationForm({ eventId }: { eventId: string }) {

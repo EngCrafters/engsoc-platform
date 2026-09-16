@@ -1,9 +1,15 @@
 # registrations
 
-Implementation status: current code does not enforce duplicate uniqueness,
-capacity concurrency or event-start closure, and has no waitlist.
-`docs/UC-02_Deep_Dive.md` and its companions specify the target and mandatory
-freeze gate. The behavior below describes existing code, not UC-02 completion.
+Implementation status: as of M2, the database itself enforces one active
+registration per (event, email) via a partial unique index — this module
+surfaces that as `already_registered` rather than crashing — but this code
+still writes directly to `registrations` over the privileged DATABASE_URL
+connection, not through the M2 `private.register_for_event` routine. It
+still doesn't enforce capacity concurrency or event-start closure, and has
+no waitlist. `docs/UC-02_Deep_Dive.md` and its companions specify the
+target; M3 ("public server boundary") replaces this direct-write path with
+the routine. The behavior below describes existing code, not UC-02
+completion.
 
 Domain module for the `registrations` table (`db/schema.ts`). Owns everything
 about registering for an event, including the no-member-profile-yet case

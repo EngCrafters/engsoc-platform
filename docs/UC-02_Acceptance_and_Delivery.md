@@ -207,16 +207,46 @@ closes M0.
 registrations / 1 committee) and main (`rbeyqrfypowyocmnmvwu`, 2 migrations
 applied, RLS disabled on all 8 tables, 0 rows everywhere — confirms the
 existing release blocker, not a new one). A54/A55/A60 preflight proof
-recorded in the data/security contract §10. Two open follow-ups from this
-rehearsal, neither blocking M2: (1) the local `.env.local` currently points
-`DATABASE_URL`/`NEXT_PUBLIC_SUPABASE_URL` at the main project rather than
-staging, contrary to the README's own contributor instructions — recommend
-repointing local dev at staging and reserving main's credentials for
-controlled migration work only; (2) `tests/rls-staging-anon.test.ts`'s
-already-documented fixture leak (11 rows and growing) should be resolved by
-adding a staging service-role key as a CI secret, or the accumulated rows
-purged, before it affects M2's duplicate-migration preflight. Implementation
-completion must still record the migration versions per environment, runtime
-role test results, app/CI/deployment SHA, E2E results and any independently
-blocked release action. Never mark a blanket-deny policy as completion of an
-intended allow behavior.
+recorded in the data/security contract §10. Two follow-ups resolved the same
+day: local `.env.local` repointed at staging for `NEXT_PUBLIC_SUPABASE_*`
+(main's `DATABASE_URL`/service role kept, clearly labeled, for deliberate
+migration work only); the RLS test suite's accumulated fixture rows purged
+from staging (12 rows deleted) — and, as of M2 below, that leak cannot recur
+at all, since anon can no longer write to `registrations` by any path.
+
+**M2 evidence (September 16, 2026):** schema/security foundation committed
+as migrations `0003_uc02_security_foundation_schema` (Drizzle-generated:
+`committee_managers`, `private.uc02_audit`, the O-01 event columns,
+registration status/supersededBy, all CHECK constraints and indexes) and
+`0004_uc02_security_foundation` (hand-written: `app_runtime`/`app_maintenance`/
+`uc02_routine_owner` roles; revoked the M1-identified platform-default
+anon/authenticated grants; narrow explicit grants; RLS policies retiring
+ADR-0006's anon INSERT and adding committee-scoped authenticated policies;
+8 `SECURITY DEFINER` routines covering registration, review/approval,
+publish/hold/archive/restore, and FIFO promotion). Both migrations were
+rehearsed twice on disposable local Postgres 17 containers (schema
+convergence, then full role/RLS/routine behavior — capacity, waitlist,
+duplicate, self-approval-denial, and the complete O-01 flag→approve→publish
+sequence all verified with real role-switching before touching staging).
+Applied to staging via the Supabase MCP `apply_migration` tool; two real
+bugs surfaced only there (Supabase's `postgres` role isn't a superuser, so
+transferring function ownership needed explicit role membership and CREATE
+privilege on the `private` schema) and are now fixed in the committed
+migration and confirmed by an identical clean rehearsal. Placeholder role
+passwords were rotated immediately on staging (never committed). The
+existing `tests/rls-staging-anon.test.ts` was updated for D07 (anon INSERT
+retired; two additional assertions now correctly expect `42501` since the
+M1-finding default grants are revoked, not just narrowed by RLS) and passes
+8/8 against live staging. `lib/registrations` was updated to translate the
+new partial-unique-index violation into `already_registered` instead of
+crashing (M2 changed database behavior that pre-existing app code didn't
+anticipate). Lint, typecheck, `drizzle-kit check`, and production build all
+pass. Main was not touched. This closes M2's atomic database contract; M3
+(public server boundary) wires `lib/events`/`lib/registrations` to call
+these routines through `app_runtime` instead of the direct privileged
+connection.
+
+Implementation completion must still record the migration versions per
+environment, runtime role test results, app/CI/deployment SHA, E2E results
+and any independently blocked release action. Never mark a blanket-deny
+policy as completion of an intended allow behavior.
