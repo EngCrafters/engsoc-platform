@@ -5,8 +5,8 @@
 
 export * from "./types";
 
-import { selectPublishedEvents } from "./db";
-import type { PublishedEvent } from "./types";
+import { selectPublishedEvent, selectPublishedEvents } from "./db";
+import type { PublicEvent, PublishedEvent } from "./types";
 
 /**
  * Every published event, soonest first. UC-02's main flow, step 2: "The
@@ -17,4 +17,10 @@ import type { PublishedEvent } from "./types";
  */
 export async function getPublishedEvents(): Promise<PublishedEvent[]> {
   return selectPublishedEvents();
+}
+
+export async function getPublishedEvent(
+  eventId: string
+): Promise<PublicEvent | null> {
+  return selectPublishedEvent(eventId);
 }

@@ -16,6 +16,15 @@ export function supabaseBrowser() {
   );
 }
 
+/** Public server reads retain the anon key and therefore enforce RLS. */
+export function supabasePublicServer() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
+
 export function supabaseServer() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

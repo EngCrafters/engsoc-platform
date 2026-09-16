@@ -18,6 +18,13 @@ const ERROR_MESSAGES: Record<RegisterForEventError, string> = {
   rate_limited:
     "Too many attempts from this connection — try again in a few minutes.",
   already_registered: "This email is already registered for this event.",
+  already_waitlisted: "This email is already on the waitlist for this event.",
+  registration_closed:
+    "Registration has closed because this event has started.",
+  invalid_intent: "Choose a valid registration option.",
+  invalid_ip: "We couldn't verify this request. Try again.",
+  invalid_input: "Check the form and try again.",
+  server_error: "We couldn't confirm the result. Try again.",
 };
 
 export function RegistrationForm({ eventId }: { eventId: string }) {
@@ -29,7 +36,9 @@ export function RegistrationForm({ eventId }: { eventId: string }) {
   if (state.status === "success") {
     return (
       <p className="text-sm font-medium text-green-700">
-        You&apos;re registered — see you there!
+        {state.waitlisted
+          ? "You’re on the waitlist — the committee will contact you if a place opens."
+          : "You&apos;re registered — see you there!"}
       </p>
     );
   }

@@ -7,12 +7,11 @@ file documents what's actually here and how the pieces fit together.
 
 ## Client (`index.ts`)
 
-A server-only Drizzle client over `DATABASE_URL`, using the `postgres` role
-directly — this bypasses Row Level Security entirely, which is why
-`DATABASE_URL` must never be a client-exposed secret. UC-02's target design
-(section 7 of the data contract) replaces this with a restricted
-`app_runtime` connection once M3 wires it up; until then, application code
-under `lib/` is trusted the same way this direct connection is.
+A server-only Drizzle client over `APP_RUNTIME_DATABASE_URL`, using the
+restricted `app_runtime` role created by the UC-02 security migration.
+`DATABASE_URL` remains a local-development/migration fallback only and must
+never be a client-exposed secret. The runtime role has no table DML grants;
+registration mutations call fixed private routines.
 
 ## Schema (`schema.ts`)
 
@@ -60,6 +59,10 @@ re-checks state after the lock, mutates, writes one audit row, and returns
 a `jsonb {code, ...}` result matching the deep dive's result-code
 vocabulary (section 7). See `docs/UC-02_Data_and_Security.md` sections 5-8
 for the full contract these implement.
+
+`0005_uc02_registration_routine_hardening.sql` is a forward routine-only
+change: it serializes attempts per IP with a transaction advisory lock and
+enforces the rolling five-attempt limit inside the trusted database boundary.
 
 ## Applying migrations
 

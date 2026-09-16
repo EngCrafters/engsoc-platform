@@ -11,6 +11,7 @@
 // directly from the client component's <form action={...}>.
 
 import { headers } from "next/headers";
+import { isIP } from "node:net";
 import {
   registerForEvent,
   type RegisterForEventError,
@@ -18,7 +19,7 @@ import {
 
 export type RegisterActionState =
   | { status: "idle" }
-  | { status: "success" }
+  | { status: "success"; waitlisted?: boolean }
   | { status: "error"; error: RegisterForEventError };
 
 export const initialRegisterActionState: RegisterActionState = {
@@ -34,9 +35,11 @@ function getClientIp(headersList: Awaited<ReturnType<typeof headers>>): string {
   const forwardedFor = headersList.get("x-forwarded-for");
   if (forwardedFor) {
     const first = forwardedFor.split(",")[0]?.trim();
-    if (first) return first;
+    if (first && isIP(first) !== 0) return first;
   }
-  return headersList.get("x-real-ip") ?? "127.0.0.1";
+  const realIp = headersList.get("x-real-ip");
+  if (realIp && isIP(realIp) !== 0) return realIp;
+  return process.env.NODE_ENV === "development" ? "127.0.0.1" : "invalid";
 }
 
 export async function registerForEventAction(
@@ -46,17 +49,20 @@ export async function registerForEventAction(
   const eventId = String(formData.get("eventId") ?? "");
   const attendeeName = String(formData.get("attendeeName") ?? "");
   const attendeeEmail = String(formData.get("attendeeEmail") ?? "");
+  const intentValue = String(formData.get("intent") ?? "register");
+  const intent = intentValue === "join_waitlist" ? "join_waitlist" : "register";
   const ipAddress = getClientIp(await headers());
 
   const result = await registerForEvent({
     eventId,
     attendeeName,
     attendeeEmail,
+    intent,
     ipAddress,
   });
 
   if (!result.ok) {
     return { status: "error", error: result.error };
   }
-  return { status: "success" };
+  return { status: "success", waitlisted: result.waitlisted === true };
 }

@@ -246,6 +246,18 @@ pass. Main was not touched. This closes M2's atomic database contract; M3
 these routines through `app_runtime` instead of the direct privileged
 connection.
 
+**M3 implementation evidence (September 16, 2026):** public event reads now
+use the Supabase anon client and therefore remain subject to the public RLS
+projection; registration writes now use `private.register_for_event` through
+`APP_RUNTIME_DATABASE_URL`, with no direct table DML path in the application.
+The forward routine hardening migration adds the transaction advisory lock and
+database-owned five-attempt rolling limit. The server action validates the
+trusted IP shape, passes the explicit waitlist intent, and maps stable routine
+codes to safe UI results. Local lint, type-check, unit tests, Drizzle history
+check, and production build pass. Deployment remains gated on configuring the
+restricted runtime credential in the serving environment and applying the
+forward routine migration there through the approved database procedure.
+
 Implementation completion must still record the migration versions per
 environment, runtime role test results, app/CI/deployment SHA, E2E results
 and any independently blocked release action. Never mark a blanket-deny

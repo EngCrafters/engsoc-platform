@@ -9,6 +9,7 @@ export type RegisterForEventInput = {
   eventId: string;
   attendeeName: string;
   attendeeEmail: string;
+  intent?: "register" | "join_waitlist";
   ipAddress: string;
 };
 
@@ -33,7 +34,16 @@ export type RegisterForEventError =
   | "event_not_published"
   | "event_full"
   | "rate_limited"
-  | "already_registered";
+  | "already_registered"
+  | "already_waitlisted"
+  | "registration_closed"
+  | "invalid_intent"
+  | "invalid_ip"
+  | "invalid_input"
+  | "server_error";
+
+export type RegisterForEventSuccess =
+  { ok: true; waitlisted?: false } | { ok: true; waitlisted: true };
 
 export type RegisterForEventResult =
-  { ok: true } | { ok: false; error: RegisterForEventError };
+  RegisterForEventSuccess | { ok: false; error: RegisterForEventError };

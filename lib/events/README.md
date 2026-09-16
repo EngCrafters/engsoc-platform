@@ -1,6 +1,8 @@
 # events
 
-Implementation status: the existing published-only query is partial.
+Implementation status: M3 reads the public event projection with the Supabase
+anon key, so RLS and column grants remain active on server-rendered pages.
+The existing published-only query is still partial.
 The target public/full/past lifecycle, pagination and admin rules live in
 `docs/UC-02_Deep_Dive.md` and its companions. Follow their specification gate
 before changing this module; the README below describes current code only.
@@ -8,8 +10,8 @@ before changing this module; the README below describes current code only.
 Domain module for the `events` table (`db/schema.ts`). Owns everything about
 an event: creating, publishing, and reading them.
 
-Currently exports one function: `getPublishedEvents()`, UC-02's "event
-appears live on the public events page" step. It returns the
+Currently exports `getPublishedEvents()` and `getPublishedEvent()`, the UC-02
+public discovery/detail reads. They return the
 `PublishedEvent` shape (`./types.ts`) — deliberately narrower than the raw
 `events` row, since a visitor shouldn't see internal fields like
 `committeeId`.

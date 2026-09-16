@@ -14,3 +14,7 @@ export type PublishedEvent = {
   eventDate: Date;
   location: string | null;
 };
+
+export type PublicEvent = PublishedEvent & {
+  registrationState: "open" | "full";
+};
