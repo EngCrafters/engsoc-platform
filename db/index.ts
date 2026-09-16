@@ -14,7 +14,14 @@ import * as schema from "./schema";
 // "Use Prepared Statements Correctly with Pooling."
 const client = postgres(
   process.env.APP_RUNTIME_DATABASE_URL ?? process.env.DATABASE_URL!,
-  { prepare: false }
+  {
+    // Vercel functions are short-lived and this URL targets Supabase's
+    // transaction pooler: cap each warm instance at one connection, do not
+    // use prepared statements, and refuse an unencrypted connection.
+    max: 1,
+    prepare: false,
+    ssl: "require",
+  }
 );
 
 export const db = drizzle(client, { schema });

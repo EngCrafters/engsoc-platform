@@ -11,7 +11,9 @@ A server-only Drizzle client over `APP_RUNTIME_DATABASE_URL`, using the
 restricted `app_runtime` role created by the UC-02 security migration.
 `DATABASE_URL` remains a local-development/migration fallback only and must
 never be a client-exposed secret. The runtime role has no table DML grants;
-registration mutations call fixed private routines.
+registration mutations call fixed private routines. It uses Supabase's shared
+transaction pooler with one application-side connection, no prepared
+statements, and required TLS.
 
 ## Schema (`schema.ts`)
 

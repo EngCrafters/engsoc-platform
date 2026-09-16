@@ -258,6 +258,14 @@ check, and production build pass. Deployment remains gated on configuring the
 restricted runtime credential in the serving environment and applying the
 forward routine migration there through the approved database procedure.
 
+**Staging follow-up (September 16, 2026):** `0005` was applied to staging
+after Supabase MCP OAuth was reauthorized. A freshly rotated staging
+`app_runtime` credential was tested through the shared transaction pooler:
+it authenticated as that role, could not directly read `events`, and could
+execute only the fixed registration routine (a non-existent event safely
+returned `EVENT_NOT_FOUND`). No credential is recorded in source, logs, or
+this document. The serving main database remains intentionally unchanged.
+
 **M4 public experience evidence (September 16, 2026):** the public list now
 links each event to a dynamic `/events/[id]` detail page with Muscat timezone
 formatting, accessible registration copy, and explicit register/waitlist
