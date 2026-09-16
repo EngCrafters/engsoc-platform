@@ -22,4 +22,5 @@ GitHub CI run `35141416910` is green; Vercel project access is currently 403,
 so deployment status/configuration cannot be verified from this session.
 
 **NEXT EXACT TASK:** Verify those two external Auth inputs, run the staging
-manager test, close M5, then start M6.
+manager test (`RUN_STAGING_MANAGER_AUTH_TESTS=true` with its non-committed
+password), close M5, then start M6.

@@ -29,4 +29,5 @@ The M5 admin check is intentionally unauthenticated: it proves `/admin/events`
 redirects to the no-signup login boundary without requiring a real manager
 password in local or CI environment variables. Authenticated-role database
 coverage verifies scope and revocation. A separate staging JWT/login check
-uses the named manager credential only after it is supplied as a secret.
+(`tests/staging-manager-auth.test.ts`) uses the named manager credential only
+after it is supplied as a secret and `RUN_STAGING_MANAGER_AUTH_TESTS=true`.
