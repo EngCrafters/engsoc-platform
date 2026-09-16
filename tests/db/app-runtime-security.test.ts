@@ -61,6 +61,10 @@ describe("app_runtime database boundary", () => {
     expect(result[0].result.code).toBe("SUCCESS");
 
     await expect(
+      runtime`SELECT * FROM private.list_public_events('upcoming', null, null, 20)`
+    ).resolves.toEqual(expect.any(Array));
+
+    await expect(
       runtime`SELECT private.unapproved_probe()`
     ).rejects.toMatchObject({ code: "42501" });
   });

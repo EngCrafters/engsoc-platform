@@ -212,6 +212,8 @@ UC-02's original spec is in `/docs/Idea_and_Requirements_Document.pdf`;
 its implementation deep dive is `docs/UC-02_Deep_Dive.md`. The current
 specification gate applies to all additional UC-02 functionality, not just
 dashboard work. Follow its owner-decision register and freeze checklist.
+`docs/CURRENT_WORK.md` is the short-form handoff state (current milestone,
+last commit, next exact task) — read it first when resuming this work.
 
 **UC-01 (member registration & profile) is deferred, not cancelled.** Its
 existing deep-dive doc (`/docs/UC-01_Deep_Dive.pdf`) is still accurate for

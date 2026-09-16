@@ -2,52 +2,52 @@
 // db/schema.ts's `events` table. Nothing outside lib/events/ should import
 // this file directly; go through index.ts instead.
 
-import { supabasePublicServer } from "@/lib/supabase";
-import type { PublicEvent, PublishedEvent } from "./types";
+import { sql } from "drizzle-orm";
+import { db } from "@/db";
+import type { PublicEvent, PublicEventAvailability } from "./types";
 
 type PublicEventRow = {
   id: string;
   title: string;
-  description: string | null;
+  description: string;
   event_date: string;
   location: string | null;
-  status?: "published" | "full";
+  committee_name: string;
+  availability: PublicEventAvailability;
 };
 
-function mapPublicEvent(row: PublicEventRow): PublishedEvent {
+function mapPublicEvent(row: PublicEventRow): PublicEvent {
   return {
     id: row.id,
     title: row.title,
     description: row.description,
     eventDate: new Date(row.event_date),
     location: row.location,
+    committeeName: row.committee_name,
+    availability: row.availability,
   };
 }
 
-export async function selectPublishedEvents(): Promise<PublishedEvent[]> {
-  const { data, error } = await supabasePublicServer()
-    .from("events")
-    .select("id,title,description,event_date,location")
-    .order("event_date", { ascending: true });
-  if (error) throw new Error("PUBLIC_EVENT_READ_FAILED");
-  return (data as PublicEventRow[]).map(mapPublicEvent);
+export async function selectPublicEvents(input: {
+  period: "upcoming" | "past";
+  cursor?: { eventDate: Date; id: string };
+  limit: number;
+}): Promise<PublicEvent[]> {
+  const rows = await db.execute<PublicEventRow>(sql`
+    select * from private.list_public_events(
+      ${input.period},
+      ${input.cursor?.eventDate.toISOString() ?? null}::timestamptz,
+      ${input.cursor?.id ?? null}::uuid, ${input.limit}
+    )
+  `);
+  return rows.map(mapPublicEvent);
 }
 
-export async function selectPublishedEvent(
+export async function selectPublicEvent(
   eventId: string
 ): Promise<PublicEvent | null> {
-  const { data, error } = await supabasePublicServer()
-    .from("events")
-    .select("id,title,description,event_date,location")
-    .eq("id", eventId)
-    .maybeSingle();
-  if (error) throw new Error("PUBLIC_EVENT_READ_FAILED");
-  if (!data) return null;
-  const row = data as PublicEventRow;
-  return {
-    ...mapPublicEvent(row),
-    // Full/open is intentionally resolved by the registration routine at
-    // submit time. The public projection does not expose internal status.
-    registrationState: "open",
-  };
+  const rows = await db.execute<PublicEventRow>(sql`
+    select * from private.get_public_event(${eventId}::uuid)
+  `);
+  return rows[0] ? mapPublicEvent(rows[0]) : null;
 }

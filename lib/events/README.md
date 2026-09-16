@@ -1,26 +1,25 @@
 # events
 
-Implementation status: M3 reads the public event projection with the Supabase
-anon key, so RLS and column grants remain active on server-rendered pages.
-The existing published-only query is still partial.
-The target public/full/past lifecycle, pagination and admin rules live in
-`docs/UC-02_Deep_Dive.md` and its companions. Follow their specification gate
-before changing this module; the README below describes current code only.
-
 Domain module for the `events` table (`db/schema.ts`). Owns everything about
-an event: creating, publishing, and reading them.
+reading published events for the public site; creating/publishing them is
+the admin dashboard scope described in CLAUDE.md, not built yet.
 
-Currently exports `getPublishedEvents()` and `getPublishedEvent()`, the UC-02
-public discovery/detail reads. They return the
-`PublishedEvent` shape (`./types.ts`) — deliberately narrower than the raw
-`events` row, since a visitor shouldn't see internal fields like
-`committeeId`.
+Reads go through the narrow `private.list_public_events` /
+`private.get_public_event` routines (`db/migrations/0007_uc02_public_event_reads.sql`),
+called over the restricted `app_runtime` connection (`db/index.ts`) — the
+same trusted-server-boundary pattern as `lib/registrations`. These routines
+derive `availability` ("open" | "waitlist" | "closed") from status, capacity,
+confirmed count and pending waitlist rows server-side, so the public surface
+never receives raw status, capacity, counts, or committee IDs.
 
-`app/(marketing)/page.tsx` calls this directly as a Server Component import,
-not through a fetch() or API route — that's the point of both living in the
-same app. Creating and publishing events (the committee-facing side) isn't
-built yet; that's the admin dashboard scope described in CLAUDE.md.
+Exports `getPublicEventPage({ period, cursor })` (cursor-paginated
+upcoming/past discovery, 20 per page) and `getPublicEvent(eventId)` (single
+event, or `null` for anything not visible — draft, archived, or a malformed
+ID all resolve the same way, so `app/(marketing)/events/[id]/page.tsx` can
+call `notFound()` uniformly). Cursors are opaque base64url-encoded
+`{v, period, date, id}` objects, validated on decode; an invalid or
+mismatched-period cursor is treated as no cursor, not an error.
 
-Import from `./index.ts` only. `./db.ts` (queries) and `./types.ts` (shapes)
-are implementation details of this module and shouldn't be imported directly
-from outside `lib/events/`.
+Import from `./index.ts` only. `./db.ts` (queries), `./types.ts` (shapes) and
+`./format.ts` (Asia/Muscat date formatting, D01) are implementation details
+and shouldn't be imported directly from outside `lib/events/`.

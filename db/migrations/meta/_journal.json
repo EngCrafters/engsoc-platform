@@ -50,6 +50,13 @@
       "when": 1789626000000,
       "tag": "0006_uc02_enable_rls_all_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789630000000,
+      "tag": "0007_uc02_public_event_reads",
+      "breakpoints": true
     }
   ]
 }

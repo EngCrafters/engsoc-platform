@@ -304,6 +304,27 @@ type-check, unit tests, and production build pass; browser E2E remains in the
 planned test matrix and runtime registration remains gated by the serving
 database credential/migration prerequisites above.
 
+**M4 closure — E2E and three latent bugs found by it (September 16, 2026):**
+Playwright coverage (`tests/e2e/`) added for the full catalog/detail/
+registration/waitlist/pagination/draft-denial matrix across desktop and
+mobile, against a disposable database and a real production build (not
+`next dev` — see `tests/e2e/README.md` for why). Building this deterministic
+suite surfaced and fixed three real defects untouched by the existing unit/
+DB suites: (1) `lib/events/index.ts`'s UUID regex was missing a group
+(`8-4-4-12` instead of `8-4-4-4-12`), so it never matched a real UUID —
+every event-detail fetch and pagination cursor silently failed validation
+and fell back to page one; (2) `app/(marketing)/actions.ts` was a
+`"use server"` file that also exported a plain object
+(`initialRegisterActionState`), which Next.js only allows for async function
+exports — this compiles fine but crashes every registration attempt at
+request time in a production build (`initialRegisterActionState` moved to
+new `action-state.ts`); (3) `db/index.ts` required TLS unconditionally,
+which is correct for every real target but breaks the disposable local test
+database, which has no TLS listener. All three are fixed; 8/8 E2E tests pass
+deterministically across two consecutive runs. Format, lint, type-check,
+`drizzle-kit check`, the 29-test Vitest suite, and production build all pass.
+This closes M4.
+
 Implementation completion must still record the migration versions per
 environment, runtime role test results, app/CI/deployment SHA, E2E results
 and any independently blocked release action. Never mark a blanket-deny

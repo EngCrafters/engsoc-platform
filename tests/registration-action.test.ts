@@ -8,10 +8,8 @@ const state = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({ headers: async () => state.requestHeaders }));
 vi.mock("@/lib/registrations", () => ({ registerForEvent: state.register }));
 
-import {
-  initialRegisterActionState,
-  registerForEventAction,
-} from "../app/(marketing)/actions";
+import { registerForEventAction } from "../app/(marketing)/actions";
+import { initialRegisterActionState } from "../app/(marketing)/action-state";
 
 const eventId = "11111111-1111-4111-8111-111111111111";
 

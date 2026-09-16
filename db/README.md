@@ -8,12 +8,15 @@ file documents what's actually here and how the pieces fit together.
 ## Client (`index.ts`)
 
 A server-only Drizzle client over `APP_RUNTIME_DATABASE_URL`, using the
-restricted `app_runtime` role created by the UC-02 security migration.
-`DATABASE_URL` remains a local-development/migration fallback only and must
-never be a client-exposed secret. The runtime role has no table DML grants;
-registration mutations call fixed private routines. It uses Supabase's shared
+restricted `app_runtime` role created by the UC-02 security migration —
+there is no fallback to `DATABASE_URL` (that's a migration-only credential;
+see "Applying migrations" below). The runtime role has no table DML grants;
+all reads and writes call fixed private routines. It uses Supabase's shared
 transaction pooler with one application-side connection, no prepared
-statements, and required TLS.
+statements, and required TLS — except when the hostname is `127.0.0.1` or
+`localhost`, which is only ever the disposable Postgres container the
+isolated test suites (`tests/db`, `tests/e2e`) run against and which has no
+TLS listener at all.
 
 ## Schema (`schema.ts`)
 

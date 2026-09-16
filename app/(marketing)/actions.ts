@@ -12,19 +12,8 @@
 
 import { headers } from "next/headers";
 import { isIP } from "node:net";
-import {
-  registerForEvent,
-  type RegisterForEventError,
-} from "@/lib/registrations";
-
-export type RegisterActionState =
-  | { status: "idle" }
-  | { status: "success"; waitlisted?: boolean }
-  | { status: "error"; error: RegisterForEventError };
-
-export const initialRegisterActionState: RegisterActionState = {
-  status: "idle",
-};
+import { registerForEvent } from "@/lib/registrations";
+import type { RegisterActionState } from "./action-state";
 
 // Vercel (and most proxies) set x-forwarded-for to "client, proxy1, proxy2"
 // — the first entry is the original client. Falls back to a fixed address

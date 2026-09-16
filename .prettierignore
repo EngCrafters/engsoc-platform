@@ -9,3 +9,5 @@
 .next/
 node_modules/
 skills-lock.json
+test-results/
+playwright-report/

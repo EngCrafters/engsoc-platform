@@ -1,7 +1,8 @@
 // Server-only Drizzle client. Runtime application code must use the
-// restricted `app_runtime` connection. DATABASE_URL remains a local
-// development/migration fallback until every environment has the dedicated
-// credential configured. Never import this module into a client component.
+// restricted `app_runtime` connection (APP_RUNTIME_DATABASE_URL) — there is
+// no fallback to DATABASE_URL, which is a migration-only credential (see
+// drizzle.config.ts) and must never be used by the running application.
+// Never import this module into a client component.
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -20,13 +21,22 @@ if (!runtimeDatabaseUrl) {
   );
 }
 
+// Every real target (Supabase, staging or main) is remote and must use TLS.
+// The only exception is the disposable local Postgres container the
+// isolated test suites (tests/db, tests/e2e) run against — it has no TLS
+// listener at all, and it's never anything but 127.0.0.1/localhost.
+const isLocalTestDatabase = ["127.0.0.1", "localhost"].includes(
+  new URL(runtimeDatabaseUrl).hostname
+);
+
 const client = postgres(runtimeDatabaseUrl, {
   // Vercel functions are short-lived and this URL targets Supabase's
   // transaction pooler: cap each warm instance at one connection, do not
-  // use prepared statements, and refuse an unencrypted connection.
+  // use prepared statements, and refuse an unencrypted connection to any
+  // real (non-localhost) target.
   max: 1,
   prepare: false,
-  ssl: "require",
+  ssl: isLocalTestDatabase ? false : "require",
 });
 
 export const db = drizzle(client, { schema });

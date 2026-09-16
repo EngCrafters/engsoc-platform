@@ -10,6 +10,7 @@ Object.assign(process.env, loadEnv("", process.cwd(), ""));
 
 export default defineConfig({
   test: {
+    exclude: ["tests/e2e/**", "node_modules/**"],
     environment: "node",
     globalSetup: ["./tests/db/global-setup.ts"],
     // These tests hit the real staging Supabase project over the network

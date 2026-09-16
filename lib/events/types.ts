@@ -7,14 +7,19 @@
  * full event distinctly here, `getPublishedEvents` already filters for
  * "published" before this shape is built).
  */
-export type PublishedEvent = {
+export type PublicEventAvailability = "open" | "waitlist" | "closed";
+
+export type PublicEvent = {
   id: string;
   title: string;
-  description: string | null;
+  description: string;
   eventDate: Date;
   location: string | null;
+  committeeName: string;
+  availability: PublicEventAvailability;
 };
 
-export type PublicEvent = PublishedEvent & {
-  registrationState: "open" | "full";
+export type PublicEventPage = {
+  events: PublicEvent[];
+  nextCursor: string | null;
 };
