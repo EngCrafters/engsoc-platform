@@ -342,6 +342,11 @@ no-signup login boundary on desktop and mobile. M5 is not yet closed: deployed
 Auth recovery requires `AUTH_REDIRECT_ORIGIN` plus the matching Supabase Auth
 redirect allow-list, and the named staging manager needs a non-committed test
 credential to exercise the real authenticated JWT/login and revocation flows.
+Commit `7c0d0b5` passed GitHub Actions run `35141416910` (formatting, lint,
+type-check, isolated database/security tests, staging anon-RLS test, build and
+commitlint). Vercel deployment status remains independently unverified because
+the connected Vercel identity has no project access (403); this is not release
+evidence.
 
 Implementation completion must still record the migration versions per
 environment, runtime role test results, app/CI/deployment SHA, E2E results

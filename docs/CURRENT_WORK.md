@@ -12,13 +12,14 @@ login/logout/recovery/reset, a protected admin shell, database-backed active
 committee-manager grants, safe internal redirects, and no-signup browser
 coverage. It does not add a Member model or event-management UI.
 
-**LAST DELIVERED COMMIT:** `aa998ae feat(uc-02): close M4 with deterministic
-E2E and three latent bug fixes`.
+**LAST DELIVERED COMMIT:** `7c0d0b5 feat(uc-02): add admin identity boundary`.
 
 **KNOWN BLOCKERS:** Before M5 can close, configure `AUTH_REDIRECT_ORIGIN` in
 the deployed environment and allowlist its `/auth/callback` URL in Supabase
 Auth. Supply the existing staging manager password only as a local/CI secret
 to run the real authenticated JWT/login, committee-scope and revocation test.
+GitHub CI run `35141416910` is green; Vercel project access is currently 403,
+so deployment status/configuration cannot be verified from this session.
 
 **NEXT EXACT TASK:** Verify those two external Auth inputs, run the staging
 manager test, close M5, then start M6.
