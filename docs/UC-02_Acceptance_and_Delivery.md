@@ -325,7 +325,7 @@ deterministically across two consecutive runs. Format, lint, type-check,
 `drizzle-kit check`, the 29-test Vitest suite, and production build all pass.
 This closes M4.
 
-**M5 implementation evidence (September 16, 2026):** cookie-backed Supabase
+**M5 evidence (September 16–17, 2026):** cookie-backed Supabase
 SSR Auth is now request-scoped (`@supabase/ssr`), with a narrow Next 16
 `proxy.ts` session refresh path. `/admin/login` offers provisioned-user
 email/password login only; there is no public signup. `/admin/recovery` uses a
@@ -338,15 +338,16 @@ data and an explicit access-denied state; logout clears the Supabase session.
 Unit tests cover safe redirects, duplicate credential keys, generic Auth errors,
 recovery, logout, reset, manager/no-grant resolution, and immediate grant
 revocation. Browser E2E covers the unauthenticated protected-route redirect and
-no-signup login boundary on desktop and mobile. M5 is not yet closed: deployed
-Auth recovery requires `AUTH_REDIRECT_ORIGIN` plus the matching Supabase Auth
-redirect allow-list, and the named staging manager needs a non-committed test
-credential to exercise the real authenticated JWT/login and revocation flows.
-Commit `7c0d0b5` passed GitHub Actions run `35141416910` (formatting, lint,
+no-signup login boundary on desktop and mobile. On September 17, the named
+staging-only Events manager passed real password login and authenticated RLS
+grant-scope verification (exactly one active Events grant) through the
+secret-gated staging test; a password-recovery request using the configured
+fixed callback origin was accepted by staging Auth. Credentials and recovery
+links are never recorded. Commit `7c0d0b5` passed GitHub Actions run `35141416910` (formatting, lint,
 type-check, isolated database/security tests, staging anon-RLS test, build and
 commitlint). Vercel deployment status remains independently unverified because
-the connected Vercel identity has no project access (403); this is not release
-evidence.
+the connected Vercel identity has no project access (403); this remains an M8
+release-verification blocker, not a reason to retain M5 as incomplete.
 
 Implementation completion must still record the migration versions per
 environment, runtime role test results, app/CI/deployment SHA, E2E results
