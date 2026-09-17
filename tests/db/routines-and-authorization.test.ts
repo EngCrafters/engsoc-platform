@@ -15,6 +15,183 @@ describe("UC-02 private routines and authorization", () => {
 
   afterAll(async () => close(admin, runtime));
 
+  it("creates only a manager-scoped draft and records one audit row", async () => {
+    const fixture = await createFixture(admin);
+    const eventDate = new Date(Date.now() + 172_800_000).toISOString();
+
+    expect(
+      await callRoutine(runtime, "create_event", [
+        fixture.otherManagerId,
+        fixture.committeeId,
+        "Foreign draft",
+        null,
+        eventDate,
+        null,
+        null,
+      ])
+    ).toMatchObject({ code: "NOT_FOUND" });
+
+    const created = await callRoutine(runtime, "create_event", [
+      fixture.managerId,
+      fixture.committeeId,
+      "  New event  ",
+      "",
+      eventDate,
+      "",
+      20,
+    ]);
+    expect(created).toMatchObject({ code: "SUCCESS", revision: 1 });
+    expect(created.eventId).toEqual(expect.any(String));
+
+    const [event] = await admin<
+      [
+        {
+          title: string;
+          status: string;
+          description: string | null;
+          location: string | null;
+        },
+      ]
+    >`SELECT title, status, description, location FROM public.events WHERE id = ${created.eventId!}`;
+    expect(event).toEqual({
+      title: "New event",
+      status: "draft",
+      description: null,
+      location: null,
+    });
+    const audit = await admin`
+      SELECT action, actor_kind, actor_user_id, committee_id, changes
+      FROM private.uc02_audit WHERE event_id = ${created.eventId!}
+    `;
+    expect(audit).toEqual([
+      expect.objectContaining({
+        action: "event.created",
+        actor_kind: "authenticated",
+        actor_user_id: fixture.managerId,
+        committee_id: fixture.committeeId,
+        changes: expect.objectContaining({
+          after: expect.objectContaining({
+            title: "New event",
+            status: "draft",
+          }),
+        }),
+      }),
+    ]);
+  });
+
+  it("edits with optimistic revision, preserves review invalidation, and denies forbidden changes", async () => {
+    const fixture = await createFixture(admin);
+    const eventDate = new Date(Date.now() + 172_800_000).toISOString();
+    expect(
+      await callRoutine(runtime, "edit_event", [
+        fixture.otherManagerId,
+        fixture.eventId,
+        1,
+        "Foreign edit",
+        "A complete test event description.",
+        eventDate,
+        null,
+        null,
+      ])
+    ).toMatchObject({ code: "NOT_FOUND" });
+
+    await callRoutine(runtime, "flag_review", [
+      fixture.managerId,
+      fixture.eventId,
+      1,
+      true,
+    ]);
+    await callRoutine(runtime, "approve_event", [
+      fixture.reviewerId,
+      fixture.eventId,
+      2,
+    ]);
+    expect(
+      await callRoutine(runtime, "edit_event", [
+        fixture.managerId,
+        fixture.eventId,
+        2,
+        "Updated title",
+        "Updated description",
+        eventDate,
+        "Muscat",
+        10,
+      ])
+    ).toMatchObject({ code: "SUCCESS", revision: 3 });
+    const [updated] = await admin<
+      [
+        {
+          title: string;
+          approved_by: string | null;
+          approved_revision: number | null;
+        },
+      ]
+    >`SELECT title, approved_by, approved_revision FROM public.events WHERE id = ${fixture.eventId}`;
+    expect(updated).toEqual({
+      title: "Updated title",
+      approved_by: null,
+      approved_revision: null,
+    });
+    const [editAudit] = await admin`
+      SELECT changes FROM private.uc02_audit
+      WHERE event_id = ${fixture.eventId} AND action = 'event.updated'
+    `;
+    expect(editAudit.changes).toEqual(
+      expect.objectContaining({
+        before: expect.objectContaining({
+          title: "UC-02 test event",
+          revision: 2,
+        }),
+        after: expect.objectContaining({ title: "Updated title", revision: 3 }),
+      })
+    );
+    expect(
+      await callRoutine(runtime, "edit_event", [
+        fixture.managerId,
+        fixture.eventId,
+        2,
+        "Stale edit",
+        "Updated description",
+        eventDate,
+        "Muscat",
+        10,
+      ])
+    ).toMatchObject({ code: "CONFLICT", currentRevision: 3 });
+  });
+
+  it("denies create and edit after a manager grant is revoked", async () => {
+    const fixture = await createFixture(admin);
+    await admin`
+      UPDATE public.committee_managers
+      SET revoked_at = now(), revoked_by = ${fixture.managerId}
+      WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}
+    `;
+    const futureDate = new Date(Date.now() + 172_800_000).toISOString();
+    expect(
+      await callRoutine(runtime, "create_event", [
+        fixture.managerId,
+        fixture.committeeId,
+        "Revoked create",
+        null,
+        futureDate,
+        null,
+        null,
+      ])
+    ).toMatchObject({ code: "NOT_FOUND" });
+    expect(
+      await callRoutine(runtime, "edit_event", [
+        fixture.managerId,
+        fixture.eventId,
+        1,
+        "Revoked edit",
+        "A complete test event description.",
+        futureDate,
+        null,
+        null,
+      ])
+    ).toMatchObject({ code: "NOT_FOUND" });
+  });
+
   it("enforces committee scope, review, self-approval denial, approval, and publication", async () => {
     const fixture = await createFixture(admin);
 

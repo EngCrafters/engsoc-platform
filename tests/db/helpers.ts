@@ -4,6 +4,7 @@ import postgres, { type Sql, type TransactionSql } from "postgres";
 export type RoutineResult = {
   code: string;
   registrationId?: string;
+  eventId?: string;
   revision?: number;
 };
 
@@ -86,7 +87,9 @@ export async function callRoutine(
     | "hold_event_full"
     | "archive_event"
     | "restore_event"
-    | "promote_waitlist",
+    | "promote_waitlist"
+    | "create_event"
+    | "edit_event",
   values: (string | number | boolean | null)[]
 ): Promise<RoutineResult> {
   const placeholders = values.map((_, index) => `$${index + 1}`).join(", ");
