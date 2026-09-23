@@ -64,6 +64,27 @@
       "when": 1789738920000,
       "tag": "0008_uc02_admin_event_routines",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789742520000,
+      "tag": "0009_uc02_admin_event_list",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789746120000,
+      "tag": "0010_uc02_maintenance_grant_routines",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789749720000,
+      "tag": "0011_uc02_admin_event_detail",
+      "breakpoints": true
     }
   ]
 }

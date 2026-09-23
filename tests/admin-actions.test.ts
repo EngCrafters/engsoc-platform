@@ -112,7 +112,7 @@ describe("admin authentication actions", () => {
     ).resolves.toEqual({
       status: "error",
       message:
-        "Password recovery is temporarily unavailable. Contact the platform owner.",
+        "Password recovery is temporarily unavailable. Contact the platform maintenance authority.",
     });
     expect(state.resetPasswordForEmail).not.toHaveBeenCalled();
   });

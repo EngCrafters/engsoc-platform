@@ -1,6 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
+import { Loader2 } from "lucide-react";
+import { AuthMessage } from "@/components/auth/auth-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { requestRecoveryAction } from "../actions";
 import { initialRecoveryActionState } from "../action-state";
 
@@ -12,41 +17,33 @@ export function RecoveryForm() {
   return (
     <form action={action} className="grid gap-4" noValidate>
       {state.status === "sent" ? (
-        <p
-          role="status"
-          className="rounded border border-green-700 bg-green-50 p-3 text-sm text-green-900"
-        >
+        <AuthMessage tone="success">
           If an account matches that address, a recovery email will be sent.
-        </p>
+          Check your inbox and spam folder. Nothing here confirms whether an
+          account exists.
+        </AuthMessage>
       ) : null}
       {state.status === "error" ? (
-        <p
-          role="alert"
-          className="rounded border border-red-700 bg-red-50 p-3 text-sm text-red-900"
-        >
-          {state.message}
-        </p>
+        <AuthMessage tone="error">{state.message}</AuthMessage>
       ) : null}
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium">
-          Email address
-        </label>
-        <input
+      <div className="grid gap-1.5">
+        <Label htmlFor="email">Email address</Label>
+        <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
           required
-          className="mt-1 min-h-11 w-full rounded border border-neutral-400 bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
+          aria-invalid={state.status === "error" || undefined}
+          className="h-11"
         />
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex min-h-11 items-center justify-center rounded bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="h-11 w-full">
+        {pending ? (
+          <Loader2 aria-hidden="true" className="animate-spin" />
+        ) : null}
         {pending ? "Sending…" : "Send recovery email"}
-      </button>
+      </Button>
     </form>
   );
 }

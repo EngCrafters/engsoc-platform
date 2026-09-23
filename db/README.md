@@ -49,7 +49,7 @@ Numbered SQL files plus a Drizzle journal/snapshot pair per migration in
 `0004_uc02_security_foundation.sql` creates three roles: `app_runtime`
 (what the Next.js server will connect as, once M3 wires it up — no direct
 table grants, only `EXECUTE` on the routines below), `app_maintenance`
-(grant/audit/attempt-purge tooling, run by the owner, not the app), and
+(attempt-purge tooling and, since `0010`, the only role that can run the grant/revoke routines; run by the owner, not the app), and
 `uc02_routine_owner` (`NOLOGIN`, owns the routines, holds the actual table
 grants they need). Both login roles are created with a placeholder
 password that must be rotated with `ALTER ROLE ... WITH PASSWORD` on any
@@ -74,6 +74,17 @@ split: main did not receive staging-only migration `0002`, so this forward
 migration enables and forces RLS across all public domain tables. Deferred
 tables have no policies and are therefore default-deny.
 
+`0010_uc02_maintenance_grant_routines.sql` adds the only write path for
+committee-manager grants: `private.grant_committee_manager` and
+`private.revoke_committee_manager`. Each writes the grant and its
+`grant.activated` / `grant.revoked` audit row in one transaction, is idempotent
+(`ALREADY_ACTIVE` / `ALREADY_REVOKED` write nothing), validates the committee,
+user and actor, and derives `changes.bootstrap` for a committee's first active
+manager. Only `app_maintenance` can execute them (denied to `app_runtime`, `anon`,
+`authenticated`, `service_role`), and the same migration removes
+`app_maintenance`'s direct INSERT/UPDATE on `committee_managers` and INSERT on
+`private.uc02_audit`. No schema change. See `docs/Platform_Maintenance_Runbook.md`.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.
@@ -85,3 +96,8 @@ gone through the Supabase MCP `apply_migration` tool instead, rehearsed
 first against a disposable local Postgres container — see
 `docs/UC-02_Data_and_Security.md` section 10's rehearsal evidence for the
 exact method.
+
+`0011_uc02_admin_event_detail.sql` adds `private.get_admin_event(actor, event_id)`,
+the read-only detail counterpart of `list_admin_events` (0009). It uses the same
+active-grant predicate through `app_runtime`, so an event shown in the admin list
+always opens in the detail view; a missing or out-of-scope event returns no row.

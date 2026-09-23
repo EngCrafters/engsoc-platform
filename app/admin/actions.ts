@@ -58,7 +58,7 @@ export async function requestRecoveryAction(
     return {
       status: "error",
       message:
-        "Password recovery is temporarily unavailable. Contact the platform owner.",
+        "Password recovery is temporarily unavailable. Contact the platform maintenance authority.",
     };
   }
 

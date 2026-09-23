@@ -19,6 +19,13 @@ export function runtimeDb(): Sql {
   });
 }
 
+export function maintenanceDb(): Sql {
+  return postgres(required("UC02_TEST_APP_MAINTENANCE_DATABASE_URL"), {
+    max: 4,
+    prepare: false,
+  });
+}
+
 function required(name: string) {
   const value = process.env[name];
   if (!value)
@@ -89,7 +96,8 @@ export async function callRoutine(
     | "restore_event"
     | "promote_waitlist"
     | "create_event"
-    | "edit_event",
+    | "edit_event"
+    | "list_admin_events",
   values: (string | number | boolean | null)[]
 ): Promise<RoutineResult> {
   const placeholders = values.map((_, index) => `$${index + 1}`).join(", ");

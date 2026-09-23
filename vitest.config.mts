@@ -10,6 +10,9 @@ import path from "node:path";
 Object.assign(process.env, loadEnv("", process.cwd(), ""));
 
 export default defineConfig({
+  // Component tests render server components to static markup; tsconfig keeps
+  // jsx:"preserve" for Next, so tell the test transform to compile it.
+  oxc: { jsx: { runtime: "automatic" } },
   resolve: {
     alias: { "@": path.resolve(import.meta.dirname) },
   },

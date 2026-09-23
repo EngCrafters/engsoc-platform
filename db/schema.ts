@@ -109,6 +109,14 @@ export const committees = pgTable("committees", {
 // active (revoked_at IS NULL) row is the entire capability: no role enum,
 // no board/super-admin tier. Revocation is a recorded state change, never a
 // row deletion, so audit history stays intact.
+//
+// Access rule (migration 0010): rows are written only by the maintenance-only
+// routines private.grant_committee_manager / revoke_committee_manager, which
+// write the grant and its private.uc02_audit row in one transaction. Only
+// app_maintenance (external maintenance authority) can execute them;
+// app_runtime, anon, authenticated and service_role cannot, and app_maintenance
+// has no direct INSERT/UPDATE here. Authenticated users may only SELECT their
+// own rows (authenticated_select_own_grants).
 // ---------------------------------------------------------------------------
 export const committeeManagers = pgTable(
   "committee_managers",

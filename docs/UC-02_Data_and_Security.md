@@ -222,7 +222,10 @@ approver is simply a second committee_managers grant holder for the event's
 own committee, distinct from whoever flagged the draft (flaggedBy). Board
 participants use the same grant mechanism, not a separate role.
 The owner maintenance identity can provision/revoke through a separate audited
-procedure; ordinary application credentials cannot invoke that operation.
+procedure (migration 0010: `private.grant_committee_manager` and
+`revoke_committee_manager`, executable only by `app_maintenance`, which write
+the grant and its audit row atomically; see the maintenance runbook).
+Ordinary application credentials cannot invoke that operation.
 
 ## 7. Database and RLS boundary
 

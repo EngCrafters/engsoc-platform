@@ -1,32 +1,35 @@
 import Link from "next/link";
+import { ArrowLeft, KeyRound } from "lucide-react";
+import { AuthShell, authLinkClass } from "@/components/auth/auth-shell";
 import { RecoveryForm } from "./recovery-form";
 
 export default function AdminRecoveryPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10">
-      <section
-        className="w-full rounded-xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8"
-        aria-labelledby="recovery-title"
-      >
-        <h1
-          id="recovery-title"
-          className="text-2xl font-semibold tracking-tight"
-        >
-          Reset your password
-        </h1>
-        <p className="mt-3 text-sm text-neutral-700">
-          Enter the email address for your provisioned committee account.
-        </p>
-        <div className="mt-6">
-          <RecoveryForm />
-        </div>
+    <AuthShell
+      icon={KeyRound}
+      title="Reset your password"
+      titleId="recovery-title"
+      footer={
         <Link
           href="/admin/login"
-          className="mt-5 inline-block text-sm font-medium underline underline-offset-4 hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-900"
+          className={`${authLinkClass} inline-flex items-center gap-1.5`}
         >
+          <ArrowLeft aria-hidden="true" className="size-3.5" />
           Back to sign in
         </Link>
-      </section>
-    </main>
+      }
+    >
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        Enter your committee account email. If it matches an account, we&apos;ll
+        send a password reset link.
+      </p>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        Resetting your password does not create an account or change which
+        committees you can manage.
+      </p>
+      <div className="mt-6">
+        <RecoveryForm />
+      </div>
+    </AuthShell>
   );
 }

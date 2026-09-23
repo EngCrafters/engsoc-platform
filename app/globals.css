@@ -1,27 +1,315 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+    var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
   --font-mono:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, monospace;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-raised: var(--surface-raised);
+
+  /* Status/semantic tokens — carry meaning, not decoration. See
+     db/schema.ts field comments and CLAUDE.md "Status components". */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+  --color-full: var(--full);
+  --color-full-foreground: var(--full-foreground);
+  --color-full-soft: var(--full-soft);
+  --color-full-soft-foreground: var(--full-soft-foreground);
+  --color-quiet: var(--quiet);
+  --color-quiet-foreground: var(--quiet-foreground);
+  --color-quiet-soft: var(--quiet-soft);
+  --color-quiet-soft-foreground: var(--quiet-soft-foreground);
+
+  /* Deep navy shell — nav rail and other strong structural surfaces. */
+  --color-shell: var(--shell);
+  --color-shell-foreground: var(--shell-foreground);
+  --color-shell-muted: var(--shell-muted);
+  --color-shell-border: var(--shell-border);
+  --color-shell-accent: var(--shell-accent);
+  --color-shell-accent-foreground: var(--shell-accent-foreground);
+
+  --shadow-panel: var(--shadow-panel-value);
+  --shadow-raised: var(--shadow-raised-value);
+  --shadow-popover: var(--shadow-popover-value);
+
+  --ease-out-quiet: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quiet: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
   overflow-x: clip;
 }
 
 html {
   overflow-x: clip;
+}
+
+:root {
+  /* Hallmark pre-emit critique: P4 H4 E4 S4 R5 V4.
+     Modern minimal admin workspace · quiet navy and blue ·
+     dark navigation rail, open page framing, one aligned management list. */
+  /* Engineering Society palette — deliberate tokens, not ad-hoc color.
+     Deep slate-navy for structure, engineering blue as primary, a
+     restrained cyan accent, and meaning-carrying status hues. */
+  --background: oklch(0.972 0.006 258);
+  --foreground: oklch(0.208 0.042 265.755);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.208 0.042 265.755);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.208 0.042 265.755);
+
+  --surface: oklch(1 0 0);
+  --surface-foreground: oklch(0.208 0.042 265.755);
+  --surface-raised: oklch(1 0 0);
+
+  --primary: oklch(0.465 0.145 259);
+  --primary-foreground: oklch(0.985 0.003 247.9);
+  --primary-soft: oklch(0.95 0.022 259);
+  --primary-soft-foreground: oklch(0.39 0.12 259);
+
+  --secondary: oklch(0.968 0.007 247.9);
+  --secondary-foreground: oklch(0.279 0.041 260.03);
+
+  --muted: oklch(0.958 0.008 257);
+  --muted-foreground: oklch(0.508 0.04 257.3);
+
+  --accent: oklch(0.6 0.104 219.5);
+  --accent-foreground: oklch(0.99 0.005 220);
+  --accent-soft: oklch(0.951 0.03 213);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0.003 247.9);
+
+  --success: oklch(0.596 0.132 163.2);
+  --success-foreground: oklch(0.99 0.004 165);
+  --success-soft: oklch(0.951 0.037 164.15);
+  --success-soft-foreground: oklch(0.398 0.1 164);
+
+  --warning: oklch(0.666 0.164 58.3);
+  --warning-foreground: oklch(0.24 0.05 60);
+  --warning-soft: oklch(0.962 0.045 95.6);
+  --warning-soft-foreground: oklch(0.43 0.1 60);
+
+  --danger: oklch(0.577 0.245 27.325);
+  --danger-foreground: oklch(0.985 0.003 247.9);
+  --danger-soft: oklch(0.955 0.03 17.7);
+  --danger-soft-foreground: oklch(0.44 0.17 27);
+
+  --full: oklch(0.646 0.19 41.1);
+  --full-foreground: oklch(0.99 0.006 75);
+  --full-soft: oklch(0.954 0.038 75.16);
+  --full-soft-foreground: oklch(0.44 0.14 41);
+
+  --quiet: oklch(0.551 0.027 264.36);
+  --quiet-foreground: oklch(0.99 0.003 247.9);
+  --quiet-soft: oklch(0.94 0.008 260);
+  --quiet-soft-foreground: oklch(0.42 0.03 260);
+
+  --border: oklch(0.895 0.012 258);
+  --input: oklch(0.895 0.012 258);
+  --ring: oklch(0.62 0.14 260);
+
+  --chart-1: oklch(0.488 0.196 264.4);
+  --chart-2: oklch(0.6 0.104 219.5);
+  --chart-3: oklch(0.596 0.132 163.2);
+  --chart-4: oklch(0.666 0.164 58.3);
+  --chart-5: oklch(0.646 0.19 41.1);
+  --radius: 0.75rem;
+
+  /* Deep navy shell — nav rail, strong structural surfaces. */
+  --shell: oklch(0.22 0.035 263.5);
+  --shell-foreground: oklch(0.95 0.008 258);
+  --shell-muted: oklch(0.72 0.03 260);
+  --shell-border: oklch(1 0 0 / 8%);
+  --shell-accent: oklch(0.77 0.12 259);
+  --shell-accent-foreground: oklch(0.99 0.004 264);
+
+  --sidebar: var(--shell);
+  --sidebar-foreground: var(--shell-foreground);
+  --sidebar-primary: var(--shell-accent);
+  --sidebar-primary-foreground: var(--shell-accent-foreground);
+  --sidebar-accent: oklch(1 0 0 / 6%);
+  --sidebar-accent-foreground: var(--shell-foreground);
+  --sidebar-border: var(--shell-border);
+  --sidebar-ring: var(--shell-accent);
+
+  --shadow-panel-value: 0 1px 2px 0 oklch(0.2 0.04 264 / 0.04);
+  --shadow-raised-value:
+    0 1px 2px oklch(0.2 0.04 264 / 0.04),
+    0 8px 24px -8px oklch(0.2 0.04 264 / 0.1);
+  --shadow-popover-value:
+    0 4px 12px oklch(0.2 0.04 264 / 0.08),
+    0 16px 40px -12px oklch(0.2 0.04 264 / 0.18);
+}
+
+.dark {
+  --background: oklch(0.16 0.018 264);
+  --foreground: oklch(0.95 0.008 258);
+  --card: oklch(0.208 0.022 264);
+  --card-foreground: oklch(0.95 0.008 258);
+  --popover: oklch(0.208 0.022 264);
+  --popover-foreground: oklch(0.95 0.008 258);
+
+  --surface: oklch(0.208 0.022 264);
+  --surface-foreground: oklch(0.95 0.008 258);
+  --surface-raised: oklch(0.25 0.024 264);
+
+  --primary: oklch(0.673 0.166 264.4);
+  --primary-foreground: oklch(0.16 0.03 264);
+  --primary-soft: oklch(0.3 0.06 264);
+  --primary-soft-foreground: oklch(0.87 0.06 264);
+
+  --secondary: oklch(0.279 0.022 264);
+  --secondary-foreground: oklch(0.95 0.008 258);
+
+  --muted: oklch(0.279 0.022 264);
+  --muted-foreground: oklch(0.68 0.02 258);
+
+  --accent: oklch(0.72 0.11 213);
+  --accent-foreground: oklch(0.16 0.03 220);
+  --accent-soft: oklch(0.3 0.05 213);
+
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.16 0.03 20);
+
+  --success: oklch(0.72 0.15 163);
+  --success-foreground: oklch(0.16 0.03 163);
+  --success-soft: oklch(0.3 0.06 163);
+  --success-soft-foreground: oklch(0.85 0.1 163);
+
+  --warning: oklch(0.77 0.16 70);
+  --warning-foreground: oklch(0.2 0.04 60);
+  --warning-soft: oklch(0.32 0.06 65);
+  --warning-soft-foreground: oklch(0.88 0.1 80);
+
+  --danger: oklch(0.704 0.191 22.216);
+  --danger-foreground: oklch(0.16 0.03 20);
+  --danger-soft: oklch(0.32 0.08 20);
+  --danger-soft-foreground: oklch(0.85 0.1 20);
+
+  --full: oklch(0.72 0.18 45);
+  --full-foreground: oklch(0.18 0.03 41);
+  --full-soft: oklch(0.32 0.07 45);
+  --full-soft-foreground: oklch(0.86 0.1 55);
+
+  --quiet: oklch(0.65 0.02 260);
+  --quiet-foreground: oklch(0.16 0.02 260);
+  --quiet-soft: oklch(0.3 0.015 260);
+  --quiet-soft-foreground: oklch(0.82 0.015 260);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.673 0.166 264.4);
+
+  --chart-1: oklch(0.673 0.166 264.4);
+  --chart-2: oklch(0.72 0.11 213);
+  --chart-3: oklch(0.72 0.15 163);
+  --chart-4: oklch(0.77 0.16 70);
+  --chart-5: oklch(0.72 0.18 45);
+
+  --shell: oklch(0.13 0.024 264);
+  --shell-foreground: oklch(0.95 0.008 258);
+  --shell-muted: oklch(0.62 0.025 260);
+  --shell-border: oklch(1 0 0 / 8%);
+  --shell-accent: oklch(0.72 0.15 264.4);
+  --shell-accent-foreground: oklch(0.14 0.03 264);
+
+  --sidebar: var(--shell);
+  --sidebar-foreground: var(--shell-foreground);
+  --sidebar-primary: var(--shell-accent);
+  --sidebar-primary-foreground: var(--shell-accent-foreground);
+  --sidebar-accent: oklch(1 0 0 / 6%);
+  --sidebar-accent-foreground: var(--shell-foreground);
+  --sidebar-border: var(--shell-border);
+  --sidebar-ring: var(--shell-accent);
+
+  --shadow-panel-value: 0 1px 2px 0 oklch(0 0 0 / 0.3);
+  --shadow-raised-value:
+    0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -8px oklch(0 0 0 / 0.5);
+  --shadow-popover-value:
+    0 4px 12px oklch(0 0 0 / 0.4), 0 16px 40px -12px oklch(0 0 0 / 0.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

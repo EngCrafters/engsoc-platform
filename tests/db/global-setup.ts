@@ -158,6 +158,11 @@ export default async function setup() {
   runtimeUrl.username = "app_runtime";
   runtimeUrl.password = runtimePassword;
   process.env.UC02_TEST_APP_RUNTIME_DATABASE_URL = runtimeUrl.toString();
+  const maintenanceUrl = new URL(databaseUrl);
+  maintenanceUrl.username = "app_maintenance";
+  maintenanceUrl.password = maintenancePassword;
+  process.env.UC02_TEST_APP_MAINTENANCE_DATABASE_URL =
+    maintenanceUrl.toString();
 
   if (
     !existsSync(

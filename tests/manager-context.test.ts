@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+vi.mock("server-only", () => ({}));
+
 import { resolveManagerContext } from "../lib/auth/manager";
 
 function clientFor({
@@ -26,7 +29,9 @@ function clientFor({
   return {
     auth: {
       getUser: async () => ({
-        data: { user: userId ? { id: userId } : null },
+        data: {
+          user: userId ? { id: userId, email: "manager@example.test" } : null,
+        },
         error: null,
       }),
     },
@@ -40,6 +45,7 @@ describe("manager authorization context", () => {
     await expect(resolveManagerContext(clientFor())).resolves.toEqual({
       kind: "manager",
       userId: "manager-id",
+      email: "manager@example.test",
       committees: [{ id: "events-id", name: "Events" }],
     });
   });
@@ -50,6 +56,7 @@ describe("manager authorization context", () => {
     ).resolves.toEqual({
       kind: "unassigned",
       userId: "manager-id",
+      email: "manager@example.test",
     });
   });
 
@@ -64,6 +71,7 @@ describe("manager authorization context", () => {
     ).resolves.toEqual({
       kind: "manager",
       userId: "manager-id",
+      email: "manager@example.test",
       committees: [{ id: "events-id", name: "Events" }],
     });
   });
