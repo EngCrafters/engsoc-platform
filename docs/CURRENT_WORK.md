@@ -39,3 +39,8 @@ mismatch, not an event-list or authorization defect.
 **M7 AUTHENTICATED BROWSER SMOKE:** The Ready Vercel deployment passed the named-manager desktop and 390px mobile smoke on September 23, 2026. Login and session establishment, registration tabs/counts, cursor pagination, formula-safe CSV export, FIFO promotion, malformed cursor handling, foreign-committee denial, and absence of maintenance controls all passed. Temporary fixtures were removed after the run.
 
 **NEXT EXACT TASK:** Complete the frozen M8 UC-02 release/closure evidence: role and end-to-end matrix, serving-database/RLS verification through the authorized procedure, isolated backup/restore evidence, deployment/runtime checks, and documentation reconciliation. Do not begin product features outside the release scope.
+
+**M8 BLOCKER:** The serving main Supabase project remains the documented
+release blocker because RLS is disabled on its business tables. Applying the
+tested RLS/grants requires the authorized production database procedure; this
+cycle made no production SQL changes.

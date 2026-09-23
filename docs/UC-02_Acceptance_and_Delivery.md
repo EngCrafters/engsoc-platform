@@ -447,3 +447,24 @@ navigation, formula-safe same-origin CSV export, FIFO waitlist promotion,
 malformed cursor handling, foreign-committee denial, and absence of
 maintenance grant/revoke controls. The temporary fixture was removed in the
 smoke cleanup path.
+
+## M8 release verification status
+
+M7's release candidate was pushed as `125b950665b4cc94ccf8f575d265096087d2608c`.
+GitHub Actions run `35895189443` is green (lint, type-check, database/RLS
+tests, and build). The production Vercel deployment generated from `main` is
+Ready and aliased to `https://engsoc-platform.vercel.app`; the authenticated
+browser smoke above exercised that deployment against staging.
+
+The M8 role and end-to-end evidence currently covers anonymous public catalog,
+detail, registration and waitlist behavior (20/20 Playwright tests), the
+authenticated manager event and registration flows, malformed/cross-scope
+denials, and the staging runtime least-privilege/RLS suites. The isolated
+backup/restore rehearsal recorded in the data/security contract remains the
+backup evidence: pg_dump/pg_restore preserved schema, RLS, policies, rows and
+nullable `memberId` without touching a hosted project.
+
+UC-02 is not marked complete yet. The serving main Supabase project still has
+RLS disabled on its business tables, as documented by the release preflight.
+Applying the tested RLS and grants to that serving database requires the
+authorized production change; no production SQL was run from this work cycle.
