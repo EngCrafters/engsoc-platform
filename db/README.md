@@ -101,3 +101,13 @@ exact method.
 the read-only detail counterpart of `list_admin_events` (0009). It uses the same
 active-grant predicate through `app_runtime`, so an event shown in the admin list
 always opens in the detail view; a missing or out-of-scope event returns no row.
+
+M6 staging rollout (September 23, 2026) used Supabase CLI 2.117.0 against the
+explicit staging project ref. A disposable CLI workspace fetched the eight
+existing remote migration files, then received byte-identical copies of this
+repository's complete `0008`–`0011` SQL files as four ordered migrations. A
+`db push --dry-run --skip-vault` listed only those four files;
+`db push --skip-vault` applied them and recorded versions `20260923010000` through
+`20260923010300` in `supabase_migrations.schema_migrations`. Neither the
+repository's migration-only `DATABASE_URL` nor a production project link was
+used. The delivery ledger records the resulting ownership and privilege checks.

@@ -3,24 +3,30 @@
 Keep this short. See `docs/UC-02_Acceptance_and_Delivery.md` for full evidence
 and `docs/UC-02_Deep_Dive.md` for behavior specification.
 
-**CURRENT MILESTONE:** UC-02 M6 (Event management and approval) — ready to
-begin after M5 delivery verification.
+**CURRENT MILESTONE:** UC-02 M6 (Event management and approval) — delivered in
+source, CI, and staging on September 23, 2026. M7 (Registration operations) is
+the next documented milestone; do not begin its implementation in this run.
 
-**CURRENT STATUS:** M1–M5 are delivered in source and staging. M5 adds
-request-scoped Supabase SSR clients and session refresh, provisioned-user
-login/logout/recovery/reset, a protected admin shell, database-backed active
-committee-manager grants, safe internal redirects, and no-signup browser
-coverage. It does not add a Member model or event-management UI.
+**SOURCE / CI:** Origin `main` contains `72ee5f0` (fixed create/edit routines)
+and `aeeed87` (M6 admin UI, migrations 0009–0011, account/security, maintenance
+model, tests). GitHub Actions run `35840419684` for `aeeed87` passed. The final
+local worktree passed format, lint, typecheck, 102/102 Vitest tests, db:check,
+build, 20/20 Playwright tests, and diff whitespace check.
 
-**LAST DELIVERED COMMIT:** `2d5c08f docs(uc-02): close M5 auth evidence`.
+**STAGING:** Migrations 0008–0011 are recorded as Supabase versions
+`20260923010000`–`20260923010300` on staging. Routine ownership, execute
+grants, and direct-DML restrictions were verified. Live `app_runtime`,
+`app_maintenance`, cross-committee, and authenticated-RLS smoke transactions
+passed and rolled back; fixture counts were unchanged. Browser checks against
+a local production build connected to staging passed named-manager password
+login, event list/detail, create form, safe missing/malformed IDs,
+account/scope display, session persistence, logout, and generic recovery
+feedback. No password, token, or recovery link is in the repository.
 
-**VERIFIED M5 EVIDENCE:** The named staging-only manager has exactly one active
-Events committee grant; its real password login/JWT-scoped RLS query passed on
-September 17, 2026. Staging Auth accepted a password-recovery request using
-the configured fixed callback origin. Credentials remain local-only. GitHub CI
-for `1fed3e4` and `2d5c08f` is green. Vercel project access is currently 403, so deployment
-status/configuration remains independently unverified.
+**VERCEL:** The connected identity still receives HTTP 403 for the
+`eng-crafters` scope, so production deployment readiness and SHA cannot be
+independently verified through Vercel. No Vercel settings were changed.
 
-**NEXT EXACT TASK:** Read M6's authoritative scope and implement its first
-dependency-ordered vertical slice. Do not add Member features or registration
-operations/UI before their owning milestones.
+**NEXT EXACT TASK:** M7 planning/implementation may begin in a separate run
+after reviewing its approved scope. Do not implement M7 in this M6 delivery
+run.

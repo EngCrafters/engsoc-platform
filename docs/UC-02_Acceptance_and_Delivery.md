@@ -353,3 +353,60 @@ Implementation completion must still record the migration versions per
 environment, runtime role test results, app/CI/deployment SHA, E2E results
 and any independently blocked release action. Never mark a blanket-deny
 policy as completion of an intended allow behavior.
+
+**M6 rollout evidence (September 23, 2026):** Commit `72ee5f0` contains the
+scoped create/edit migration (`0008`); commit `aeeed87` contains the admin
+workspace, list/detail/filter/cursor/count routines (`0009`, `0011`), external
+maintenance grant/revoke routines (`0010`), account/security and Auth page UI,
+ADR 0009, the maintenance runbook, and regression tests. The application calls
+fixed `private.*` routines through `app_runtime` and has no direct event or
+grant table DML path. Committee managers remain the highest application role;
+platform maintenance authority is external. Password recovery changes Auth
+credentials, never committee grants.
+
+The final worktree passed `format:check`, lint, typecheck, 102/102 Vitest tests
+(including the credential-gated named staging manager test), `db:check`,
+production build, 20/20 Playwright tests (desktop and mobile), and
+`git diff --check`. GitHub Actions CI run `35840419684` for `aeeed87` passed
+commit message and lint/type/test/build jobs. Origin `main` contains that SHA.
+
+Staging project `wnrdgnmmcdedmilnzzsl` recorded the exact `0008`–`0011` SQL
+files as Supabase migration versions `20260923010000`, `20260923010100`,
+`20260923010200`, and `20260923010300`, in that order. The rollout fetched
+the existing remote history into a disposable CLI workspace, checked each
+source/copy SHA-256 match, and dry-ran the four-file push before applying it.
+All six M6 routines are owned by `uc02_routine_owner`. Of these six,
+`app_runtime` executes the four event routines and `app_maintenance` executes
+the two grant/revoke routines. `anon`, `authenticated`, and `service_role`
+execute none of them.
+`app_runtime` retains no direct event, registration, or grant DML; the
+maintenance role retains no direct grant/audit write privilege.
+
+A live staging `app_runtime` transaction passed 29 assertions covering scoped
+list/detail, create/edit, optimistic conflict, date/capacity validation,
+review flag and removal, second-manager approval, publication, full/reopen,
+archive/restore, invalid transitions, confirmed/waitlisted counts, filters,
+and cursor pagination. A separate staging transaction ran the maintenance
+grant/duplicate/revoke/repeat/reactivation/audit and direct-write-denial checks
+as `app_maintenance`. Another staging transaction created a foreign committee
+fixture, then proved its list/detail/create/edit paths denied the first
+committee's manager as `app_runtime`. An `authenticated` RLS transaction saw
+exactly one active grant and its committee. Every transaction rolled back;
+staging's four events, one registration, one committee, and two active manager
+grants remained unchanged. The unauthenticated login/recovery browser route
+returned generic account-safe recovery feedback. The named manager's real
+password login and JWT-scoped read passed again on September 23. A production
+build served locally against staging passed authenticated browser checks for
+login, event list/detail, create form, safe missing/malformed event IDs,
+account identity/committee scope, session persistence after reload, logout,
+and protected-route redirect. No maintenance control appeared in the manager
+account. No test credential or Auth token was printed or committed.
+
+Vercel deployment verification remains externally blocked: the connected
+identity receives HTTP 403 for the `eng-crafters` scope. No Vercel project
+settings were changed, and deployment readiness/SHA cannot be independently
+confirmed through that connection.
+
+**M6 delivery status:** Delivered in source, CI, and staging on September 23, 2026. Independent Vercel deployment verification remains blocked by external
+scope access (403). M7 is the next documented milestone; no M7 implementation
+is included in M6.
