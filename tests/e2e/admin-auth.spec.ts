@@ -20,6 +20,10 @@ test("all event-management routes remain behind the same protected boundary", as
   await expect(page).toHaveURL(/\/admin\/login\?next=\/admin\/events$/);
   await page.goto("/admin/events/00000000-0000-4000-8000-000000000000");
   await expect(page).toHaveURL(/\/admin\/login\?next=\/admin\/events$/);
+  await page.goto(
+    "/admin/events/00000000-0000-4000-8000-000000000000/registrations"
+  );
+  await expect(page).toHaveURL(/\/admin\/login\?next=\/admin\/events$/);
 });
 
 test("the account page is behind the same protected boundary", async ({

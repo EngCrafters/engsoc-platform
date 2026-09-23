@@ -85,6 +85,13 @@ manager. Only `app_maintenance` can execute them (denied to `app_runtime`, `anon
 `app_maintenance`'s direct INSERT/UPDATE on `committee_managers` and INSERT on
 `private.uc02_audit`. No schema change. See `docs/Platform_Maintenance_Runbook.md`.
 
+`0012_uc02_admin_registration_operations.sql` adds the M7 manager-scoped
+registration list/count/export routines. They return only attendee name,
+email, status, and registration time for an authorized event; export audits a
+bounded event snapshot atomically. `promote_waitlist` remains the only
+contact-attested FIFO promotion path, and no attendance, cancellation, or
+Member-link mutation is introduced by M7.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.

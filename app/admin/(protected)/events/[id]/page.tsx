@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Users } from "lucide-react";
 import { getManagerContext } from "@/lib/auth/manager";
 import { getAdminEvent } from "@/lib/admin-events/server";
 import { getEventLifecycleStatus } from "@/lib/admin-events/status";
@@ -29,6 +31,15 @@ export default async function EventPage({
         eventStatus={status}
         committees={manager.committees}
       />
+      <div className="mt-8">
+        <Link
+          href={`/admin/events/${event.id}/registrations`}
+          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:border-primary/40 hover:bg-primary-soft/30"
+        >
+          <Users aria-hidden="true" className="size-4" />
+          Manage registrations
+        </Link>
+      </div>
       <LifecycleActions
         eventId={event.id}
         revision={event.revision}

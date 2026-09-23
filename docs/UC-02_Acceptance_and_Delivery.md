@@ -415,5 +415,25 @@ recorded here.
 **M6 delivery status:** Delivered in source, CI, staging, and Vercel on
 September 23, 2026. The current Vercel Production target is deliberately
 connected to staging for this manager verification; promotion to a separately
-provisioned production project remains outside M6. M7 is the next documented
-milestone; no M7 implementation is included in M6.
+provisioned production project remains outside M6. M7 is tracked below.
+
+## M7 implementation evidence
+
+M7 implements only the frozen registration-operations scope: the protected
+`/admin/events/[id]/registrations` page, manager-scoped confirmed/waitlisted
+cursor lists and counts, FIFO contact-attested promotion through the existing
+`private.promote_waitlist` routine, and a same-origin POST CSV export with
+atomic `registrations.exported` audit. The export includes only attendee name,
+email, status, and UTC registration time; it excludes IDs, Member data,
+attendance, IPs, and unrelated committee fields. No attendee search,
+cancellation, attendance editing, or new entity was added.
+
+M7 database migrations `0012_uc02_admin_registration_operations.sql`,
+`0013_uc02_admin_registration_count_scope.sql`, and
+`0014_uc02_admin_registration_status_safety.sql` are applied to staging as
+Supabase versions `20260923010400`, `20260923010500`, and `20260923010600`.
+The routines are
+owned by `uc02_routine_owner`, executable only by `app_runtime`, and public
+execution is revoked. Local database, unit, build, protected-route E2E, and
+staging runtime smoke checks passed; staging smoke returned one authorized
+registration, correct counts/export rows, and zero rows for a foreign actor.

@@ -85,6 +85,27 @@
       "when": 1789749720000,
       "tag": "0011_uc02_admin_event_detail",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789753320000,
+      "tag": "0012_uc02_admin_registration_operations",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789756920000,
+      "tag": "0013_uc02_admin_registration_count_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789760520000,
+      "tag": "0014_uc02_admin_registration_status_safety",
+      "breakpoints": true
     }
   ]
 }

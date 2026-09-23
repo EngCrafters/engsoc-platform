@@ -4,8 +4,7 @@ Keep this short. See `docs/UC-02_Acceptance_and_Delivery.md` for full evidence
 and `docs/UC-02_Deep_Dive.md` for behavior specification.
 
 **CURRENT MILESTONE:** UC-02 M6 (Event management and approval) — delivered in
-source, CI, and staging on September 23, 2026. M7 (Registration operations) is
-the next documented milestone; do not begin its implementation in this run.
+source, CI, staging, and Vercel on September 23, 2026. M7 is now active.
 
 **SOURCE / CI:** Origin `main` contains `72ee5f0` (fixed create/edit routines)
 and `aeeed87` (M6 admin UI, migrations 0009–0011, account/security, maintenance
@@ -23,6 +22,13 @@ login, event list/detail, create form, safe missing/malformed IDs,
 account/scope display, session persistence, logout, and generic recovery
 feedback. No password, token, or recovery link is in the repository.
 
+M7 migrations 0012â€“0014 are recorded as `20260923010400`, `20260923010500`,
+and `20260923010600`. The registration list/count/export routines are scoped to
+the manager's event committee; staging runtime smoke returned the authorized
+registration and zero rows for a foreign actor. Export auditing and FIFO
+promotion use fixed routines; attendance editing, cancellation, and search
+remain out of scope.
+
 **VERCEL:** Production environment configuration was corrected on September
 23, 2026. `NEXT_PUBLIC_SUPABASE_URL`, the matching anon key, and
 `APP_RUNTIME_DATABASE_URL` now target the staging Supabase project that owns
@@ -31,6 +37,8 @@ the named staging manager. A fresh production deployment is Ready at
 `https://engsoc-platform.vercel.app`. The prior failure was a backend-project
 mismatch, not an event-list or authorization defect.
 
-**NEXT EXACT TASK:** M7 planning/implementation may begin in a separate run
-after reviewing its approved scope. Do not implement M7 in this M6 delivery
-run.
+**NEXT EXACT TASK:** Implement only the frozen M7 registration scope:
+manager-scoped cursor list/counts, FIFO contact-attested waitlist promotion,
+and private event-scoped CSV export with audit. Attendance editing,
+cancellation/removal, member-link display, and attendee search remain out of
+scope.
