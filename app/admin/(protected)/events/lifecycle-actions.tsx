@@ -91,7 +91,8 @@ export function LifecycleActions(props: Props) {
 
   useEffect(() => {
     if (state?.code && state.code !== "SUCCESS") feedbackRef.current?.focus();
-  }, [state]);
+    if (state?.code === "SUCCESS") router.refresh();
+  }, [router, state]);
 
   return (
     <section

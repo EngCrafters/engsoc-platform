@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AlignLeft,
@@ -69,6 +70,7 @@ export function EventForm({
   event?: EventValues;
   eventStatus?: EventLifecycleStatus;
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(
     async (_: unknown, form: FormData) => saveEventAction(form),
     null
@@ -81,7 +83,8 @@ export function EventForm({
 
   useEffect(() => {
     if (state?.code && state.code !== "SUCCESS") errorRef.current?.focus();
-  }, [state]);
+    if (state?.code === "SUCCESS") router.refresh();
+  }, [router, state]);
 
   return (
     <form
