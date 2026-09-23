@@ -23,9 +23,13 @@ login, event list/detail, create form, safe missing/malformed IDs,
 account/scope display, session persistence, logout, and generic recovery
 feedback. No password, token, or recovery link is in the repository.
 
-**VERCEL:** The connected identity still receives HTTP 403 for the
-`eng-crafters` scope, so production deployment readiness and SHA cannot be
-independently verified through Vercel. No Vercel settings were changed.
+**VERCEL:** Production environment configuration was corrected on September
+23, 2026. `NEXT_PUBLIC_SUPABASE_URL`, the matching anon key, and
+`APP_RUNTIME_DATABASE_URL` now target the staging Supabase project that owns
+the named staging manager. A fresh production deployment is Ready at
+`https://engsoc-platform-farzeduek-eng-crafters.vercel.app` and is aliased to
+`https://engsoc-platform.vercel.app`. The prior failure was a backend-project
+mismatch, not an event-list or authorization defect.
 
 **NEXT EXACT TASK:** M7 planning/implementation may begin in a separate run
 after reviewing its approved scope. Do not implement M7 in this M6 delivery

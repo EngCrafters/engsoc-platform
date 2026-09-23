@@ -402,11 +402,18 @@ account identity/committee scope, session persistence after reload, logout,
 and protected-route redirect. No maintenance control appeared in the manager
 account. No test credential or Auth token was printed or committed.
 
-Vercel deployment verification remains externally blocked: the connected
-identity receives HTTP 403 for the `eng-crafters` scope. No Vercel project
-settings were changed, and deployment readiness/SHA cannot be independently
-confirmed through that connection.
+Vercel production verification completed on September 23, 2026 after
+correcting a deployment configuration mismatch. The Vercel Production public
+URL and anon key had pointed at the main Supabase project while the supplied
+staging manager and M6 routines lived on the staging project. Both public
+variables and the restricted `app_runtime` connection were aligned to staging,
+then a fresh production deployment completed successfully and was aliased to
+`https://engsoc-platform.vercel.app`. The deployment is Ready at
+`https://engsoc-platform-farzeduek-eng-crafters.vercel.app`. No secrets are
+recorded here.
 
-**M6 delivery status:** Delivered in source, CI, and staging on September 23, 2026. Independent Vercel deployment verification remains blocked by external
-scope access (403). M7 is the next documented milestone; no M7 implementation
-is included in M6.
+**M6 delivery status:** Delivered in source, CI, staging, and Vercel on
+September 23, 2026. The current Vercel Production target is deliberately
+connected to staging for this manager verification; promotion to a separately
+provisioned production project remains outside M6. M7 is the next documented
+milestone; no M7 implementation is included in M6.
