@@ -437,3 +437,13 @@ owned by `uc02_routine_owner`, executable only by `app_runtime`, and public
 execution is revoked. Local database, unit, build, protected-route E2E, and
 staging runtime smoke checks passed; staging smoke returned one authorized
 registration, correct counts/export rows, and zero rows for a foreign actor.
+
+On September 23, 2026, the authenticated browser smoke ran against the Ready
+Vercel deployment at `https://engsoc-platform.vercel.app`, using the named
+staging manager loaded from the ignored local `.env.local` (credentials were
+not printed or persisted). Desktop and 390px mobile checks passed: login and
+session establishment, confirmed and waitlisted tabs/counts, cursor next-page
+navigation, formula-safe same-origin CSV export, FIFO waitlist promotion,
+malformed cursor handling, foreign-committee denial, and absence of
+maintenance grant/revoke controls. The temporary fixture was removed in the
+smoke cleanup path.

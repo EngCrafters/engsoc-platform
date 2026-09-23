@@ -3,8 +3,7 @@
 Keep this short. See `docs/UC-02_Acceptance_and_Delivery.md` for full evidence
 and `docs/UC-02_Deep_Dive.md` for behavior specification.
 
-**CURRENT MILESTONE:** UC-02 M6 (Event management and approval) — delivered in
-source, CI, staging, and Vercel on September 23, 2026. M7 is now active.
+**CURRENT MILESTONE:** UC-02 M8 (release and closure) — M7 is delivered in source, CI, staging, and Vercel on September 23, 2026. M8 release verification is now active.
 
 **SOURCE / CI:** Origin `main` contains `72ee5f0` (fixed create/edit routines)
 and `aeeed87` (M6 admin UI, migrations 0009–0011, account/security, maintenance
@@ -37,8 +36,6 @@ the named staging manager. A fresh production deployment is Ready at
 `https://engsoc-platform.vercel.app`. The prior failure was a backend-project
 mismatch, not an event-list or authorization defect.
 
-**NEXT EXACT TASK:** Implement only the frozen M7 registration scope:
-manager-scoped cursor list/counts, FIFO contact-attested waitlist promotion,
-and private event-scoped CSV export with audit. Attendance editing,
-cancellation/removal, member-link display, and attendee search remain out of
-scope.
+**M7 AUTHENTICATED BROWSER SMOKE:** The Ready Vercel deployment passed the named-manager desktop and 390px mobile smoke on September 23, 2026. Login and session establishment, registration tabs/counts, cursor pagination, formula-safe CSV export, FIFO promotion, malformed cursor handling, foreign-committee denial, and absence of maintenance controls all passed. Temporary fixtures were removed after the run.
+
+**NEXT EXACT TASK:** Complete the frozen M8 UC-02 release/closure evidence: role and end-to-end matrix, serving-database/RLS verification through the authorized procedure, isolated backup/restore evidence, deployment/runtime checks, and documentation reconciliation. Do not begin product features outside the release scope.
