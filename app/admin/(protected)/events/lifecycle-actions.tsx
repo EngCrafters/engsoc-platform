@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { EventLifecycleStatus } from "@/lib/admin-events/status";
 import { EASE_OUT } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
+import { adminErrorMessage } from "@/lib/admin-errors";
 
 type Props = {
   eventId: string;
@@ -34,16 +35,6 @@ type Props = {
   isApproved: boolean;
   isPast: boolean;
   lifecycleStatus: EventLifecycleStatus;
-};
-
-const messages: Record<string, string> = {
-  APPROVAL_REQUIRED:
-    "A different active manager must approve this revision before it can be published.",
-  SELF_APPROVAL_DENIED:
-    "The manager who requested review cannot approve the same revision.",
-  INVALID_TRANSITION:
-    "That action is not available for the current event lifecycle state.",
-  NOT_FOUND: "This event is no longer available in your committee scope.",
 };
 
 const LIFECYCLE_FORM_ID = "lifecycle-form";
@@ -281,8 +272,7 @@ export function LifecycleActions(props: Props) {
               <Alert variant="destructive">
                 <AlertTitle>Couldn&apos;t apply that change</AlertTitle>
                 <AlertDescription>
-                  {messages[state.code] ??
-                    "The lifecycle change could not be completed. Try again."}
+                  {adminErrorMessage(state.code)}
                 </AlertDescription>
               </Alert>
             </motion.div>

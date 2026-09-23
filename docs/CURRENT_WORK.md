@@ -44,3 +44,10 @@ mismatch, not an event-list or authorization defect.
 release blocker because RLS is disabled on its business tables. Applying the
 tested RLS/grants requires the authorized production database procedure; this
 cycle made no production SQL changes.
+
+**M8 OPERATIONAL PASS:** Event archive/restore remains the reversible record
+control and hard delete is intentionally absent. Published/past edit limits,
+capacity safeguards, stale-revision guidance, lifecycle explanations, and a
+shared manager error contract are now explicit in the editor and lifecycle UI.
+Registration cancellation, arbitrary status edits, attendance editing, and
+hard deletion remain outside the frozen UC-02 scope.

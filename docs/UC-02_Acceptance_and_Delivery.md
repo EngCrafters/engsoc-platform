@@ -468,3 +468,42 @@ UC-02 is not marked complete yet. The serving main Supabase project still has
 RLS disabled on its business tables, as documented by the release preflight.
 Applying the tested RLS and grants to that serving database requires the
 authorized production change; no production SQL was run from this work cycle.
+
+## M8 operational-control and error-contract pass
+
+The event record model remains reversible: managers archive and restore records
+through fixed audited routines; hard deletion is intentionally not exposed so
+registrations and audit history cannot be orphaned. Managers can create, view,
+edit, review, approve, publish, hold full, reopen, archive, restore, promote
+the first waitlisted registration, and export an authorized event's rows.
+Registration cancellation, arbitrary status edits, attendance editing, and
+hard deletion remain outside the frozen UC-02 contract and are not presented as
+missing controls in the UI.
+
+Editing rules are now explained beside the form and in the shared error
+contract: archived events must be restored first; a published event with
+registration history cannot move date; past events cannot change date or
+capacity; capacity cannot be lower than confirmed registrations; and stale
+revisions require a refresh. Successful saves now provide explicit feedback.
+
+Authoritative count sources are the manager-scoped database routines: the event
+list and event detail use their respective fixed count projections, while the
+registration page and CSV export use `count_admin_registrations` and
+`export_admin_registrations`. Existing database parity tests cover list/detail
+counts, registration counts, export scope, and cross-committee isolation.
+
+### Error matrix
+
+| Internal code             | User-facing meaning                                                                                                    | UI location            | Next action                                         |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------------------------------------------- |
+| `CONFLICT`                | This record changed in another session.                                                                                | Event editor/lifecycle | Refresh and reapply the change.                     |
+| `APPROVAL_REQUIRED`       | Review approval is required before publishing.                                                                         | Lifecycle panel        | Ask a different active manager to approve.          |
+| `SELF_APPROVAL_DENIED`    | The reviewer cannot approve their own revision.                                                                        | Lifecycle panel        | Ask another manager to approve.                     |
+| `INVALID_TRANSITION`      | The action is unavailable for the current state; archived events must be restored, and past/date/capacity rules apply. | Event editor/lifecycle | Restore, refresh, or change an allowed field.       |
+| `CAPACITY_BELOW_COUNT`    | Capacity cannot be below confirmed registrations.                                                                      | Event editor           | Increase capacity or leave it unchanged.            |
+| `QUEUE_ORDER_CONFLICT`    | Only the first waitlisted registration can be promoted.                                                                | Registration row       | Refresh and promote the first row.                  |
+| `NOT_FOUND` / `FORBIDDEN` | The record is outside the current committee scope.                                                                     | Protected page/action  | Refresh access or contact maintenance authority.    |
+| `SERVER_ERROR`            | An unexpected server failure occurred.                                                                                 | Any manager action     | Retry; contact maintenance authority if persistent. |
+
+The shared `lib/admin-errors.ts` mapping keeps these messages consistent and
+never renders SQL, UUID parser text, routine names, or stack traces.

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { promoteWaitlistAction } from "./actions";
+import { adminErrorMessage } from "@/lib/admin-errors";
 
 export function PromoteButton({
   eventId,
@@ -24,9 +25,7 @@ export function PromoteButton({
       </button>
       {state?.code && state.code !== "SUCCESS" ? (
         <span className="text-xs text-danger">
-          {state.code === "QUEUE_ORDER_CONFLICT"
-            ? "Promote the first waitlisted person."
-            : "Could not promote."}
+          {adminErrorMessage(state.code)}
         </span>
       ) : null}
     </form>

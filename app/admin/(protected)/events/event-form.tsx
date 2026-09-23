@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { EASE_OUT } from "@/lib/motion/variants";
 import type { EventLifecycleStatus } from "@/lib/admin-events/status";
+import { adminErrorMessage } from "@/lib/admin-errors";
 
 type EventValues = {
   id: string;
@@ -102,6 +103,14 @@ export function EventForm({
           <AnimatePresence>
             {state?.code === "CONFLICT" ? (
               <ConflictAlert onReload={() => window.location.reload()} />
+            ) : state?.code === "SUCCESS" ? (
+              <Alert className="border-success/30 bg-success-soft/30 text-success-soft-foreground">
+                <AlertTitle>Changes saved</AlertTitle>
+                <AlertDescription>
+                  The event details are saved. Review the lifecycle panel below
+                  if publication or approval is needed.
+                </AlertDescription>
+              </Alert>
             ) : state?.code && state.code !== "SUCCESS" ? (
               <motion.div
                 initial={{ opacity: 0, y: -6 }}
@@ -112,7 +121,7 @@ export function EventForm({
                 <Alert variant="destructive">
                   <AlertTitle>Couldn&apos;t save this event</AlertTitle>
                   <AlertDescription>
-                    Check the details below and try again.
+                    {adminErrorMessage(state.code)}
                   </AlertDescription>
                 </Alert>
               </motion.div>
@@ -204,6 +213,22 @@ export function EventForm({
               defaultValue={event ? muscatDateTimeValue(event.eventDate) : ""}
               className="h-11 w-full sm:w-72"
             />
+            {eventStatus === "archived" ? (
+              <p className="text-xs leading-5 text-warning-soft-foreground">
+                Archived events are read-only. Restore the event from the
+                lifecycle panel before editing its details.
+              </p>
+            ) : eventStatus === "published" || eventStatus === "full" ? (
+              <p className="text-xs leading-5 text-muted-foreground">
+                While registrations exist, the event date cannot be moved.
+                Capacity cannot be reduced below confirmed registrations.
+              </p>
+            ) : eventStatus === "past" ? (
+              <p className="text-xs leading-5 text-warning-soft-foreground">
+                This event has started. Its date and capacity are locked; update
+                descriptive details only when the lifecycle rules allow it.
+              </p>
+            ) : null}
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="event-location">Location</Label>
