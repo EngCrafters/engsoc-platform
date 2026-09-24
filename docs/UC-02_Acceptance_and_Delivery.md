@@ -577,6 +577,21 @@ restored copy. An isolated real `app_runtime` login called
 This establishes backup recoverability and an exact forward rehearsal; the
 main production role still needs a credentialed live check.
 
+The owner then confirmed that the finalized Events manager is also the
+platform maintainer for the first main grant. Its existing staging credentials
+were verified against the active Events grant, and the same confirmed Auth
+identity was created on main through Supabase Auth Admin. A direct main
+password sign-in succeeded. The Events committee insert and
+`private.grant_committee_manager` bootstrap ran in one transaction and
+returned `SUCCESS`; one main Auth user, committee, active grant and matching
+`grant.activated` audit row were verified. The main `app_runtime` password was
+rotated. A real production-role login called `count_admin_events` for the
+manager and an unknown actor, returned zero events for both, and was denied a
+direct events-table read. Vercel Production variables were changed to main
+for the runtime URL, public API URL and anon key; the unused migration and
+service-role credentials were removed. A new deployment and deployed manager
+smoke must verify the serving runtime before M8 can close.
+
 The deployed staging browser smoke used the existing finalized manager
 credentials injected by `vercel env run` without printing them. It confirmed
 manager login, registration count controls and paging, safe CSV export,

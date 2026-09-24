@@ -53,11 +53,20 @@ through `vercel env run`, without writing or printing them, for the deployed
 browser smoke. Login, counts, export, waitlist promotion, foreign-scope denial,
 malformed cursor and mobile checks passed; fixture cleanup was verified.
 
-**NEXT EXACT TASK:** The finalized staging manager belongs to the Events
-committee. Confirm whether that person is also the platform maintainer who
-may be attributed as `p_actor` for the audited first main grant; otherwise
-provide a separate maintenance identity. Then provision main through the
-maintenance path, establish a known main `app_runtime` secret, configure
-production Vercel variables for main, and complete real-role and deployed
-manager smoke. Keep M8 open until the serving Vercel environment can safely
-switch to main and all evidence passes.
+**MAIN PROVISIONING:** The owner confirmed that the finalized staging manager
+is also the platform maintainer for the first grant. Main Auth now has that
+same confirmed identity and password; direct main sign-in passed. The Events
+committee and first grant were created atomically with the grant routine;
+one active grant and one audit row were verified. The main `app_runtime`
+password was rotated and a real login called the scoped count routine while
+direct event-table access was denied. Vercel Production variables now point
+to main; unused migration and service-role credentials were removed from the
+production environment. The serving deployment still needs to pick up these
+variables and pass main-project manager smoke. Staging smoke credentials
+should be removed from Vercel Production after that verification.
+
+**NEXT EXACT TASK:** Push the production role-check script and these records,
+verify GitHub CI and Vercel Ready, run the main-project deployed workflow and
+security smoke, remove staging smoke secrets from Vercel Production, and
+record final release evidence. Keep M8 open until the serving deployment and
+manager workflows pass against main.

@@ -55,3 +55,11 @@ with the finalized existing credentials injected through Vercel CLI; fixture
 cleanup was verified. The first main grant still needs an authorized
 maintenance actor for its audit attribution before the production environment
 can be changed.
+
+The owner confirmed that the finalized Events manager is also the maintenance
+actor for the first main grant. Main now has that confirmed Auth identity,
+Events committee, active grant and matching audit row. Main password sign-in
+and a real `app_runtime` login passed; direct table access was denied. Vercel
+Production variables have been switched to main, with unused privileged
+variables removed. The serving deployment and end-to-end main smoke remain
+the final release gates.
