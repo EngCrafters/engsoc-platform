@@ -34,3 +34,15 @@ provide safe, specific guidance without database details.
   configuration, then rerun the deployed authenticated browser matrix.
 - Record final validation, CI, Vercel, restore and smoke evidence; only then
   mark M8 delivered and UC-02 complete.
+
+## Verified release-candidate checks
+
+Commit `2fdc72f` is on `main`. Format, lint, typecheck, 120 unit/database
+tests, DB check, production build, 20 desktop/mobile browser tests and diff
+check passed. GitHub CI run `36026002317` succeeded. Vercel deployment
+`dpl_GsmSjpL8MLmpGvcJvwNR5HJEKwYE` is Ready on the public alias. Main has
+ENABLE/FORCE RLS on all ten UC-02 tables and migrations through 0015. The
+main schema and data were backed up before the migration, and an isolated
+PostgreSQL 17 restore test passed. A real staging `app_runtime` role check
+passed. Production is still backed by staging; the first main manager and
+credentials are required before the serving environment can switch safely.

@@ -6,6 +6,7 @@
 !.claude/skills/implement-use-case/
 !.claude/skills/implement-use-case/SKILL.md
 .codex/
+.mcp.json
 .next/
 node_modules/
 skills-lock.json

@@ -27,6 +27,7 @@
 
 # misc
 .DS_Store
+.mcp.json
 *.pem
 
 # debug

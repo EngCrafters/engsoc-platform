@@ -12,8 +12,11 @@ invalid status, oversize or inconsistent output instead of returning a false
 success. The event editor locks archived/past controls, warns before approval
 invalidation, and rejects duplicate or malformed form input server-side.
 Recovery-link failures have explicit safe guidance. Cross-surface and
-revocation tests cover list/detail/public/export parity. The M8 changes are
-being validated and prepared for a coherent `main` commit.
+revocation tests cover list/detail/public/export parity. Commit `2fdc72f`
+was pushed to `main` on September 24. Full local gates passed: format, lint,
+typecheck, 120 tests, DB check, build, 20 Playwright tests and diff check.
+GitHub CI run `36026002317` succeeded. Vercel production deployment
+`dpl_GsmSjpL8MLmpGvcJvwNR5HJEKwYE` is Ready and serves the public alias.
 
 **STAGING:** `wnrdgnmmcdedmilnzzsl` is active. Migration 0015 was applied on
 September 24. All ten inspected UC-02 tables have ENABLE/FORCE RLS. The new
@@ -40,7 +43,9 @@ deployed browser smoke script. Main has no auth users, committees, grants, or
 events, so production manager smoke and initial provisioning need an owner
 identity and credentials. The September 23 authenticated M7 smoke passed.
 
-**NEXT EXACT TASK:** Finish full validation, source commit/push, CI and Vercel
-verification. Complete real-role and deployed manager smoke when credentials
-are available. Keep M8 open until the serving Vercel environment can safely
-switch to main with a provisioned manager and all release evidence passes.
+**NEXT EXACT TASK:** Obtain the authorized first-manager identity and
+committee, provision main through the maintenance path, establish a known
+main `app_runtime` secret, configure production Vercel variables for main,
+and complete real-role and deployed manager smoke. The required named staging
+smoke credentials are also absent from `.env.local`. Keep M8 open until the
+serving Vercel environment can safely switch to main and all evidence passes.

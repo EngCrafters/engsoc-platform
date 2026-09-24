@@ -551,3 +551,19 @@ can inspect Ready deployments under `eng-crafters`, despite a 403 from the MCP
 connector. The local environment lacks the named staging manager
 email/password expected by the deployed browser smoke script; authenticated
 M8 deployed smoke cannot yet be rerun. M8 is not delivered.
+
+Final local validation for commit `2fdc72f` passed on September 24:
+`npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`
+(120/120 across 24 files), `npm run db:check`, `npm run build`,
+`npx playwright test` (20/20 desktop and mobile), and `git diff --check`.
+The staging real-role script confirmed `app_runtime`, unknown-actor count zero,
+and denied direct event-table access. Supabase's main security advisor reported
+only four informational RLS-with-no-policy findings on intentionally dormant
+tables ([advisor rule](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)).
+GitHub CI run [36026002317](https://github.com/EngCrafters/engsoc-platform/actions/runs/36026002317)
+succeeded at SHA `2fdc72f3d85052d0b30a421c1a4a8d71ef92e202`. Vercel production
+deployment `dpl_GsmSjpL8MLmpGvcJvwNR5HJEKwYE` reached Ready and owns the
+public alias. Anonymous deployed HTTP checks returned 200 for catalog/login,
+307 for protected manager events, and 401 for unauthorized registration
+export. The Vercel environment still targets staging, so these checks do not
+substitute for a main-project manager smoke.
