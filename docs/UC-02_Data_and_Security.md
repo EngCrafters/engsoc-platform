@@ -387,6 +387,17 @@ No time-of-check/time-of-use gap between ownership check and mutation.
 
 ## 9. Query and transport contracts
 
+M8 implementation note (September 24, 2026): the manager event overview calls
+`private.count_admin_events(actor, committee)` for the full selected committee
+scope. Its `total_count` includes archived records; the seven state counts
+(draft, review, approved, published, full, past, archived) partition that
+total. These counts come from the database and are independent of the current
+page or status filter. Event list/detail registration totals remain derived
+from `public.registrations`; the registration page uses the scoped count
+routine, and export compares its row count to that authorized count before
+returning CSV. A mismatch is an explicit retryable failure, never a successful
+empty file.
+
 Domain Date objects may be used internally; serialize ISO timestamps at the
 client boundary and derive DTO field types from the canonical schema where safe.
 

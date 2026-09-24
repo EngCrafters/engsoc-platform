@@ -62,6 +62,47 @@ export type AdminEventList = {
   nextCursor: AdminEventCursor | null;
 };
 
+export type AdminEventCounts = {
+  total: number;
+  draft: number;
+  review: number;
+  approved: number;
+  published: number;
+  full: number;
+  past: number;
+  archived: number;
+};
+
+export async function countAdminEvents(
+  actorId: string,
+  committeeId: string | null
+): Promise<AdminEventCounts> {
+  const rows = await db.execute<{
+    total_count: number;
+    draft_count: number;
+    review_count: number;
+    approved_count: number;
+    published_count: number;
+    full_count: number;
+    past_count: number;
+    archived_count: number;
+  }>(
+    sql`SELECT * FROM private.count_admin_events(${actorId}::uuid, ${committeeId}::uuid)`
+  );
+  const row = rows[0];
+  if (!row) throw new Error("Admin event counts unavailable");
+  return {
+    total: row.total_count,
+    draft: row.draft_count,
+    review: row.review_count,
+    approved: row.approved_count,
+    published: row.published_count,
+    full: row.full_count,
+    past: row.past_count,
+    archived: row.archived_count,
+  };
+}
+
 export async function listAdminEvents(
   actorId: string,
   options: {

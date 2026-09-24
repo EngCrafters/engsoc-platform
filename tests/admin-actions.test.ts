@@ -89,6 +89,16 @@ describe("admin authentication actions", () => {
     });
   });
 
+  it("explains temporary sign-in outages without leaking the provider error", async () => {
+    state.signInWithPassword.mockRejectedValue(new Error("internal SQL error"));
+    const result = await loginAction(initialLoginActionState, loginForm());
+    expect(result.status).toBe("error");
+    if (result.status === "error") {
+      expect(result.message).toMatch(/temporarily unavailable/i);
+      expect(result.message).not.toMatch(/sql/i);
+    }
+  });
+
   it("sends recovery through the fixed callback URL with generic success", async () => {
     const form = new FormData();
     form.set("email", "manager@example.test");
@@ -101,6 +111,21 @@ describe("admin authentication actions", () => {
         redirectTo: "https://app.example/auth/callback?next=/auth/reset",
       }
     );
+  });
+
+  it("explains a recovery service failure without exposing account existence", async () => {
+    state.resetPasswordForEmail.mockResolvedValue({ error: { status: 503 } });
+    const form = new FormData();
+    form.set("email", "manager@example.test");
+    const result = await requestRecoveryAction(
+      initialRecoveryActionState,
+      form
+    );
+    expect(result.status).toBe("error");
+    if (result.status === "error") {
+      expect(result.message).toMatch(/could not be sent/i);
+      expect(result.message).not.toMatch(/manager@example.test/i);
+    }
   });
 
   it("does not call Auth when a fixed recovery redirect is not configured", async () => {

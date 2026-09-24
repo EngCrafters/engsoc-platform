@@ -507,3 +507,47 @@ counts, registration counts, export scope, and cross-committee isolation.
 
 The shared `lib/admin-errors.ts` mapping keeps these messages consistent and
 never renders SQL, UUID parser text, routine names, or stack traces.
+
+## M8 final-pass evidence in progress — September 24, 2026
+
+The manager overview now uses `private.count_admin_events` for all records in
+the selected committee scope, including archived records. Draft, review,
+approved, published, full, past and archived are mutually exclusive database
+classifications. Page size and cursor no longer change the displayed summary.
+Staging applied the matching routine; the catalog verifies
+`uc02_routine_owner`, `SECURITY DEFINER`, fixed `search_path`, `app_runtime`
+execution, and no `anon`/`authenticated` execution. A live `app_runtime`
+connection returned zero for an unknown actor and denied direct event-table
+reads. The isolated DB test covers counts beyond page one, foreign scope and
+revocation.
+
+Export now rejects malformed status, missing scope, count mismatches and size
+limits with explicit responses. A count mismatch can arise if registrations
+change between the count and export statements; in that case the manager gets
+refresh/retry guidance instead of a partial or false-success CSV. A focused
+route test covers this failure path. The isolated cross-surface test checks
+list/detail status, confirmed and waitlisted counts, registration IDs and CSV
+row IDs, public visibility, archive/restore and immediate revocation. The
+event form disables archived edits, locks visible date/capacity controls in
+past states, and warns when a reviewed event edit will invalidate approval.
+The server action also rejects duplicate form keys and malformed values before
+reaching a database cast. Recovery and sign-in callback failures now lead to
+specific safe guidance.
+
+The owner selected original main `rbeyqrfypowyocmnmvwu` for release. It was
+resumed and is `ACTIVE_HEALTHY`. Live catalog inspection corrected the stale
+preflight: all ten UC-02 tables already had ENABLE and FORCE RLS. Before any
+schema mutation, the main public/private schema and data were dumped. The
+isolated PostgreSQL 17 restore test recovers the delivered schema, routines,
+grants, RLS and registration data. Main had zero events, registrations,
+committees, manager grants, auth users and audit records. Missing additive
+migrations 0007–0015 were applied on September 24. Post-apply catalog checks
+confirm expected routine owner, `SECURITY DEFINER`, fixed search paths,
+restricted execute grants and no direct runtime or maintenance table grants.
+The existing main `app_runtime` password is unavailable, so its real-login
+check is still open. Vercel Production still points to staging pending first
+main manager provisioning and a coordinated environment switch. Vercel CLI
+can inspect Ready deployments under `eng-crafters`, despite a 403 from the MCP
+connector. The local environment lacks the named staging manager
+email/password expected by the deployed browser smoke script; authenticated
+M8 deployed smoke cannot yet be rerun. M8 is not delivered.

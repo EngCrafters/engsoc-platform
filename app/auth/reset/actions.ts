@@ -17,8 +17,17 @@ export async function resetPasswordAction(
       message: "Use a password with at least 12 characters.",
     };
   }
-  const supabase = await createAuthServerClient();
-  const { error } = await supabase.auth.updateUser({ password });
+  let error;
+  try {
+    const supabase = await createAuthServerClient();
+    ({ error } = await supabase.auth.updateUser({ password }));
+  } catch {
+    return {
+      status: "error",
+      message:
+        "The password reset service is temporarily unavailable. Request a new recovery email and try again.",
+    };
+  }
   if (error)
     return {
       status: "error",

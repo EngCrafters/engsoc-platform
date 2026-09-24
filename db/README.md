@@ -92,6 +92,15 @@ bounded event snapshot atomically. `promote_waitlist` remains the only
 contact-attested FIFO promotion path, and no attendance, cancellation, or
 Member-link mutation is introduced by M7.
 
+`0015_uc02_admin_event_counts.sql` adds `private.count_admin_events(actor,
+committee)` for full-scope event summary counts. It uses the active grant
+predicate from the manager list, classifies future drafts/review/approved,
+published/full, past, and archived from database state, and grants execution
+only to `app_runtime`. The admin summary no longer counts just one list page.
+The export route rejects an empty or partial export when the database's row
+limit or a concurrent registration change makes its result disagree with the
+authorized registration count.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.

@@ -1,53 +1,46 @@
 # Current work — handoff state
 
-Keep this short. See `docs/UC-02_Acceptance_and_Delivery.md` for full evidence
-and `docs/UC-02_Deep_Dive.md` for behavior specification.
+See `docs/UC-02_Acceptance_and_Delivery.md` for evidence and
+`docs/UC-02_Deep_Dive.md` for the frozen behavior contract.
 
-**CURRENT MILESTONE:** UC-02 M8 (release and closure) — M7 is delivered in source, CI, staging, and Vercel on September 23, 2026. M8 release verification is now active.
+**CURRENT MILESTONE:** UC-02 M8 release and closure. M7 was delivered on
+September 23, 2026. Do not start another milestone.
 
-**SOURCE / CI:** Origin `main` contains `72ee5f0` (fixed create/edit routines)
-and `aeeed87` (M6 admin UI, migrations 0009–0011, account/security, maintenance
-model, tests). GitHub Actions run `35840419684` for `aeeed87` passed. The final
-local worktree passed format, lint, typecheck, 102/102 Vitest tests, db:check,
-build, 20/20 Playwright tests, and diff whitespace check.
+**M8 SOURCE:** The manager overview now uses a scoped database count routine
+across all event pages and lifecycle states. The registration export rejects
+invalid status, oversize or inconsistent output instead of returning a false
+success. The event editor locks archived/past controls, warns before approval
+invalidation, and rejects duplicate or malformed form input server-side.
+Recovery-link failures have explicit safe guidance. Cross-surface and
+revocation tests cover list/detail/public/export parity. The M8 changes are
+being validated and prepared for a coherent `main` commit.
 
-**STAGING:** Migrations 0008–0011 are recorded as Supabase versions
-`20260923010000`–`20260923010300` on staging. Routine ownership, execute
-grants, and direct-DML restrictions were verified. Live `app_runtime`,
-`app_maintenance`, cross-committee, and authenticated-RLS smoke transactions
-passed and rolled back; fixture counts were unchanged. Browser checks against
-a local production build connected to staging passed named-manager password
-login, event list/detail, create form, safe missing/malformed IDs,
-account/scope display, session persistence, logout, and generic recovery
-feedback. No password, token, or recovery link is in the repository.
+**STAGING:** `wnrdgnmmcdedmilnzzsl` is active. Migration 0015 was applied on
+September 24. All ten inspected UC-02 tables have ENABLE/FORCE RLS. The new
+routine has the expected owner, fixed search path, and app-runtime-only
+execution. A live `app_runtime` connection confirmed unknown-actor count zero
+and denied direct event-table reads.
 
-M7 migrations 0012â€“0014 are recorded as `20260923010400`, `20260923010500`,
-and `20260923010600`. The registration list/count/export routines are scoped to
-the manager's event committee; staging runtime smoke returned the authorized
-registration and zero rows for a foreign actor. Export auditing and FIFO
-promotion use fixed routines; attendance editing, cancellation, and search
-remain out of scope.
+**PRODUCTION SECURITY:** The owner selected original main
+`rbeyqrfypowyocmnmvwu` for the eventual M8 release. It was resumed and is
+`ACTIVE_HEALTHY`. Live read-only inspection corrected the stale preflight:
+all ten UC-02 tables already had ENABLE and FORCE RLS. The schema and data
+were dumped before change. Missing additive migrations 0007–0015 were then
+applied on September 24. Catalog verification confirms expected routine
+ownership, fixed search paths, execution grants, and no direct runtime or
+maintenance table grants. Real production `app_runtime` login behavior remains
+unverified because its existing password is unavailable in this workspace.
 
-**VERCEL:** Production environment configuration was corrected on September
-23, 2026. `NEXT_PUBLIC_SUPABASE_URL`, the matching anon key, and
-`APP_RUNTIME_DATABASE_URL` now target the staging Supabase project that owns
-the named staging manager. A fresh production deployment is Ready at
-`https://engsoc-platform-farzeduek-eng-crafters.vercel.app` and is aliased to
-`https://engsoc-platform.vercel.app`. The prior failure was a backend-project
-mismatch, not an event-list or authorization defect.
+**DEPLOYMENT ACCESS:** Vercel CLI under `eng-crafters` can inspect production
+deployments and the public alias returns HTTP 200. The Vercel MCP connection
+still receives team-scope 403, but CLI inspection works. Vercel Production
+currently uses staging; it has not been changed to main. The ignored
+`.env.local` lacks the named staging manager email/password required by the
+deployed browser smoke script. Main has no auth users, committees, grants, or
+events, so production manager smoke and initial provisioning need an owner
+identity and credentials. The September 23 authenticated M7 smoke passed.
 
-**M7 AUTHENTICATED BROWSER SMOKE:** The Ready Vercel deployment passed the named-manager desktop and 390px mobile smoke on September 23, 2026. Login and session establishment, registration tabs/counts, cursor pagination, formula-safe CSV export, FIFO promotion, malformed cursor handling, foreign-committee denial, and absence of maintenance controls all passed. Temporary fixtures were removed after the run.
-
-**NEXT EXACT TASK:** Complete the frozen M8 UC-02 release/closure evidence: role and end-to-end matrix, serving-database/RLS verification through the authorized procedure, isolated backup/restore evidence, deployment/runtime checks, and documentation reconciliation. Do not begin product features outside the release scope.
-
-**M8 BLOCKER:** The serving main Supabase project remains the documented
-release blocker because RLS is disabled on its business tables. Applying the
-tested RLS/grants requires the authorized production database procedure; this
-cycle made no production SQL changes.
-
-**M8 OPERATIONAL PASS:** Event archive/restore remains the reversible record
-control and hard delete is intentionally absent. Published/past edit limits,
-capacity safeguards, stale-revision guidance, lifecycle explanations, and a
-shared manager error contract are now explicit in the editor and lifecycle UI.
-Registration cancellation, arbitrary status edits, attendance editing, and
-hard deletion remain outside the frozen UC-02 scope.
+**NEXT EXACT TASK:** Finish full validation, source commit/push, CI and Vercel
+verification. Complete real-role and deployed manager smoke when credentials
+are available. Keep M8 open until the serving Vercel environment can safely
+switch to main with a provisioned manager and all release evidence passes.

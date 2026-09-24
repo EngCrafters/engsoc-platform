@@ -241,6 +241,20 @@ document wins and this one is fixed.
 
 ## Answers at a glance
 
+### M8 production release gate (September 24, 2026)
+
+The owner selected original main `rbeyqrfypowyocmnmvwu` for production. It
+was resumed and is active. Live inspection found ENABLE and FORCE RLS already
+present on all ten UC-02 tables, correcting the older preflight. A main schema
+and data dump was taken before additive migrations 0007–0015 were applied.
+The post-apply catalog has the expected private routine owner, fixed search
+paths and grants. Vercel Production still targets staging
+`wnrdgnmmcdedmilnzzsl`; switch only after initial main manager provisioning,
+real-role checks and a coordinated deployment smoke. The main runtime role's
+existing password is unavailable in this workspace. Vercel CLI under
+`eng-crafters` can inspect Ready deployments even though the MCP connector
+receives a team-scope 403.
+
 - **Who is the platform owner?** Whoever holds Supabase project/organization
   authority and the `app_maintenance` secret. It is a person or team outside the
   app, not a database row or role.

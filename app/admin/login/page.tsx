@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
-import { AuthShell, authLinkClass } from "@/components/auth/auth-shell";
+import {
+  AuthMessage,
+  AuthShell,
+  authLinkClass,
+} from "@/components/auth/auth-shell";
 import { LoginForm } from "./login-form";
 import { safeAdminReturnPath } from "@/lib/auth/paths";
 
@@ -27,6 +31,13 @@ export default async function AdminLoginPage({
         </p>
       }
     >
+      {params.auth === "failed" ? (
+        <div className="mt-4">
+          <AuthMessage tone="error">
+            This sign-in link is invalid or expired. Sign in again below.
+          </AuthMessage>
+        </div>
+      ) : null}
       <p className="mt-3 text-sm leading-6 text-muted-foreground">
         Use the account provisioned for your committee. Platform maintenance
         grants access; there is no self-signup.

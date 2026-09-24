@@ -19,4 +19,24 @@ describe("manager error contract", () => {
       /unexpected server error/i
     );
   });
+
+  it("maps expected maintenance and system codes without leaking internals", () => {
+    for (const code of [
+      "ACTOR_NOT_FOUND",
+      "USER_NOT_FOUND",
+      "COMMITTEE_NOT_FOUND",
+      "ALREADY_ACTIVE",
+      "ALREADY_REVOKED",
+      "DENIED",
+      "DATABASE_UNAVAILABLE",
+      "TIMEOUT",
+      "EXPORT_LIMIT",
+    ]) {
+      const message = adminErrorMessage(code);
+      expect(message).not.toMatch(/unexpected server error/i);
+      expect(message).not.toMatch(
+        /sqlstate|private\.|public\.|stack trace|postgres/i
+      );
+    }
+  });
 });

@@ -154,6 +154,7 @@ export default async function setup() {
   const runtimePassword = randomUUID();
   const maintenancePassword = randomUUID();
   process.env.TEST_DATABASE_URL = databaseUrl;
+  if (container) process.env.UC02_TEST_CONTAINER_NAME = container.name;
   const runtimeUrl = new URL(databaseUrl);
   runtimeUrl.username = "app_runtime";
   runtimeUrl.password = runtimePassword;

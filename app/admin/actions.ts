@@ -30,8 +30,17 @@ export async function loginAction(
     };
   }
 
-  const supabase = await createAuthServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  let error;
+  try {
+    const supabase = await createAuthServerClient();
+    ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+  } catch {
+    return {
+      status: "error",
+      message:
+        "Sign-in is temporarily unavailable. Wait a moment and try again.",
+    };
+  }
   if (error) {
     // Auth deliberately gives the same response for a nonexistent account and
     // an incorrect password.
@@ -62,10 +71,27 @@ export async function requestRecoveryAction(
     };
   }
 
-  const supabase = await createAuthServerClient();
   // Keep the result generic to avoid account enumeration. Supabase applies its
   // own recovery rate limits.
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  try {
+    const supabase = await createAuthServerClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+    if (error && (error.status === 429 || (error.status ?? 0) >= 500)) {
+      return {
+        status: "error",
+        message:
+          "Recovery email could not be sent right now. Wait a moment and try again.",
+      };
+    }
+  } catch {
+    return {
+      status: "error",
+      message:
+        "Recovery is temporarily unavailable. Wait a moment and try again.",
+    };
+  }
   return { status: "sent" };
 }
 

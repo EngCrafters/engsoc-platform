@@ -44,6 +44,10 @@ type EventValues = {
   capacity: number | null;
   revision: number;
   committeeId: string;
+  reviewRequired: boolean;
+  approvedBy: string | null;
+  confirmedCount: number;
+  waitlistedCount: number;
 };
 
 function muscatDateTimeValue(value: string) {
@@ -80,6 +84,8 @@ export function EventForm({
     event ? event.capacity !== null : false
   );
   const errorRef = useRef<HTMLDivElement>(null);
+  const archived = eventStatus === "archived";
+  const past = eventStatus === "past";
 
   useEffect(() => {
     if (state?.code && state.code !== "SUCCESS") errorRef.current?.focus();
@@ -168,6 +174,7 @@ export function EventForm({
             <Input
               id="event-title"
               name="title"
+              disabled={archived}
               required
               maxLength={200}
               defaultValue={event?.title}
@@ -189,6 +196,7 @@ export function EventForm({
               <Textarea
                 id="event-description"
                 name="description"
+                disabled={archived}
                 defaultValue={event?.description ?? ""}
                 className="min-h-32 pl-9"
               />
@@ -212,6 +220,13 @@ export function EventForm({
               id="event-date"
               name="eventDate"
               type="datetime-local"
+              disabled={archived}
+              readOnly={
+                past ||
+                Boolean(
+                  event && event.confirmedCount + event.waitlistedCount > 0
+                )
+              }
               required
               defaultValue={event ? muscatDateTimeValue(event.eventDate) : ""}
               className="h-11 w-full sm:w-72"
@@ -238,6 +253,7 @@ export function EventForm({
             <Input
               id="event-location"
               name="location"
+              disabled={archived}
               defaultValue={event?.location ?? ""}
               className="h-11"
               placeholder="e.g. Block 6, Lecture Hall 3"
@@ -261,6 +277,7 @@ export function EventForm({
               checked={hasCapacityLimit}
               onCheckedChange={setHasCapacityLimit}
               aria-label="Limit capacity"
+              disabled={archived || past}
             />
           </div>
           {hasCapacityLimit ? (
@@ -276,6 +293,8 @@ export function EventForm({
                 id="event-capacity"
                 name="capacity"
                 type="number"
+                disabled={archived}
+                readOnly={past}
                 min="1"
                 required
                 defaultValue={event?.capacity ?? ""}
@@ -328,9 +347,20 @@ export function EventForm({
                 </p>
               </div>
             </div>
+            {event?.reviewRequired && event.approvedBy ? (
+              <Alert className="mt-4 border-warning/30 bg-warning-soft/30">
+                <AlertTitle>Approval will be cleared</AlertTitle>
+                <AlertDescription>
+                  Changing event details creates a new revision. Another active
+                  committee manager must approve it before a later publish or
+                  reopen action. Published changes appear publicly immediately.
+                  Saving unchanged details keeps the approval.
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <Button
               type="submit"
-              disabled={pending}
+              disabled={pending || archived}
               className="mt-5 h-11 w-full"
             >
               {pending ? (
@@ -338,7 +368,13 @@ export function EventForm({
               ) : (
                 <Save aria-hidden="true" />
               )}
-              {pending ? "Saving…" : event ? "Save changes" : "Create draft"}
+              {pending
+                ? "Saving…"
+                : archived
+                  ? "Restore to edit"
+                  : event
+                    ? "Save changes"
+                    : "Create draft"}
             </Button>
           </div>
           <p aria-live="polite" className="sr-only">

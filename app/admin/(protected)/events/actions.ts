@@ -26,6 +26,19 @@ function muscatIso(value: string | null) {
 export async function saveEventAction(form: FormData) {
   const manager = await getManagerContext();
   if (manager.kind !== "manager") return { code: "AUTH_REQUIRED" };
+  if (
+    [
+      "eventId",
+      "committeeId",
+      "revision",
+      "title",
+      "description",
+      "eventDate",
+      "location",
+      "capacity",
+    ].some((key) => form.getAll(key).length > 1)
+  )
+    return { code: "VALIDATION_ERROR" };
   const id = one(form, "eventId");
   const committeeId = one(form, "committeeId");
   const revisionValue = one(form, "revision");
@@ -36,22 +49,29 @@ export async function saveEventAction(form: FormData) {
   const location = one(form, "location");
   const capacityValue = one(form, "capacity");
   const capacity = capacityValue ? Number(capacityValue) : null;
-  const edit = id !== null;
+  const edit = form.has("eventId");
   if (
+    (edit && id === null) ||
     !title ||
     description === null ||
     !eventDate ||
     location === null ||
     (edit
-      ? committeeId !== null ||
+      ? form.has("committeeId") ||
         revisionValue === null ||
-        !Number.isSafeInteger(revision)
-      : committeeId === null || revisionValue !== null) ||
+        !Number.isSafeInteger(revision) ||
+        revision < 1
+      : committeeId === null || form.has("revision")) ||
     (id !== null && !isUuid(id)) ||
     (committeeId !== null && !isUuid(committeeId)) ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\+04:00$/.test(eventDate) ||
+    Number.isNaN(Date.parse(eventDate)) ||
+    title.trim().length > 200 ||
+    description.length > 10_000 ||
+    location.length > 500 ||
     (capacityValue !== null &&
       capacityValue !== "" &&
-      !Number.isSafeInteger(capacity))
+      (!Number.isSafeInteger(capacity) || capacity! < 1))
   )
     return { code: "VALIDATION_ERROR" };
   const values = id

@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { CalendarPlus, CalendarRange } from "lucide-react";
 import { getManagerContext } from "@/lib/auth/manager";
-import { listAdminEvents } from "@/lib/admin-events/server";
+import { countAdminEvents, listAdminEvents } from "@/lib/admin-events/server";
 import {
   decodeAdminEventCursor,
   encodeAdminEventCursor,
 } from "@/lib/admin-events/cursor";
-import { getEventLifecycleStatus } from "@/lib/admin-events/status";
 import { isUuid, parseAdminEventFilter } from "@/lib/admin-events/types";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { EventSummaryStats } from "@/components/admin/event-summary-stats";
@@ -37,22 +36,16 @@ export default async function AdminEventsPage({
     committeeId,
     filter,
   });
-  const { events, nextCursor } = cursorResult.invalid
-    ? { events: [], nextCursor: null }
-    : await listAdminEvents(manager.userId, {
-        committeeId,
-        filter,
-        cursor: cursorResult.cursor,
-      });
-
-  const counts = { draft: 0, review: 0, published: 0, full: 0 };
-  for (const event of events) {
-    const status = getEventLifecycleStatus(event);
-    if (status === "draft") counts.draft += 1;
-    else if (status === "review") counts.review += 1;
-    else if (status === "published") counts.published += 1;
-    else if (status === "full") counts.full += 1;
-  }
+  const [counts, { events, nextCursor }] = await Promise.all([
+    countAdminEvents(manager.userId, committeeId),
+    cursorResult.invalid
+      ? Promise.resolve({ events: [], nextCursor: null })
+      : listAdminEvents(manager.userId, {
+          committeeId,
+          filter,
+          cursor: cursorResult.cursor,
+        }),
+  ]);
 
   return (
     <section aria-labelledby="admin-events-title">
@@ -70,17 +63,20 @@ export default async function AdminEventsPage({
           </Button>
         }
       />
-      {events.length > 0 ? (
-        <section aria-label="Status counts on this page" className="mt-8">
+      {counts.total > 0 ? (
+        <section
+          aria-label="Event counts in selected committee scope"
+          className="mt-8"
+        >
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <h2 className="text-sm font-semibold text-foreground">
               Workspace overview
             </h2>
             <p className="text-xs text-muted-foreground">
-              Current page · up to 20 events
+              All records in the selected committee scope
             </p>
           </div>
-          <EventSummaryStats counts={counts} total={events.length} />
+          <EventSummaryStats counts={counts} />
         </section>
       ) : null}
       <EventListFilters

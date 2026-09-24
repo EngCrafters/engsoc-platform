@@ -105,4 +105,44 @@ describe("UC-02 manager-scoped admin event list", () => {
     const fixture = await createFixture(admin);
     expect(await list(fixture.managerId, { status: "forged" })).toEqual([]);
   });
+
+  it("counts every scoped state across pages and removes revoked access", async () => {
+    const fixture = await createFixture(admin);
+    const base = new Date(Date.now() + 172_800_000);
+    for (let i = 0; i < 24; i += 1) {
+      await admin`
+        INSERT INTO public.events (title, description, event_date, committee_id, status)
+        VALUES (${`Count fixture ${i}`}, 'Count fixture.', ${base}, ${fixture.committeeId}, 'draft')
+      `;
+    }
+    const [counts] = await runtime<
+      {
+        total_count: number;
+        draft_count: number;
+        published_count: number;
+        archived_count: number;
+      }[]
+    >`SELECT * FROM private.count_admin_events(${fixture.managerId}::uuid, ${fixture.committeeId}::uuid)`;
+    expect(counts.total_count).toBe(25);
+    expect(counts.draft_count).toBe(25);
+    expect(counts.published_count).toBe(0);
+    expect(counts.archived_count).toBe(0);
+    expect(
+      await list(fixture.managerId, { committeeId: fixture.committeeId })
+    ).toHaveLength(21);
+
+    const [foreign] = await runtime<{ total_count: number }[]>`
+      SELECT * FROM private.count_admin_events(${fixture.otherManagerId}::uuid, ${fixture.committeeId}::uuid)
+    `;
+    expect(foreign.total_count).toBe(0);
+
+    await admin`
+      UPDATE public.committee_managers SET revoked_at = now(), revoked_by = ${fixture.reviewerId}
+      WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}
+    `;
+    const [revoked] = await runtime<{ total_count: number }[]>`
+      SELECT * FROM private.count_admin_events(${fixture.managerId}::uuid, ${fixture.committeeId}::uuid)
+    `;
+    expect(revoked.total_count).toBe(0);
+  });
 });
