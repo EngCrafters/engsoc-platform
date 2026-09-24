@@ -46,3 +46,12 @@ main schema and data were backed up before the migration, and an isolated
 PostgreSQL 17 restore test passed. A real staging `app_runtime` role check
 passed. Production is still backed by staging; the first main manager and
 credentials are required before the serving environment can switch safely.
+
+The actual prechange main dump was also restored in disposable Supabase
+Postgres 17.6, and migrations 0007–0015 replayed on it successfully. A real
+isolated runtime login was allowed to call the scoped count routine and denied
+direct event-table reads. The deployed staging manager browser smoke completed
+with the finalized existing credentials injected through Vercel CLI; fixture
+cleanup was verified. The first main grant still needs an authorized
+maintenance actor for its audit attribution before the production environment
+can be changed.

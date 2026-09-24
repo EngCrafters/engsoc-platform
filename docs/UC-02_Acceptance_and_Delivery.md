@@ -567,3 +567,21 @@ public alias. Anonymous deployed HTTP checks returned 200 for catalog/login,
 307 for protected manager events, and 401 for unauthorized registration
 export. The Vercel environment still targets staging, so these checks do not
 substitute for a main-project manager smoke.
+
+The actual prechange main schema and data dump was restored in a disposable
+Supabase Postgres 17.6 container, with the required local role grants. The
+restore recovered one registration attempt, zero business records, and ten
+ENABLE/FORCE RLS tables. Migrations 0007–0015 replayed without error on this
+restored copy. An isolated real `app_runtime` login called
+`private.count_admin_events` and was denied direct `public.events` access.
+This establishes backup recoverability and an exact forward rehearsal; the
+main production role still needs a credentialed live check.
+
+The deployed staging browser smoke used the existing finalized manager
+credentials injected by `vercel env run` without printing them. It confirmed
+manager login, registration count controls and paging, safe CSV export,
+waitlist promotion, foreign-scope denial, malformed cursor messaging,
+maintenance control isolation, and mobile usability. Its temporary event and
+registration rows were confirmed removed after the run. The first main
+committee grant remains pending attribution to the authorized maintenance
+actor; Vercel Production has therefore not been switched from staging.

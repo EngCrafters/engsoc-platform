@@ -43,9 +43,21 @@ deployed browser smoke script. Main has no auth users, committees, grants, or
 events, so production manager smoke and initial provisioning need an owner
 identity and credentials. The September 23 authenticated M7 smoke passed.
 
-**NEXT EXACT TASK:** Obtain the authorized first-manager identity and
-committee, provision main through the maintenance path, establish a known
-main `app_runtime` secret, configure production Vercel variables for main,
-and complete real-role and deployed manager smoke. The required named staging
-smoke credentials are also absent from `.env.local`. Keep M8 open until the
-serving Vercel environment can safely switch to main and all evidence passes.
+**BACKUP AND DEPLOYED SMOKE:** The actual prechange main schema and data dump
+restored without errors in a disposable Supabase Postgres 17 container. The
+restored row counts and ten ENABLE/FORCE RLS tables matched the live prechange
+inventory. Migrations 0007–0015 then replayed successfully on that restore;
+a real isolated `app_runtime` login could call the count routine and was denied
+direct event-table access. The finalized staging manager credentials were used
+through `vercel env run`, without writing or printing them, for the deployed
+browser smoke. Login, counts, export, waitlist promotion, foreign-scope denial,
+malformed cursor and mobile checks passed; fixture cleanup was verified.
+
+**NEXT EXACT TASK:** The finalized staging manager belongs to the Events
+committee. Confirm whether that person is also the platform maintainer who
+may be attributed as `p_actor` for the audited first main grant; otherwise
+provide a separate maintenance identity. Then provision main through the
+maintenance path, establish a known main `app_runtime` secret, configure
+production Vercel variables for main, and complete real-role and deployed
+manager smoke. Keep M8 open until the serving Vercel environment can safely
+switch to main and all evidence passes.
