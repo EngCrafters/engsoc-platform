@@ -16,6 +16,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { DURATION, EASE_OUT } from "@/lib/motion/variants";
 
 const managementLinks = [
   { href: "/admin/events", label: "Events", icon: CalendarDays },
@@ -93,7 +95,7 @@ export function AdminSidebar({
                     <motion.span
                       layoutId="admin-nav-active"
                       className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-shell-accent"
-                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: DURATION.slow, ease: EASE_OUT }}
                     />
                   ) : null}
                   <Icon
@@ -149,6 +151,16 @@ export function AdminSidebar({
           </ul>
         </div>
       ) : null}
+
+      <div className="flex items-center justify-between gap-2 border-t border-shell-border px-4 py-3">
+        <span className="text-[0.68rem] font-medium tracking-wide text-shell-muted">
+          Appearance
+        </span>
+        <ThemeToggle
+          variant="shell"
+          triggerClassName="text-shell-foreground/85 hover:bg-white/[0.08] hover:text-shell-foreground focus-visible:outline-shell-accent"
+        />
+      </div>
 
       <div className="flex items-center gap-2.5 border-t border-shell-border px-4 py-4">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-shell-foreground/90">

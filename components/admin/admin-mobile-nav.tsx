@@ -21,6 +21,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { listItem, listStagger } from "@/lib/motion/variants";
 
 const links = [
@@ -81,9 +82,12 @@ export function AdminMobileNav({
           className="w-[85%] border-shell-border bg-shell p-0 text-shell-foreground"
         >
           <SheetHeader className="border-b border-shell-border px-5 py-5">
-            <SheetTitle className="text-shell-foreground">
-              Engineering Society
-            </SheetTitle>
+            <div className="flex items-start justify-between gap-2">
+              <SheetTitle className="text-shell-foreground">
+                Engineering Society
+              </SheetTitle>
+              <ThemeToggle variant="shell" />
+            </div>
             <p className="text-xs text-shell-muted">Administration</p>
             <p className="mt-2 truncate text-xs text-shell-foreground/90">
               {email ?? "Signed in"}

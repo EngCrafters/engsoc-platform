@@ -50,6 +50,10 @@
   --color-surface-foreground: var(--surface-foreground);
   --color-surface-raised: var(--surface-raised);
 
+  /* Glass surface — auth/floating panels only. See docs/DESIGN_SYSTEM.md. */
+  --color-glass: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+
   /* Status/semantic tokens — carry meaning, not decoration. See
      db/schema.ts field comments and CLAUDE.md "Status components". */
   --color-success: var(--success);
@@ -122,6 +126,11 @@ html {
   --surface: oklch(1 0 0);
   --surface-foreground: oklch(0.208 0.042 265.755);
   --surface-raised: oklch(1 0 0);
+
+  /* Translucent glass surface — use sparingly (auth card, floating
+     overlays). Never a dashboard data-card background. */
+  --glass-bg: oklch(1 0 0 / 66%);
+  --glass-border: oklch(1 0 0 / 40%);
 
   --primary: oklch(0.465 0.145 259);
   --primary-foreground: oklch(0.985 0.003 247.9);
@@ -214,6 +223,9 @@ html {
   --surface: oklch(0.208 0.022 264);
   --surface-foreground: oklch(0.95 0.008 258);
   --surface-raised: oklch(0.25 0.024 264);
+
+  --glass-bg: oklch(0.208 0.022 264 / 62%);
+  --glass-border: oklch(1 0 0 / 12%);
 
   --primary: oklch(0.673 0.166 264.4);
   --primary-foreground: oklch(0.16 0.03 264);
