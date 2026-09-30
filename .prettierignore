@@ -2,6 +2,7 @@
 # deterministic without deleting or rewriting local tooling.
 .agents/
 .claude/skills/*
+.claude/settings.local.json
 !.claude/skills/README.md
 !.claude/skills/implement-use-case/
 !.claude/skills/implement-use-case/SKILL.md
