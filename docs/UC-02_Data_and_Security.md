@@ -1,9 +1,11 @@
 # UC-02 data and security contract
 
 Revision 3, September 15, 2026. Companion to [the deep dive](UC-02_Deep_Dive.md).
-**Target design, not current deployed schema. O-01 answered; approval fields
-below are approved design, generated as part of M2, not yet an applied
-migration.**
+**Approved data contract.** O-01 and its approval fields were delivered in M2.
+Staging and the selected main project have applied the UC-02 migrations through
+0015; the September 24 main-project catalog check confirmed ENABLE/FORCE RLS
+on all ten UC-02 tables. The migration chain and live catalog, rather than this
+design document alone, establish deployed state.
 The deep dive owns product rules; this file specifies their representation.
 
 ## 1. Entity relationships

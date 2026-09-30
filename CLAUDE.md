@@ -61,12 +61,13 @@ it:
 - At minimum it needs: event list (draft/published/full), create/edit
   event, and a per-event registration list with attendee count.
 - Committee-scoped access and event-scoped CSV are specified there.
-  Publication approval authority (O-01) remains owner-dependent.
+  The owner answered publication approval authority (O-01) with per-committee
+  two-manager review when review is required.
 
-The current milestone is **UC-02 specification freeze**. No additional UC-02
-application functionality or migration may be implemented until every item in
-the deep dive's freeze checklist passes. Complete and verify the specification
-commit first; then implement its dependency-ordered roadmap autonomously.
+The UC-02 specification freeze passed at commit `9c5b733` and CI verified it.
+The current milestone is **UC-02 M8 release and closure**. Earlier milestones
+have been implemented in dependency order; use `docs/CURRENT_WORK.md` for the
+current release gate and exact handoff task.
 
 ## How we work
 
@@ -103,8 +104,9 @@ stack this replaced and why: `/docs/Technical_Blueprint.pdf`.
 
 `db/schema.ts` describes the implemented schema. The historical ER diagram in
 `/docs/Technical_Blueprint.pdf`, Part 2, predates nullable Member links.
-`docs/UC-02_Data_and_Security.md` is the UC-02 ER addendum and target data
-contract; it distinguishes existing fields from planned post-freeze changes.
+`docs/UC-02_Data_and_Security.md` is the UC-02 ER addendum and approved data
+contract; the UC-02 migrations through 0015 are applied to staging and the
+selected main project.
 See ADRs 0004 and 0008. A target specification is not proof that the live
 database or applied migrations already match.
 

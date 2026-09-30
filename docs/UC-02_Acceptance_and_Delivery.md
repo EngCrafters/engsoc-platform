@@ -4,8 +4,7 @@ Revision 3, September 15, 2026. Behavior:
 [deep dive](UC-02_Deep_Dive.md). Fields/security:
 [data contract](UC-02_Data_and_Security.md).
 **O-01 answered September 15, 2026 (per-committee two-manager review); freeze
-confirmed once this commit is pushed and CI is verified green (deep dive
-section 15).**
+confirmed by commit `9c5b733` and green CI (deep dive section 15).**
 Test definitions below are requirements, not claims of implemented coverage.
 
 ## 1. Acceptance criteria
@@ -176,11 +175,12 @@ CI must require the applicable new suites before UC-02 completion.
 
 Real environment prerequisites:
 
-- Confirm which DB serves Vercel production; staging is explicitly
-  wnrdgnmmcdedmilnzzsl, main project rbeyqrfypowyocmnmvwu.
-- Current main-project RLS disabled is a blocker to public release.
-- Production schema cutover needs its authorized procedure; development
-  migration permission does not authorize production mutation.
+- Confirm each serving Vercel deployment uses the selected main project
+  rbeyqrfypowyocmnmvwu; staging is wnrdgnmmcdedmilnzzsl.
+- The September 24 live main-project check confirmed ENABLE/FORCE RLS on all
+  ten UC-02 tables; the earlier disabled-RLS preflight was stale.
+- The authorized production schema cutover applied migrations 0007–0015 after
+  a backup and an isolated restore rehearsal.
 - Set the restricted runtime connection independently from migration credentials.
 - Provision actual committee managers only from owner assignments; fixtures
   must not become real production grants.
@@ -448,7 +448,7 @@ malformed cursor handling, foreign-committee denial, and absence of
 maintenance grant/revoke controls. The temporary fixture was removed in the
 smoke cleanup path.
 
-## M8 release verification status
+## Historical M8 checkpoint — September 23, 2026
 
 M7's release candidate was pushed as `125b950665b4cc94ccf8f575d265096087d2608c`.
 GitHub Actions run `35895189443` is green (lint, type-check, database/RLS
@@ -464,10 +464,10 @@ backup/restore rehearsal recorded in the data/security contract remains the
 backup evidence: pg_dump/pg_restore preserved schema, RLS, policies, rows and
 nullable `memberId` without touching a hosted project.
 
-UC-02 is not marked complete yet. The serving main Supabase project still has
-RLS disabled on its business tables, as documented by the release preflight.
-Applying the tested RLS and grants to that serving database requires the
-authorized production change; no production SQL was run from this work cycle.
+At this checkpoint, the release preflight reported disabled RLS on the main
+project. Live inspection on September 24 corrected that report: all ten UC-02
+tables already had ENABLE/FORCE RLS. The authorized main-project cutover and
+runtime role check are recorded below.
 
 ## M8 operational-control and error-contract pass
 
@@ -544,13 +544,13 @@ committees, manager grants, auth users and audit records. Missing additive
 migrations 0007–0015 were applied on September 24. Post-apply catalog checks
 confirm expected routine owner, `SECURITY DEFINER`, fixed search paths,
 restricted execute grants and no direct runtime or maintenance table grants.
-The existing main `app_runtime` password is unavailable, so its real-login
-check is still open. Vercel Production still points to staging pending first
-main manager provisioning and a coordinated environment switch. Vercel CLI
-can inspect Ready deployments under `eng-crafters`, despite a 403 from the MCP
-connector. The local environment lacks the named staging manager
-email/password expected by the deployed browser smoke script; authenticated
-M8 deployed smoke cannot yet be rerun. M8 is not delivered.
+At this September 24 checkpoint, the existing main `app_runtime` password was
+unavailable and its real-login check remained open. Vercel Production still
+pointed to staging pending first-manager provisioning and an environment
+switch. Vercel CLI could inspect Ready deployments under `eng-crafters`, despite
+a 403 from the MCP connector. The named staging manager credentials were then
+made available through ignored local configuration, and the later evidence
+below records main provisioning, a rotated runtime password, and the switch.
 
 Final local validation for commit `2fdc72f` passed on September 24:
 `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`
@@ -597,6 +597,38 @@ credentials injected by `vercel env run` without printing them. It confirmed
 manager login, registration count controls and paging, safe CSV export,
 waitlist promotion, foreign-scope denial, malformed cursor messaging,
 maintenance control isolation, and mobile usability. Its temporary event and
-registration rows were confirmed removed after the run. The first main
-committee grant remains pending attribution to the authorized maintenance
-actor; Vercel Production has therefore not been switched from staging.
+registration rows were confirmed removed after the run. The later main-project
+grant and production environment switch are recorded above.
+
+## M8 serving-main verification — September 30, 2026
+
+The `0ad7809` manager-feedback fix passed local format, lint, typecheck,
+120/120 unit/database tests, migration check, production build, 20/20
+desktop/mobile Playwright tests and diff check. GitHub Actions run
+[`36765216880`](https://github.com/EngCrafters/engsoc-platform/actions/runs/36765216880)
+succeeded. GitHub's Production deployment record associates that SHA with
+Vercel deployment `dpl_4J2mcjwg8pQBDSejGqiJhXDR1Fto`; the deployment was
+Ready and served the public alias. Vercel's error-level query for it returned
+no logs.
+
+The main deployed browser workflow authenticated against the selected main
+Auth project, then passed manager draft creation, review-required flag,
+self-approval denial, review removal, edit and refresh-resistant success
+feedback, publication, public confirmed registration, explicit waitlist,
+duplicate denial, scoped registration lists, CSV scope, archive, restore and
+public hiding. The main manager grant and runtime routines were therefore
+exercised through the serving app as well as the earlier direct main-role
+check. Three synthetic test events were archived after their starts; their
+registration and audit history remains by design. The full smoke process
+reported a harness-only error in its final redundant cleanup after every
+workflow assertion passed. The script was corrected to accept an already
+archived event, and a separate read-only manager/public verification of the
+last event exited successfully.
+
+Archived event pages rendered the 404 UI without title, details or a
+registration control. Next.js streamed the response with HTTP 200 and a
+noindex marker, its documented `notFound()` behavior after streaming begins.
+The named staging manager smoke email/password variables were removed from
+Vercel Production after verification; only the required runtime, public Auth,
+origin and Resend configuration remained. UC-02 closure still requires the
+owner's explicit selection of the next use case.

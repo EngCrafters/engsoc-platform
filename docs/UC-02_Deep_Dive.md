@@ -2,9 +2,9 @@
 
 **Specification revision:** 3, September 15, 2026.
 **Gate:** O-01 answered by the owner (per-committee two-manager review, section
-11). Application implementation may begin once this revision, its dependent
-data/security and acceptance/delivery contracts, and the checklist in section
-15 are committed, pushed, and confirmed green in CI.
+11). This revision, both companion contracts, and the section 15 checklist
+were committed at `9c5b733` and confirmed green in CI. Implementation followed
+the dependency-ordered roadmap.
 
 ## 1. Authority, evidence, and current implementation
 
@@ -46,9 +46,10 @@ contrary requirement; that condition is not met here.
 - Staging wnrdgnmmcdedmilnzzsl: eight tables, RLS enabled, only anon published
   event SELECT and anon registration INSERT policies. One normalized
   event/email duplicate group exists. The current test adds duplicate fixtures.
-- Main project rbeyqrfypowyocmnmvwu: read-only inspection found RLS disabled
-  on all eight tables, no policies. This is a release blocker, not a safe
-  production security baseline.
+- Main project rbeyqrfypowyocmnmvwu: this initial preflight reported RLS
+  disabled on eight tables. Live catalog inspection on September 24 corrected
+  the report: all ten UC-02 tables had ENABLE/FORCE RLS before the main-project
+  migration cutover (acceptance/delivery M8 evidence).
 - Migration SQL 0002 was applied to staging through Supabase but is absent
   from the Drizzle journal. The future reconciliation must preserve both
   histories and explicitly adopt the historical changes.

@@ -1,72 +1,52 @@
 # Current work — handoff state
 
-See `docs/UC-02_Acceptance_and_Delivery.md` for evidence and
+See `docs/UC-02_Acceptance_and_Delivery.md` for release evidence and
 `docs/UC-02_Deep_Dive.md` for the frozen behavior contract.
 
-**CURRENT MILESTONE:** UC-02 M8 release and closure. M7 was delivered on
-September 23, 2026. Do not start another milestone.
+**CURRENT MILESTONE:** UC-02 M8 production release checks passed. UC-02 closure
+awaits an explicit owner choice of the next use case. M7 was delivered on
+September 23, 2026. Do not start another use case before that choice.
 
-**M8 SOURCE:** The manager overview now uses a scoped database count routine
-across all event pages and lifecycle states. The registration export rejects
-invalid status, oversize or inconsistent output instead of returning a false
-success. The event editor locks archived/past controls, warns before approval
-invalidation, and rejects duplicate or malformed form input server-side.
-Recovery-link failures have explicit safe guidance. Cross-surface and
-revocation tests cover list/detail/public/export parity. Commit `2fdc72f`
-was pushed to `main` on September 24. Full local gates passed: format, lint,
-typecheck, 120 tests, DB check, build, 20 Playwright tests and diff check.
-GitHub CI run `36026002317` succeeded. Vercel production deployment
-`dpl_GsmSjpL8MLmpGvcJvwNR5HJEKwYE` is Ready and serves the public alias.
+**SOURCE AND CHECKS:** The M8 integrity pass at `2fdc72f` delivered scoped
+overview counts, bounded export, event editing guards, safe recovery guidance,
+and cross-surface/revocation tests. The manager feedback fix at `0ad7809` keeps
+edit and lifecycle success visible through refresh. Its local gates passed:
+format, lint, typecheck, 120 tests, DB migration check, production build,
+20 desktop/mobile browser tests and diff check. GitHub CI run `36765216880`
+succeeded.
 
-**STAGING:** `wnrdgnmmcdedmilnzzsl` is active. Migration 0015 was applied on
-September 24. All ten inspected UC-02 tables have ENABLE/FORCE RLS. The new
-routine has the expected owner, fixed search path, and app-runtime-only
-execution. A live `app_runtime` connection confirmed unknown-actor count zero
-and denied direct event-table reads.
+**STAGING:** Project `wnrdgnmmcdedmilnzzsl` has migration 0015 and
+ENABLE/FORCE RLS on all ten UC-02 tables. A real `app_runtime` login could
+call the scoped count routine and was denied direct event-table reads. The
+deployed staging manager smoke passed counts, export, promotion, foreign-scope
+denial, malformed cursor and mobile checks; its fixtures were removed.
 
-**PRODUCTION SECURITY:** The owner selected original main
-`rbeyqrfypowyocmnmvwu` for the eventual M8 release. It was resumed and is
-`ACTIVE_HEALTHY`. Live read-only inspection corrected the stale preflight:
-all ten UC-02 tables already had ENABLE and FORCE RLS. The schema and data
-were dumped before change. Missing additive migrations 0007–0015 were then
-applied on September 24. Catalog verification confirms expected routine
-ownership, fixed search paths, execution grants, and no direct runtime or
-maintenance table grants. Real production `app_runtime` login behavior remains
-unverified because its existing password is unavailable in this workspace.
+**MAIN SECURITY AND BACKUP:** The owner selected original main project
+`rbeyqrfypowyocmnmvwu`. Live inspection on September 24 corrected the stale
+RLS preflight: all ten UC-02 tables had ENABLE/FORCE RLS. The prechange schema
+and data dump restored in disposable Supabase Postgres 17.6; migrations
+0007–0015 replayed on that restore and were then applied to main. Main routine
+ownership, fixed search paths and restricted grants were checked. The owner
+confirmed the first maintenance actor; the Events committee, manager grant and
+matching audit row were created. Main Auth sign-in passed. The rotated main
+`app_runtime` password supported a real scoped routine login while direct
+event-table access was denied.
 
-**DEPLOYMENT ACCESS:** Vercel CLI under `eng-crafters` can inspect production
-deployments and the public alias returns HTTP 200. The Vercel MCP connection
-still receives team-scope 403, but CLI inspection works. Vercel Production
-currently uses staging; it has not been changed to main. The ignored
-`.env.local` lacks the named staging manager email/password required by the
-deployed browser smoke script. Main has no auth users, committees, grants, or
-events, so production manager smoke and initial provisioning need an owner
-identity and credentials. The September 23 authenticated M7 smoke passed.
+**SERVING DEPLOYMENT:** Vercel Production variables target main; unused
+privileged variables and the temporary staging manager smoke variables were
+removed. GitHub's Production deployment record links `0ad7809` to Vercel
+deployment `dpl_4J2mcjwg8pQBDSejGqiJhXDR1Fto`, which reached Ready and
+served the public alias during the main-project smoke.
+The deployed main Auth session and full manager workflow passed: create,
+review/self-approval denial, edit and success feedback, publish, public
+confirmed/waitlisted/duplicate outcomes, scoped lists and CSV, archive,
+restore and public hiding. Three synthetic events were archived; registration
+and audit history is retained. The smoke harness's redundant cleanup check
+failed after all workflow assertions, was corrected, and a separate read-only
+archived-record verification exited successfully. Vercel's error log query
+returned no errors for this deployment.
 
-**BACKUP AND DEPLOYED SMOKE:** The actual prechange main schema and data dump
-restored without errors in a disposable Supabase Postgres 17 container. The
-restored row counts and ten ENABLE/FORCE RLS tables matched the live prechange
-inventory. Migrations 0007–0015 then replayed successfully on that restore;
-a real isolated `app_runtime` login could call the count routine and was denied
-direct event-table access. The finalized staging manager credentials were used
-through `vercel env run`, without writing or printing them, for the deployed
-browser smoke. Login, counts, export, waitlist promotion, foreign-scope denial,
-malformed cursor and mobile checks passed; fixture cleanup was verified.
-
-**MAIN PROVISIONING:** The owner confirmed that the finalized staging manager
-is also the platform maintainer for the first grant. Main Auth now has that
-same confirmed identity and password; direct main sign-in passed. The Events
-committee and first grant were created atomically with the grant routine;
-one active grant and one audit row were verified. The main `app_runtime`
-password was rotated and a real login called the scoped count routine while
-direct event-table access was denied. Vercel Production variables now point
-to main; unused migration and service-role credentials were removed from the
-production environment. The serving deployment still needs to pick up these
-variables and pass main-project manager smoke. Staging smoke credentials
-should be removed from Vercel Production after that verification.
-
-**NEXT EXACT TASK:** Push the production role-check script and these records,
-verify GitHub CI and Vercel Ready, run the main-project deployed workflow and
-security smoke, remove staging smoke secrets from Vercel Production, and
-record final release evidence. Keep M8 open until the serving deployment and
-manager workflows pass against main.
+**NEXT EXACT TASK:** The owner must choose the next use case explicitly so
+UC-02 can close. Until then, maintain UC-02 without starting another milestone.
+For every later push, continue verifying GitHub CI and the serving Vercel
+deployment.
