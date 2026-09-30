@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AlignLeft,
@@ -89,8 +90,14 @@ export function EventForm({
 
   useEffect(() => {
     if (state?.code && state.code !== "SUCCESS") errorRef.current?.focus();
-    if (state?.code === "SUCCESS") router.refresh();
-  }, [router, state]);
+    if (state?.code === "SUCCESS") {
+      toast.success("Event changes saved", {
+        description: "The latest event details are shown.",
+        id: `event-save-${event?.id ?? "new"}`,
+      });
+      router.refresh();
+    }
+  }, [router, state, event?.id]);
 
   return (
     <form
@@ -112,14 +119,6 @@ export function EventForm({
           <AnimatePresence>
             {state?.code === "CONFLICT" ? (
               <ConflictAlert onReload={() => window.location.reload()} />
-            ) : state?.code === "SUCCESS" ? (
-              <Alert className="border-success/30 bg-success-soft/30 text-success-soft-foreground">
-                <AlertTitle>Changes saved</AlertTitle>
-                <AlertDescription>
-                  The event details are saved. Review the lifecycle panel below
-                  if publication or approval is needed.
-                </AlertDescription>
-              </Alert>
             ) : state?.code && state.code !== "SUCCESS" ? (
               <motion.div
                 initial={{ opacity: 0, y: -6 }}

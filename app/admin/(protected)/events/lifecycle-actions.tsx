@@ -2,12 +2,12 @@
 
 import { type ReactNode, useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Archive,
   ArchiveRestore,
   Ban,
-  CheckCircle2,
   Globe2,
   RotateCcw,
   ShieldCheck,
@@ -91,8 +91,14 @@ export function LifecycleActions(props: Props) {
 
   useEffect(() => {
     if (state?.code && state.code !== "SUCCESS") feedbackRef.current?.focus();
-    if (state?.code === "SUCCESS") router.refresh();
-  }, [router, state]);
+    if (state?.code === "SUCCESS") {
+      toast.success("Lifecycle change saved", {
+        description: "The latest event state is shown.",
+        id: `event-lifecycle-${props.eventId}`,
+      });
+      router.refresh();
+    }
+  }, [router, state, props.eventId]);
 
   return (
     <section
@@ -277,19 +283,6 @@ export function LifecycleActions(props: Props) {
                 </AlertDescription>
               </Alert>
             </motion.div>
-          ) : state?.code === "SUCCESS" ? (
-            <motion.p
-              key="success"
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2, ease: EASE_OUT }}
-              className="flex items-center gap-1.5 text-sm text-success-soft-foreground"
-              aria-live="polite"
-            >
-              <CheckCircle2 aria-hidden="true" className="size-4" />
-              Lifecycle change saved. The latest event state is now shown.
-            </motion.p>
           ) : null}
         </AnimatePresence>
       </div>
