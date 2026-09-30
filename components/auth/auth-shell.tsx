@@ -2,10 +2,15 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { AuthAside } from "@/components/auth/auth-aside";
 
 /**
  * Shared frame for the signed-out admin screens (login, recovery, reset), built
  * from the same tokens as the admin shell so the two feel like one product.
+ * See docs/DESIGN_SYSTEM.md "Auth surfaces" for the glass card and
+ * Liquid/GSAP usage rules.
  */
 export function AuthShell({
   icon: Icon,
@@ -22,62 +27,45 @@ export function AuthShell({
 }) {
   return (
     <main className="grid min-h-screen w-full bg-background text-foreground lg:grid-cols-[minmax(19rem,0.82fr)_minmax(0,1.18fr)]">
-      <aside className="hidden min-h-screen flex-col justify-between bg-shell px-10 py-10 text-shell-foreground lg:flex xl:px-16 xl:py-14">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-shell-accent font-mono text-sm font-semibold text-shell-accent-foreground">
-            ES
-          </span>
-          <span className="leading-tight">
-            <span className="block text-sm font-semibold">
-              Engineering Society
-            </span>
-            <span className="block text-xs text-shell-muted">
-              Administration
-            </span>
-          </span>
-        </div>
-        <div className="max-w-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-shell-accent">
-            Committee workspace
-          </p>
-          <p className="mt-5 text-3xl font-semibold leading-tight tracking-[-0.04em] xl:text-4xl">
-            Plan, publish, and manage society events.
-          </p>
-          <p className="mt-5 text-sm leading-6 text-shell-muted">
-            Access is scoped to the committees assigned to your account.
-          </p>
-        </div>
-        <p className="text-xs text-shell-muted">Engineering Society Platform</p>
-      </aside>
+      <AuthAside
+        eyebrow="Committee workspace"
+        heading="Plan, publish, and manage society events."
+        description="Access is scoped to the committees assigned to your account."
+      />
       <div className="flex min-w-0 flex-col items-center justify-center px-4 py-10 sm:px-8">
-        <div className="mb-8 flex w-full max-w-[28rem] items-center gap-3 lg:hidden">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-shell font-mono text-xs font-semibold text-shell-foreground">
-            ES
-          </span>
-          <span className="leading-tight">
-            <span className="block text-sm font-semibold tracking-tight">
-              Engineering Society
+        <div className="mb-8 flex w-full max-w-[28rem] items-center justify-between gap-3 lg:hidden">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-shell font-mono text-xs font-semibold text-shell-foreground">
+              ES
             </span>
-            <span className="block text-xs text-muted-foreground">
-              Administration
+            <span className="leading-tight">
+              <span className="block text-sm font-semibold tracking-tight">
+                Engineering Society
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Administration
+              </span>
             </span>
-          </span>
+          </div>
+          <ThemeToggle />
         </div>
-        <section
-          aria-labelledby={titleId}
-          className="w-full max-w-[28rem] rounded-xl border border-border bg-surface p-6 shadow-panel duration-200 animate-in fade-in-0 slide-in-from-bottom-1 sm:p-9"
+        <Card
+          variant="glass"
+          className="w-full max-w-[28rem] p-6 duration-200 animate-in fade-in-0 slide-in-from-bottom-1 sm:p-9"
         >
-          <span className="flex size-10 items-center justify-center rounded-lg border border-primary/15 bg-primary-soft text-primary-soft-foreground">
-            <Icon aria-hidden="true" className="size-5" />
-          </span>
-          <h1
-            id={titleId}
-            className="mt-5 text-[1.65rem] font-semibold tracking-[-0.04em]"
-          >
-            {title}
-          </h1>
-          {children}
-        </section>
+          <section aria-labelledby={titleId}>
+            <span className="flex size-10 items-center justify-center rounded-lg border border-primary/15 bg-primary-soft text-primary-soft-foreground">
+              <Icon aria-hidden="true" className="size-5" />
+            </span>
+            <h1
+              id={titleId}
+              className="mt-5 text-[1.65rem] font-semibold tracking-[-0.04em]"
+            >
+              {title}
+            </h1>
+            {children}
+          </section>
+        </Card>
         {footer ? (
           <div className="mt-5 w-full max-w-[28rem] text-center text-sm leading-6 text-muted-foreground">
             {footer}

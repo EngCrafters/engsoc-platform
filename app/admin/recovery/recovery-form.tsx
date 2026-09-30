@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { AuthMessage } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormActions, FormField } from "@/components/ui/form-field";
 import { requestRecoveryAction } from "../actions";
 import { initialRecoveryActionState } from "../action-state";
 
@@ -26,8 +26,7 @@ export function RecoveryForm() {
       {state.status === "error" ? (
         <AuthMessage tone="error">{state.message}</AuthMessage>
       ) : null}
-      <div className="grid gap-1.5">
-        <Label htmlFor="email">Email address</Label>
+      <FormField htmlFor="email" label="Email address">
         <Input
           id="email"
           name="email"
@@ -37,13 +36,15 @@ export function RecoveryForm() {
           aria-invalid={state.status === "error" || undefined}
           className="h-11"
         />
-      </div>
-      <Button type="submit" disabled={pending} className="h-11 w-full">
-        {pending ? (
-          <Loader2 aria-hidden="true" className="animate-spin" />
-        ) : null}
-        {pending ? "Sending…" : "Send recovery email"}
-      </Button>
+      </FormField>
+      <FormActions>
+        <Button type="submit" disabled={pending} className="h-11 w-full">
+          {pending ? (
+            <Loader2 aria-hidden="true" className="animate-spin" />
+          ) : null}
+          {pending ? "Sending…" : "Send recovery email"}
+        </Button>
+      </FormActions>
     </form>
   );
 }

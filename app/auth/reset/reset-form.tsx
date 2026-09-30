@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { AuthMessage } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormActions, FormField } from "@/components/ui/form-field";
 import { resetPasswordAction } from "./actions";
 import { initialResetActionState } from "./action-state";
 
@@ -19,8 +19,11 @@ export function ResetForm() {
       {state.status === "error" ? (
         <AuthMessage tone="error">{state.message}</AuthMessage>
       ) : null}
-      <div className="grid gap-1.5">
-        <Label htmlFor="password">New password</Label>
+      <FormField
+        htmlFor="password"
+        label="New password"
+        description="At least 12 characters."
+      >
         <Input
           id="password"
           name="password"
@@ -29,19 +32,18 @@ export function ResetForm() {
           required
           minLength={12}
           aria-invalid={state.status === "error" || undefined}
-          aria-describedby="password-hint"
+          aria-describedby="password-description"
           className="h-11"
         />
-        <p id="password-hint" className="text-xs text-muted-foreground">
-          At least 12 characters.
-        </p>
-      </div>
-      <Button type="submit" disabled={pending} className="h-11 w-full">
-        {pending ? (
-          <Loader2 aria-hidden="true" className="animate-spin" />
-        ) : null}
-        {pending ? "Resetting…" : "Reset password"}
-      </Button>
+      </FormField>
+      <FormActions>
+        <Button type="submit" disabled={pending} className="h-11 w-full">
+          {pending ? (
+            <Loader2 aria-hidden="true" className="animate-spin" />
+          ) : null}
+          {pending ? "Resetting…" : "Reset password"}
+        </Button>
+      </FormActions>
     </form>
   );
 }
