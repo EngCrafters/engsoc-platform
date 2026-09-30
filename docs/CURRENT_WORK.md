@@ -50,3 +50,11 @@ returned no errors for this deployment.
 UC-02 can close. Until then, maintain UC-02 without starting another milestone.
 For every later push, continue verifying GitHub CI and the serving Vercel
 deployment.
+
+**PARALLEL INITIATIVE — DESIGN SYSTEM:** The owner separately authorized a
+project-wide design-system pass (tokens, theming, component foundation,
+restrained Canvas UI/GSAP on auth) on October 1, 2026. See
+`docs/adr/0010-project-wide-design-system.md`. This is presentation-only and
+does not change, weaken, or substitute for the UC-02 closure decision above —
+it may land commits on `main` in the same window as this hold. See
+`docs/DESIGN_SYSTEM.md` once written for the resulting conventions.
