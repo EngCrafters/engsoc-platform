@@ -34,20 +34,27 @@ export function ThemeToggle({
       title={label}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={cn(
-        "flex size-8 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
+        "flex items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
+        variant === "shell" ? "size-9" : "size-8",
         variant === "shell"
-          ? "text-shell-foreground/85 hover:bg-white/[0.08] hover:text-shell-foreground focus-visible:outline-shell-accent"
+          ? "text-shell-foreground/85 hover:bg-shell-foreground/[0.08] hover:text-shell-foreground focus-visible:outline-shell-accent"
           : "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-ring"
       )}
     >
       {mounted ? (
         isDark ? (
-          <Sun aria-hidden="true" className="size-4" />
+          <Sun
+            aria-hidden="true"
+            className={variant === "shell" ? "size-[1.125rem]" : "size-4"}
+          />
         ) : (
-          <Moon aria-hidden="true" className="size-4" />
+          <Moon
+            aria-hidden="true"
+            className={variant === "shell" ? "size-[1.125rem]" : "size-4"}
+          />
         )
       ) : (
-        <span className="size-4" />
+        <span className={variant === "shell" ? "size-[1.125rem]" : "size-4"} />
       )}
     </button>
   );

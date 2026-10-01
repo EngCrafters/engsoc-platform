@@ -9,14 +9,15 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { AdminEventCounts } from "@/lib/admin-events/server";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const STATS = [
+const primaryStats = [
   {
     key: "total",
     label: "Total records",
     icon: CalendarRange,
-    tone: "text-primary",
+    tone: "text-muted-foreground",
   },
   {
     key: "draft",
@@ -26,15 +27,9 @@ const STATS = [
   },
   {
     key: "review",
-    label: "Review required",
+    label: "Needs review",
     icon: ShieldAlert,
     tone: "text-warning-soft-foreground",
-  },
-  {
-    key: "approved",
-    label: "Approved draft",
-    icon: ShieldCheck,
-    tone: "text-success-soft-foreground",
   },
   {
     key: "published",
@@ -42,40 +37,62 @@ const STATS = [
     icon: Globe2,
     tone: "text-success-soft-foreground",
   },
-  {
-    key: "full",
-    label: "Full",
-    icon: Ban,
-    tone: "text-full-soft-foreground",
-  },
-  {
-    key: "past",
-    label: "Past",
-    icon: Clock3,
-    tone: "text-muted-foreground",
-  },
-  {
-    key: "archived",
-    label: "Archived",
-    icon: Archive,
-    tone: "text-muted-foreground",
-  },
+] as const;
+
+const secondaryStats = [
+  { key: "approved", label: "Approved draft", icon: ShieldCheck },
+  { key: "full", label: "Full", icon: Ban },
+  { key: "past", label: "Past", icon: Clock3 },
+  { key: "archived", label: "Archived", icon: Archive },
 ] as const;
 
 export function EventSummaryStats({ counts }: { counts: AdminEventCounts }) {
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border shadow-panel sm:grid-cols-4">
-      {STATS.map(({ key, label, icon: Icon, tone }) => (
-        <div key={key} className="min-w-0 bg-surface px-4 py-4 sm:px-5 sm:py-5">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Icon aria-hidden="true" className={cn("size-3.5", tone)} />
-            <span className="truncate">{label}</span>
+    <div className="grid gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        {primaryStats.map(({ key, label, icon: Icon, tone }) => (
+          <Card key={key} className="min-w-0 gap-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Icon
+                  aria-hidden="true"
+                  className={cn("size-4 shrink-0", tone)}
+                  strokeWidth={1.8}
+                />
+                <span className="truncate">{label}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+                {counts[key]}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-border bg-surface px-4 py-3 sm:grid-cols-4 sm:px-5">
+        {secondaryStats.map(({ key, label, icon: Icon }) => (
+          <div key={key} className="flex min-w-0 items-center gap-2">
+            <Icon
+              aria-hidden="true"
+              className={cn(
+                "size-4 shrink-0",
+                key === "approved" && "text-success-soft-foreground",
+                key === "full" && "text-full-soft-foreground",
+                (key === "past" || key === "archived") &&
+                  "text-muted-foreground"
+              )}
+              strokeWidth={1.8}
+            />
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
+              {label}
+            </span>
+            <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
+              {counts[key]}
+            </span>
           </div>
-          <p className="mt-3 text-[1.75rem] font-semibold tabular-nums tracking-tight text-foreground">
-            {counts[key]}
-          </p>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

@@ -54,25 +54,18 @@ export function EventListFilters({
   return (
     <section
       aria-label="Filter events"
-      className="mt-6 flex flex-col gap-4 rounded-xl border border-border bg-surface px-4 py-4 shadow-panel sm:px-5 lg:flex-row lg:items-end lg:justify-between"
+      className="mt-6 flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between"
     >
-      <div className="flex min-w-0 items-start gap-2.5 text-sm font-semibold text-foreground">
+      <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground lg:pb-2.5">
         {pending ? (
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
         ) : (
           <SlidersHorizontal
             aria-hidden="true"
-            className="mt-0.5 size-4 text-primary"
+            className="size-4 text-muted-foreground"
           />
         )}
-        <span>
-          <span className="block">
-            {pending ? "Updating events" : "Filter events"}
-          </span>
-          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-            Narrow the list by committee and state
-          </span>
-        </span>
+        <span>{pending ? "Updating events" : "Filters"}</span>
       </div>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="grid gap-1.5">

@@ -78,6 +78,13 @@ tracking-wide`).
 
 ## Components
 
+### Admin dashboard
+
+- The admin rail has one primary Create event action and a short icon navigation. Account and security is a navigation item; theme and sign-out are direct controls beside the signed-in account.
+- Committee access appears as a compact scope badge in the rail footer. The full list remains available through its accessible label and title; filtering by committee remains in the event list.
+- The Events overview gives total, draft, review, and published counts equal prominence in four cards. Approved, full, past, and archived counts remain visible in a quieter summary row. Use semantic status colors on icons only.
+- Keep content gutters at 16px on narrow screens and 24–32px on larger screens, with 12–16px gaps between summary cards. The navigation and content widths stay fixed when the theme changes.
+
 - **Brand mark:** `public/brand/engineering-society-logo.png` is the supplied
   transparent logo. `BrandMark` renders it in the public, admin, and auth
   headers; the same asset is the browser and touch icon.

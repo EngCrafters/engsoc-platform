@@ -28,7 +28,7 @@ export function AdminShell({
             committees={committees}
             logoutAction={logoutAction}
           />
-          <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 py-7 sm:px-6 md:px-8 md:py-9 lg:px-10 xl:px-12">
+          <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {children}
           </main>
         </div>

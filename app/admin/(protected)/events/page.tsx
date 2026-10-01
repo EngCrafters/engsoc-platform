@@ -50,14 +50,13 @@ export default async function AdminEventsPage({
   return (
     <section aria-labelledby="admin-events-title">
       <AdminPageHeader
-        eyebrow="Management / Events"
         title="Events"
         headingId="admin-events-title"
-        description={`Plan, publish, and manage events for ${manager.committees.map((committee) => committee.name).join(", ")}.`}
+        description="Plan, publish, and manage your committee events."
         actions={
           <Button asChild>
             <Link href="/admin/events/new">
-              <CalendarPlus aria-hidden="true" />
+              <CalendarPlus aria-hidden="true" data-icon="inline-start" />
               Create event
             </Link>
           </Button>
@@ -66,12 +65,10 @@ export default async function AdminEventsPage({
       {counts.total > 0 ? (
         <section
           aria-label="Event counts in selected committee scope"
-          className="mt-8"
+          className="mt-6"
         >
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold text-foreground">
-              Workspace overview
-            </h2>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold text-foreground">Overview</h2>
             <p className="text-xs text-muted-foreground">
               All records in the selected committee scope
             </p>
