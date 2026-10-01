@@ -107,6 +107,15 @@ body {
 
 html {
   overflow-x: clip;
+  /* overflow-y must be a real scroll container (not `visible`, the
+     default) for scrollbar-gutter to do anything. Together these always
+     reserve the vertical scrollbar's space, so toggling theme (native
+     scrollbar redraws for the new color-scheme) or opening any Radix
+     menu/dialog (which locks body scroll, removing then restoring the
+     scrollbar) can't shift the page — the "structure breaks" symptom
+     this fixes. */
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 :root {
