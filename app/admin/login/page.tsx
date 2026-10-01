@@ -18,17 +18,12 @@ export default async function AdminLoginPage({
       title="Committee administration"
       titleId="admin-login-title"
       footer={
-        <div className="grid gap-1">
-          <p className="text-muted-foreground/70">
-            Event registration does not require an account.
-          </p>
-          <Link
-            href="/"
-            className="font-medium text-foreground/90 underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-          >
-            Back to public site
-          </Link>
-        </div>
+        <Link
+          href="/"
+          className="font-medium text-foreground/90 underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+        >
+          Back to public site
+        </Link>
       }
     >
       {params.auth === "failed" ? (

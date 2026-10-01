@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { AuthMessage } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,12 +40,7 @@ export function LoginForm({ next }: { next: string }) {
         />
       </FormField>
       <div className="grid gap-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <Label htmlFor="password">Password</Label>
-          <Link href="/admin/recovery" className={forgotPasswordLinkClass}>
-            Forgot your password?
-          </Link>
-        </div>
+        <Label htmlFor="password">Password</Label>
         <Input
           id="password"
           name="password"
@@ -54,6 +50,12 @@ export function LoginForm({ next }: { next: string }) {
           aria-invalid={failed || undefined}
           className="h-11"
         />
+        <Link
+          href="/admin/recovery"
+          className={cn(forgotPasswordLinkClass, "justify-self-end")}
+        >
+          Forgot your password?
+        </Link>
       </div>
       <FormActions>
         <Button type="submit" disabled={pending} className="h-11 w-full">
