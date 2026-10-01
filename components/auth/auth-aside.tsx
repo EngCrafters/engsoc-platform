@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { Liquid } from "@/components/canvasui/Liquid";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BrandMark } from "@/components/ui/brand-mark";
 
 /**
  * Desktop-only brand panel for the auth shell. The GSAP entrance and the
@@ -70,9 +71,7 @@ export function AuthAside({
             className="flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-lg bg-shell-accent font-mono text-sm font-semibold text-shell-accent-foreground">
-                ES
-              </span>
+              <BrandMark />
               <span className="leading-tight">
                 <span className="block text-sm font-semibold">
                   Engineering Society

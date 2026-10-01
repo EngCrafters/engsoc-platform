@@ -78,6 +78,9 @@ tracking-wide`).
 
 ## Components
 
+- **Brand mark:** `public/brand/engineering-society-logo.png` is the supplied
+  transparent logo. `BrandMark` renders it in the public, admin, and auth
+  headers; the same asset is the browser and touch icon.
 - **Card variants** (`components/ui/card.tsx`, `variant` prop): `default`
   (dashboard data cards), `subtle` (quiet surface-on-surface), `elevated`
   (raised shadow, e.g. the public event cards), `interactive` (hover lift +

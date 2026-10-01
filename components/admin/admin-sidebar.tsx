@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { DURATION, EASE_OUT } from "@/lib/motion/variants";
 
 const managementLinks = [
@@ -57,9 +58,7 @@ export function AdminSidebar({
           href="/admin/events"
           className="flex items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-shell-accent"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-shell-accent text-shell-accent-foreground font-mono text-xs font-semibold">
-            ES
-          </span>
+          <BrandMark size={36} />
           <span className="min-w-0 leading-tight">
             <span className="block truncate text-sm font-semibold tracking-tight">
               Engineering Society

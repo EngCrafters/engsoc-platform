@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { AmbientGlow } from "@/components/ui/ambient-glow";
 import { AuthAside } from "@/components/auth/auth-aside";
+import { BrandMark } from "@/components/ui/brand-mark";
 export { MessageBanner as AuthMessage } from "@/components/ui/message-banner";
 
 /**
@@ -36,9 +37,7 @@ export function AuthShell({
         <AmbientGlow />
         <div className="flex w-full max-w-[26rem] items-center justify-between gap-3 lg:hidden">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-shell font-mono text-xs font-semibold text-shell-foreground">
-              ES
-            </span>
+            <BrandMark size={36} />
             <span className="leading-tight">
               <span className="block text-sm font-semibold tracking-tight">
                 Engineering Society

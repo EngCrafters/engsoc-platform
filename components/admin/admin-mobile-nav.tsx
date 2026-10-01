@@ -23,6 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { listItem, listStagger } from "@/lib/motion/variants";
 
 const links = [
@@ -60,9 +61,7 @@ export function AdminMobileNav({
   return (
     <header className="flex items-center justify-between gap-3 border-b border-shell-border bg-shell px-4 py-3 text-shell-foreground lg:hidden">
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-shell-accent text-shell-accent-foreground font-mono text-[0.65rem] font-semibold">
-          ES
-        </span>
+        <BrandMark size={32} alt="Engineering Society" />
         <p className="min-w-0 truncate text-sm font-semibold tracking-tight">
           {currentLabel(pathname)}
         </p>

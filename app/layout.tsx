@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Engineering Society Platform",
   description: "One shared platform for the Engineering Society.",
+  icons: {
+    icon: "/brand/engineering-society-logo.png",
+    apple: "/brand/engineering-society-logo.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

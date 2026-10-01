@@ -7,14 +7,18 @@
 // <html>/<body>; this nests inside it.
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BrandMark } from "@/components/ui/brand-mark";
 
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-full flex-col">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
-          Engineering Society
-        </p>
+        <div className="flex items-center gap-2.5">
+          <BrandMark size={32} />
+          <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
+            Engineering Society
+          </p>
+        </div>
         <ThemeToggle />
       </header>
       <main className="flex-1">{children}</main>
