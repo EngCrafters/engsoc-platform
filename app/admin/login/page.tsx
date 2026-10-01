@@ -22,35 +22,29 @@ export default async function AdminLoginPage({
       title="Committee administration"
       titleId="admin-login-title"
       footer={
-        <p>
-          Event registration does not require an account.
-          <br />
-          <Link href="/" className={authLinkClass}>
-            Back to public site
+        <div className="grid gap-2">
+          <Link href="/admin/recovery" className={authLinkClass}>
+            Forgot your password?
           </Link>
-        </p>
+          <p>
+            Event registration does not require an account.{" "}
+            <Link href="/" className={authLinkClass}>
+              Back to public site
+            </Link>
+          </p>
+        </div>
       }
     >
       {params.auth === "failed" ? (
-        <div className="mt-4">
-          <AuthMessage tone="error">
-            This sign-in link is invalid or expired. Sign in again below.
-          </AuthMessage>
-        </div>
+        <AuthMessage tone="error">
+          This sign-in link is invalid or expired. Sign in again below.
+        </AuthMessage>
       ) : null}
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+      <p className="text-sm leading-6 text-muted-foreground">
         Use the account provisioned for your committee. Platform maintenance
         grants access; there is no self-signup.
       </p>
-      <div className="mt-6">
-        <LoginForm next={next} />
-      </div>
-      <Link
-        href="/admin/recovery"
-        className={`${authLinkClass} mt-5 inline-block text-sm`}
-      >
-        Forgot your password?
-      </Link>
+      <LoginForm next={next} />
     </AuthShell>
   );
 }

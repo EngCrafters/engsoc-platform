@@ -33,9 +33,9 @@ export function AuthShell({
         heading="Plan, publish, and manage society events."
         description="Access is scoped to the committees assigned to your account."
       />
-      <div className="relative flex min-w-0 flex-col items-center justify-center overflow-hidden px-4 py-10 sm:px-8">
+      <div className="relative flex min-w-0 flex-col items-center justify-center gap-6 overflow-hidden px-4 py-10 sm:px-8">
         <AmbientGlow />
-        <div className="mb-8 flex w-full max-w-[28rem] items-center justify-between gap-3 lg:hidden">
+        <div className="flex w-full max-w-[26rem] items-center justify-between gap-3 lg:hidden">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-shell font-mono text-xs font-semibold text-shell-foreground">
               ES
@@ -53,24 +53,25 @@ export function AuthShell({
         </div>
         <Card
           variant="glass"
-          className="w-full max-w-[28rem] p-7 duration-200 animate-in fade-in-0 slide-in-from-bottom-1 sm:p-10"
+          className="w-full max-w-[26rem] p-6 duration-200 animate-in fade-in-0 slide-in-from-bottom-1 sm:p-8"
         >
-          <section aria-labelledby={titleId}>
-            <span className="inline-flex size-9 items-center justify-center rounded-full border border-foreground/15 text-foreground/70">
-              <Icon aria-hidden="true" className="size-4" />
-            </span>
-            <h1
-              id={titleId}
-              className="mt-4 text-[1.65rem] font-semibold tracking-[-0.04em]"
-            >
-              {title}
-            </h1>
-            <div className="mt-5 mb-5 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-            {children}
+          <section aria-labelledby={titleId} className="grid gap-5">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/15 text-foreground/70">
+                <Icon aria-hidden="true" className="size-4" />
+              </span>
+              <h1
+                id={titleId}
+                className="text-xl font-semibold tracking-[-0.03em]"
+              >
+                {title}
+              </h1>
+            </div>
+            <div className="grid gap-4">{children}</div>
           </section>
         </Card>
         {footer ? (
-          <div className="mt-5 w-full max-w-[28rem] text-center text-sm leading-6 text-muted-foreground">
+          <div className="w-full max-w-[26rem] text-center text-sm leading-6 text-muted-foreground">
             {footer}
           </div>
         ) : null}

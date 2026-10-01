@@ -129,9 +129,11 @@ html {
 
   /* Translucent glass surface — use sparingly (auth card, floating
      overlays). Never a dashboard data-card background. Needs an
-     AmbientGlow (or similar) behind it or the blur has nothing to show. */
-  --glass-bg: oklch(1 0 0 / 52%);
-  --glass-border: oklch(1 0 0 / 45%);
+     AmbientGlow (or similar) behind it or the blur has nothing to show.
+     The border is dark (not white-on-white) so the card reads as a
+     distinct surface even against a near-white page. */
+  --glass-bg: oklch(1 0 0 / 72%);
+  --glass-border: oklch(0.145 0 0 / 12%);
 
   /* Primary/accent are pure neutral — no brand hue. Only success/warning/
      danger/full/quiet carry color, and only to communicate state. */
@@ -228,8 +230,8 @@ html {
   --surface-foreground: oklch(0.95 0.008 258);
   --surface-raised: oklch(0.25 0.024 264);
 
-  --glass-bg: oklch(0.208 0.022 264 / 46%);
-  --glass-border: oklch(1 0 0 / 14%);
+  --glass-bg: oklch(0.28 0.012 264 / 65%);
+  --glass-border: oklch(1 0 0 / 20%);
 
   --primary: oklch(0.92 0 0);
   --primary-foreground: oklch(0.145 0 0);
@@ -316,6 +318,25 @@ html {
   }
   html {
     @apply font-sans;
+  }
+}
+
+@keyframes card-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+  20% {
+    transform: translateX(-2px) rotate(-0.3deg);
+  }
+  40% {
+    transform: translateX(2px) rotate(0.3deg);
+  }
+  60% {
+    transform: translateX(-1.5px) rotate(-0.2deg);
+  }
+  80% {
+    transform: translateX(1.5px) rotate(0.2deg);
   }
 }
 

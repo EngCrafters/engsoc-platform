@@ -18,7 +18,7 @@ const cardVariants = cva(
         interactive:
           "cursor-pointer bg-card text-card-foreground ring-1 ring-foreground/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-raised hover:ring-foreground/20",
         glass:
-          "border border-glass-border bg-glass text-card-foreground shadow-panel backdrop-blur-2xl backdrop-saturate-150",
+          "relative border border-glass-border bg-glass text-card-foreground shadow-raised backdrop-blur-2xl backdrop-saturate-150 hover:animate-[card-shake_0.4s_ease-in-out]",
       },
     },
     defaultVariants: {

@@ -24,24 +24,17 @@ export default async function AdminRecoveryPage({
       }
     >
       {params.link === "invalid" ? (
-        <div className="mt-4">
-          <AuthMessage tone="error">
-            This recovery link is invalid or expired. Request a new email below
-            and use its most recent link.
-          </AuthMessage>
-        </div>
+        <AuthMessage tone="error">
+          This recovery link is invalid or expired. Request a new email below
+          and use its most recent link.
+        </AuthMessage>
       ) : null}
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+      <p className="text-sm leading-6 text-muted-foreground">
         Enter your committee account email. If it matches an account, we&apos;ll
-        send a password reset link.
+        send a password reset link. Resetting your password does not create an
+        account or change which committees you can manage.
       </p>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-        Resetting your password does not create an account or change which
-        committees you can manage.
-      </p>
-      <div className="mt-6">
-        <RecoveryForm />
-      </div>
+      <RecoveryForm />
     </AuthShell>
   );
 }
