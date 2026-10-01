@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { Loader2 } from "lucide-react";
 import { AuthMessage } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { FormActions, FormField } from "@/components/ui/form-field";
 import { loginAction } from "../actions";
 import { initialLoginActionState } from "../action-state";
@@ -46,9 +46,7 @@ export function LoginForm({ next }: { next: string }) {
       </FormField>
       <FormActions>
         <Button type="submit" disabled={pending} className="h-11 w-full">
-          {pending ? (
-            <Loader2 aria-hidden="true" className="animate-spin" />
-          ) : null}
+          {pending ? <Spinner /> : null}
           {pending ? "Signing in…" : "Sign in"}
         </Button>
       </FormActions>

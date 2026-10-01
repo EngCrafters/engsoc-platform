@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { Loader2 } from "lucide-react";
 import { AuthMessage } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { FormActions, FormField } from "@/components/ui/form-field";
 import { resetPasswordAction } from "./actions";
 import { initialResetActionState } from "./action-state";
@@ -38,9 +38,7 @@ export function ResetForm() {
       </FormField>
       <FormActions>
         <Button type="submit" disabled={pending} className="h-11 w-full">
-          {pending ? (
-            <Loader2 aria-hidden="true" className="animate-spin" />
-          ) : null}
+          {pending ? <Spinner /> : null}
           {pending ? "Resetting…" : "Reset password"}
         </Button>
       </FormActions>

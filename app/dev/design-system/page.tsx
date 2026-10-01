@@ -8,6 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { FormActions, FormField } from "@/components/ui/form-field";
 import { StatePanel } from "@/components/ui/state-panel";
+import { AmbientGlow } from "@/components/ui/ambient-glow";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Dev-only design-system reference. Never a production route — 404s
@@ -85,19 +88,26 @@ export default function DesignSystemShowcasePage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Card variants
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {(
-            ["default", "subtle", "elevated", "interactive", "glass"] as const
-          ).map((variant) => (
-            <Card key={variant} variant={variant}>
-              <CardHeader>
-                <CardTitle className="capitalize">{variant}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Card variant=&quot;{variant}&quot;
-              </CardContent>
-            </Card>
-          ))}
+        <p className="text-xs text-muted-foreground">
+          Hover the &quot;interactive&quot; card. &quot;glass&quot; needs an{" "}
+          <code>AmbientGlow</code> (or similar) behind it, shown here.
+        </p>
+        <div className="relative overflow-hidden rounded-xl p-4">
+          <AmbientGlow />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(
+              ["default", "subtle", "elevated", "interactive", "glass"] as const
+            ).map((variant) => (
+              <Card key={variant} variant={variant}>
+                <CardHeader>
+                  <CardTitle className="capitalize">{variant}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  Card variant=&quot;{variant}&quot;
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -159,10 +169,30 @@ export default function DesignSystemShowcasePage() {
 
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Loading
+        </h2>
+        <div className="flex flex-wrap items-center gap-6">
+          <Button disabled>
+            <Spinner />
+            Saving…
+          </Button>
+          <Spinner className="size-6" />
+        </div>
+        <div className="grid max-w-sm gap-2">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Auth icon treatment
         </h2>
-        <span className="flex size-10 items-center justify-center rounded-lg border border-primary/15 bg-primary-soft text-primary-soft-foreground">
-          <LockKeyhole aria-hidden="true" className="size-5" />
+        <span className="inline-flex size-9 items-center justify-center rounded-full border border-foreground/15 text-foreground/70">
+          <LockKeyhole aria-hidden="true" className="size-4" />
         </span>
       </section>
     </main>

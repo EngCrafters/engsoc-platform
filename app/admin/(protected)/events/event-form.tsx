@@ -9,7 +9,6 @@ import {
   Building2,
   CalendarClock,
   Info,
-  Loader2,
   Save,
   Ticket,
   Type,
@@ -24,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
@@ -362,11 +362,7 @@ export function EventForm({
               disabled={pending || archived}
               className="mt-5 h-11 w-full"
             >
-              {pending ? (
-                <Loader2 aria-hidden="true" className="animate-spin" />
-              ) : (
-                <Save aria-hidden="true" />
-              )}
+              {pending ? <Spinner /> : <Save aria-hidden="true" />}
               {pending
                 ? "Saving…"
                 : archived

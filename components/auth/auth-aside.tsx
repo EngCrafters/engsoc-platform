@@ -58,7 +58,7 @@ export function AuthAside({
     >
       <Liquid
         className="flex h-full flex-1"
-        color={[0.27, 0.42, 0.93]}
+        color={[0.82, 0.82, 0.84]}
         distortion={0.3}
         intensity={1.5}
         blend={4}

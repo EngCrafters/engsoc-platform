@@ -16,9 +16,9 @@ const cardVariants = cva(
         elevated:
           "bg-card text-card-foreground ring-1 ring-foreground/10 shadow-raised",
         interactive:
-          "bg-card text-card-foreground ring-1 ring-foreground/10 transition-shadow hover:shadow-raised",
+          "cursor-pointer bg-card text-card-foreground ring-1 ring-foreground/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-raised hover:ring-foreground/20",
         glass:
-          "border border-glass-border bg-glass text-card-foreground shadow-panel backdrop-blur-xl",
+          "border border-glass-border bg-glass text-card-foreground shadow-panel backdrop-blur-2xl backdrop-saturate-150",
       },
     },
     defaultVariants: {
