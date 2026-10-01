@@ -122,8 +122,10 @@ message-banner.tsx`): `StatePanel` is the shared icon-circle + heading +
 theme-toggle.tsx`): `next-themes`, `attribute="class"`,
   `defaultTheme="system"`. `ThemeToggle` has a `variant="shell"` styling for
   the dark navy admin shell/auth aside and a default styling for light
-  surfaces; it's in the admin sidebar footer, the mobile nav sheet header,
-  and both auth-shell placements (desktop aside, mobile header row).
+  surfaces. One click switches between the visible light and dark modes;
+  before the first click, the mode follows the system setting. The button is
+  in the admin sidebar footer, the mobile nav sheet header, and both
+  auth-shell placements (desktop aside, mobile header row).
 
 ## Motion
 

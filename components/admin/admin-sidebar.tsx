@@ -156,10 +156,7 @@ export function AdminSidebar({
         <span className="text-[0.68rem] font-medium tracking-wide text-shell-muted">
           Appearance
         </span>
-        <ThemeToggle
-          variant="shell"
-          triggerClassName="text-shell-foreground/85 hover:bg-white/[0.08] hover:text-shell-foreground focus-visible:outline-shell-accent"
-        />
+        <ThemeToggle variant="shell" />
       </div>
 
       <div className="flex items-center gap-2.5 border-t border-shell-border px-4 py-4">
