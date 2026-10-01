@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FormField } from "@/components/ui/form-field";
 import {
   Select,
   SelectContent,
@@ -32,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EASE_OUT } from "@/lib/motion/variants";
+import { DURATION, EASE_OUT } from "@/lib/motion/variants";
 import type { EventLifecycleStatus } from "@/lib/admin-events/status";
 import { adminErrorMessage } from "@/lib/admin-errors";
 
@@ -124,7 +125,7 @@ export function EventForm({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.2, ease: EASE_OUT }}
+                transition={{ duration: DURATION.normal, ease: EASE_OUT }}
               >
                 <Alert variant="destructive">
                   <AlertTitle>Couldn&apos;t save this event</AlertTitle>
@@ -168,8 +169,7 @@ export function EventForm({
               </p>
             </div>
           ) : null}
-          <div className="grid gap-1.5">
-            <Label htmlFor="event-title">Title</Label>
+          <FormField htmlFor="event-title" label="Title" required>
             <Input
               id="event-title"
               name="title"
@@ -179,7 +179,7 @@ export function EventForm({
               defaultValue={event?.title}
               className="h-11"
             />
-          </div>
+          </FormField>
           <div className="grid gap-1.5">
             <Label htmlFor="event-description">
               Description
@@ -247,8 +247,7 @@ export function EventForm({
               </p>
             ) : null}
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="event-location">Location</Label>
+          <FormField htmlFor="event-location" label="Location">
             <Input
               id="event-location"
               name="location"
@@ -257,7 +256,7 @@ export function EventForm({
               className="h-11"
               placeholder="e.g. Block 6, Lecture Hall 3"
             />
-          </div>
+          </FormField>
         </EventFormSection>
 
         <EventFormSection

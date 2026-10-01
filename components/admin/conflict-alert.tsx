@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DURATION, EASE_OUT } from "@/lib/motion/variants";
 
 /**
  * Shown when a lifecycle or save action returns CONFLICT — the revision the
@@ -18,7 +19,7 @@ export function ConflictAlert({ onReload }: { onReload: () => void }) {
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -6 }}
-        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: DURATION.normal, ease: EASE_OUT }}
       >
         <Alert
           variant="destructive"

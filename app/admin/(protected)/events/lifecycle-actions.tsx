@@ -21,7 +21,7 @@ import { ConfirmTransitionDialog } from "@/components/admin/confirm-transition-d
 import { ConflictAlert } from "@/components/admin/conflict-alert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { EventLifecycleStatus } from "@/lib/admin-events/status";
-import { EASE_OUT } from "@/lib/motion/variants";
+import { DURATION, EASE_OUT } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
 import { adminErrorMessage } from "@/lib/admin-errors";
 
@@ -260,7 +260,7 @@ export function LifecycleActions(props: Props) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: DURATION.fast }}
               className="text-sm text-muted-foreground"
               aria-live="polite"
             >
@@ -274,7 +274,7 @@ export function LifecycleActions(props: Props) {
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2, ease: EASE_OUT }}
+              transition={{ duration: DURATION.normal, ease: EASE_OUT }}
             >
               <Alert variant="destructive">
                 <AlertTitle>Couldn&apos;t apply that change</AlertTitle>
