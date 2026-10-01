@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ export function AdminMobileNav({
         </SheetTrigger>
         <SheetContent
           side="left"
+          showCloseButton={false}
           className="w-[85%] border-shell-border bg-shell p-0 text-shell-foreground"
         >
           <SheetHeader className="border-b border-shell-border px-5 py-5">
@@ -86,7 +88,19 @@ export function AdminMobileNav({
               <SheetTitle className="text-shell-foreground">
                 Engineering Society
               </SheetTitle>
-              <ThemeToggle variant="shell" />
+              <div className="flex shrink-0 items-center gap-1">
+                <ThemeToggle variant="shell" />
+                <SheetClose asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Close administration menu"
+                    className="text-shell-foreground/85 hover:bg-white/[0.08] hover:text-shell-foreground"
+                  >
+                    <X aria-hidden="true" className="size-4" />
+                  </Button>
+                </SheetClose>
+              </div>
             </div>
             <p className="text-xs text-shell-muted">Administration</p>
             <p className="mt-2 truncate text-xs text-shell-foreground/90">

@@ -118,6 +118,14 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* The stable gutter already reserves scrollbar space. Radix's extra
+   scroll-lock margin would shift the shell when a menu opens. */
+@supports (scrollbar-gutter: stable) {
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
+}
+
 :root {
   /* Hallmark pre-emit critique: P4 H4 E4 S4 R5 V4.
      Modern minimal admin workspace · quiet navy and blue ·
