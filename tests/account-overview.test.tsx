@@ -46,6 +46,13 @@ describe("admin account page", () => {
     expect(html).toContain("Committee manager");
   });
 
+  it("uses separate accessible heading IDs in the settings dialog", () => {
+    const html = account({ compact: true, idPrefix: "settings-account" });
+    expect(html).toContain('aria-labelledby="settings-account-identity-title"');
+    expect(html).toContain('id="settings-account-identity-title"');
+    expect(html).not.toContain('id="account-identity-title"');
+  });
+
   it("lists every active committee scope, each marked active", () => {
     const html = account();
     expect(html).toContain("Events");
@@ -108,9 +115,10 @@ describe("admin shell identity and scope", () => {
     email: "manager@example.test",
     committees,
     logoutAction: noop,
+    onOpenSettings: () => {},
   };
 
-  it("shows identity, role, every committee and the account entry (sidebar)", () => {
+  it("shows identity, role, every committee and a settings dialog trigger (sidebar)", () => {
     const html = renderToStaticMarkup(
       <TooltipProvider>
         <AdminSidebar {...props} />
@@ -120,14 +128,15 @@ describe("admin shell identity and scope", () => {
     expect(html).toContain("Committee manager");
     expect(html).toContain("Events");
     expect(html).toContain("Media");
-    expect(html).toContain('href="/admin/account"');
-    expect(html).toContain("Account &amp; security");
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain("Settings");
+    expect(html).not.toContain('href="/admin/account"');
     expect(visibleText(html)).not.toMatch(/owner|super-?admin/i);
   });
 
   it("never labels the user an owner (mobile header)", () => {
     const html = renderToStaticMarkup(<AdminMobileNav {...props} />);
     expect(visibleText(html)).not.toMatch(/owner|super-?admin/i);
-    expect(html).toContain("Account &amp; security");
+    expect(html).toContain('aria-label="Open settings"');
   });
 });

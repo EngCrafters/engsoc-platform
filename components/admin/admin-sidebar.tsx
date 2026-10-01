@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarPlus, Layers3, LogOut, UserRound } from "lucide-react";
+import {
+  CalendarPlus,
+  Layers3,
+  LogOut,
+  Settings2,
+  UserRound,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -21,10 +27,12 @@ export function AdminSidebar({
   email,
   committees,
   logoutAction,
+  onOpenSettings,
 }: {
   email: string | null;
   committees: ReadonlyArray<{ id: string; name: string }>;
   logoutAction: () => void | Promise<void>;
+  onOpenSettings: (trigger: HTMLButtonElement) => void;
 }) {
   const pathname = usePathname();
   const scopeLabel = committees.map((committee) => committee.name).join(", ");
@@ -82,6 +90,26 @@ export function AdminSidebar({
               </li>
             );
           })}
+          <li>
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={(event) => onOpenSettings(event.currentTarget)}
+              className={cn(
+                "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-shell-accent",
+                pathname === "/admin/account"
+                  ? "bg-shell-foreground/10 text-shell-foreground"
+                  : "text-shell-muted hover:bg-shell-foreground/[0.06] hover:text-shell-foreground"
+              )}
+            >
+              <Settings2
+                aria-hidden="true"
+                className="size-[1.125rem] shrink-0"
+                strokeWidth={1.8}
+              />
+              <span>Settings</span>
+            </button>
+          </li>
         </ul>
       </nav>
 

@@ -20,6 +20,7 @@ export default async function ProtectedAdminLayout({
   return (
     <AdminShell
       email={manager.email}
+      userId={manager.userId}
       committees={manager.committees}
       logoutAction={logoutAction}
     >

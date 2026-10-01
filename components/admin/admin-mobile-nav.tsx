@@ -8,6 +8,7 @@ import {
   Layers3,
   LogOut,
   Menu,
+  Settings2,
   UserRound,
   X,
 } from "lucide-react";
@@ -34,10 +35,12 @@ export function AdminMobileNav({
   email,
   committees,
   logoutAction,
+  onOpenSettings,
 }: {
   email: string | null;
   committees: ReadonlyArray<{ id: string; name: string }>;
   logoutAction: () => void | Promise<void>;
+  onOpenSettings: (trigger: HTMLButtonElement) => void;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -51,6 +54,16 @@ export function AdminMobileNav({
           {adminPageLabel(pathname)}
         </p>
       </div>
+      <Button
+        variant="ghost"
+        size="icon-lg"
+        aria-label="Open settings"
+        aria-haspopup="dialog"
+        onClick={(event) => onOpenSettings(event.currentTarget)}
+        className="ml-auto text-shell-foreground/90 hover:bg-shell-foreground/[0.08] hover:text-shell-foreground"
+      >
+        <Settings2 aria-hidden="true" />
+      </Button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button

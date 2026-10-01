@@ -12,6 +12,7 @@ import {
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -23,7 +24,7 @@ import {
 const managerCan = [
   "Create, edit, and publish events in your committees, subject to review.",
   "Approve a draft flagged by another manager in the same committee.",
-  "View registrations and event-scoped CSV when those screens are released.",
+  "View registrations and export event-scoped CSV files.",
 ];
 
 const managerCannot = [
@@ -67,30 +68,43 @@ export function AccountOverview({
   userId,
   committees,
   logoutAction,
+  compact = false,
+  idPrefix = "account",
 }: {
   email: string | null;
   userId: string;
   committees: ReadonlyArray<{ id: string; name: string }>;
   logoutAction: () => void | Promise<void>;
+  compact?: boolean;
+  idPrefix?: string;
 }) {
   return (
     <div>
-      <AdminPageHeader
-        eyebrow="Account"
-        title="Account & security"
-        headingId="account-title"
-        description="Your sign-in identity, active committee access, and security options."
-      />
+      {!compact ? (
+        <AdminPageHeader
+          eyebrow="Account"
+          title="Account & security"
+          headingId="account-title"
+          description="Your sign-in identity, active committee access, and security options."
+        />
+      ) : null}
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div
+        className={cn(
+          "grid gap-5",
+          compact
+            ? "gap-4"
+            : "mt-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
+        )}
+      >
         <Card
           role="region"
-          aria-labelledby="account-identity-title"
+          aria-labelledby={`${idPrefix}-identity-title`}
           className="gap-0 shadow-panel"
         >
           <CardHeader>
             <CardTitle
-              id="account-identity-title"
+              id={`${idPrefix}-identity-title`}
               className="flex items-center gap-2"
             >
               <UserRound aria-hidden="true" className="size-4" />
@@ -131,12 +145,12 @@ export function AccountOverview({
 
         <Card
           role="region"
-          aria-labelledby="account-scope-title"
+          aria-labelledby={`${idPrefix}-scope-title`}
           className="gap-0 shadow-panel"
         >
           <CardHeader>
             <CardTitle
-              id="account-scope-title"
+              id={`${idPrefix}-scope-title`}
               className="flex items-center gap-2"
             >
               <Building2 aria-hidden="true" className="size-4" />
@@ -168,13 +182,13 @@ export function AccountOverview({
       </div>
 
       <Card
-        className="mt-5 gap-0 shadow-panel"
+        className={cn("gap-0 shadow-panel", compact ? "mt-4" : "mt-5")}
         role="region"
-        aria-labelledby="account-role-title"
+        aria-labelledby={`${idPrefix}-role-title`}
       >
         <CardHeader>
           <CardTitle
-            id="account-role-title"
+            id={`${idPrefix}-role-title`}
             className="flex items-center gap-2"
           >
             <ShieldCheck aria-hidden="true" className="size-4" />
@@ -185,17 +199,30 @@ export function AccountOverview({
             super-admin role. The application has no such role.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 border-t border-border pt-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-8">
-          <section aria-labelledby="account-can-title">
-            <h3 id="account-can-title" className="mb-3 text-sm font-semibold">
+        <CardContent
+          className={cn(
+            "grid gap-6 border-t border-border pt-5",
+            !compact && "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-8"
+          )}
+        >
+          <section aria-labelledby={`${idPrefix}-can-title`}>
+            <h3
+              id={`${idPrefix}-can-title`}
+              className="mb-3 text-sm font-semibold"
+            >
               Committee managers can
             </h3>
             <ListWithIcon items={managerCan} icon={Check} tone="text-success" />
           </section>
-          <div className="grid content-start gap-3 md:border-l md:border-border md:pl-8">
+          <div
+            className={cn(
+              "grid content-start gap-3",
+              !compact && "md:border-l md:border-border md:pl-8"
+            )}
+          >
             <details className="group rounded-lg border border-border px-4 py-3">
               <summary
-                id="account-cannot-title"
+                id={`${idPrefix}-cannot-title`}
                 className="cursor-pointer text-sm font-semibold marker:text-muted-foreground"
               >
                 Committee manager limits
@@ -210,7 +237,7 @@ export function AccountOverview({
             </details>
             <details className="group rounded-lg border border-border px-4 py-3">
               <summary
-                id="account-maintenance-title"
+                id={`${idPrefix}-maintenance-title`}
                 className="cursor-pointer text-sm font-semibold marker:text-muted-foreground"
               >
                 Needs maintenance authority
@@ -233,13 +260,13 @@ export function AccountOverview({
       </Card>
 
       <Card
-        className="mt-5 gap-0 shadow-panel"
+        className={cn("gap-0 shadow-panel", compact ? "mt-4" : "mt-5")}
         role="region"
-        aria-labelledby="account-security-title"
+        aria-labelledby={`${idPrefix}-security-title`}
       >
         <CardHeader>
           <CardTitle
-            id="account-security-title"
+            id={`${idPrefix}-security-title`}
             className="flex items-center gap-2"
           >
             <KeyRound aria-hidden="true" className="size-4" />
@@ -250,7 +277,12 @@ export function AccountOverview({
             committees you can manage.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-5 border-t border-border pt-5 md:flex-row md:items-end md:justify-between">
+        <CardContent
+          className={cn(
+            "flex flex-col gap-5 border-t border-border pt-5",
+            !compact && "md:flex-row md:items-end md:justify-between"
+          )}
+        >
           <div className="max-w-2xl text-sm leading-6 text-muted-foreground">
             <p>
               Use a unique password of at least 12 characters. Recovery email is
