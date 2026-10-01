@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { CircleAlert, CircleCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { AmbientGlow } from "@/components/ui/ambient-glow";
 import { AuthAside } from "@/components/auth/auth-aside";
+export { MessageBanner as AuthMessage } from "@/components/ui/message-banner";
 
 /**
  * Shared frame for the signed-out admin screens (login, recovery, reset), built
@@ -80,33 +79,6 @@ export function AuthShell({
         ) : null}
       </div>
     </main>
-  );
-}
-
-export function AuthMessage({
-  tone,
-  children,
-  className,
-}: {
-  tone: "error" | "success";
-  children: ReactNode;
-  className?: string;
-}) {
-  const Icon = tone === "error" ? CircleAlert : CircleCheck;
-  return (
-    <div
-      role={tone === "error" ? "alert" : "status"}
-      className={cn(
-        "flex gap-2.5 rounded-lg border p-3 text-sm leading-6 duration-200 animate-in fade-in-0",
-        tone === "error"
-          ? "border-danger/30 bg-danger-soft text-danger-soft-foreground"
-          : "border-success/30 bg-success-soft text-success-soft-foreground",
-        className
-      )}
-    >
-      <Icon aria-hidden="true" className="mt-1 size-4 shrink-0" />
-      <p>{children}</p>
-    </div>
   );
 }
 

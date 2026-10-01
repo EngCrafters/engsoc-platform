@@ -6,13 +6,16 @@
 // view, and vice versa. `app/layout.tsx` still provides the required root
 // <html>/<body>; this nests inside it.
 
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b border-neutral-200 px-6 py-4">
-        <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">
+      <header className="flex items-center justify-between border-b border-border px-6 py-4">
+        <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
           Engineering Society
         </p>
+        <ThemeToggle />
       </header>
       <main className="flex-1">{children}</main>
     </div>

@@ -5,6 +5,11 @@ import { registerForEventAction } from "./actions";
 import { initialRegisterActionState } from "./action-state";
 import type { RegisterForEventError } from "@/lib/registrations";
 import type { PublicEventAvailability } from "@/lib/events";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { MessageBanner } from "@/components/ui/message-banner";
+import { FormActions, FormField } from "@/components/ui/form-field";
 
 const ERROR_MESSAGES: Record<RegisterForEventError, string> = {
   invalid_name: "Enter your name.",
@@ -49,24 +54,17 @@ export function RegistrationForm({
 
   if (state.status === "success")
     return (
-      <p
-        role="status"
-        className="rounded border border-green-700 bg-green-50 p-4 text-sm font-medium text-green-900"
-      >
+      <MessageBanner tone="success">
         {state.waitlisted
           ? "You're on the waitlist, not yet registered for a place. The committee will contact you if a place can be offered."
           : "You're registered. Your place is confirmed."}
-      </p>
+      </MessageBanner>
     );
   if (availability === "closed")
     return (
-      <button
-        type="button"
-        disabled
-        className="min-h-11 rounded bg-neutral-300 px-4 text-sm font-medium text-neutral-700"
-      >
+      <Button type="button" disabled className="h-11">
         Registration closed
-      </button>
+      </Button>
     );
 
   const error = state.status === "error" ? state.error : null;
@@ -75,20 +73,18 @@ export function RegistrationForm({
     <form action={formAction} className="grid gap-4" noValidate>
       <input type="hidden" name="eventId" value={eventId} />
       {state.status === "error" ? (
-        <div
-          ref={errorSummary}
-          tabIndex={-1}
-          role="alert"
-          className="rounded border border-red-700 bg-red-50 p-3 text-sm text-red-900"
-        >
+        <MessageBanner ref={errorSummary} tabIndex={-1} tone="error">
           {ERROR_MESSAGES[state.error]}
-        </div>
+        </MessageBanner>
       ) : null}
-      <div>
-        <label htmlFor="attendeeName" className="block text-sm font-medium">
-          Name
-        </label>
-        <input
+      <FormField
+        htmlFor="attendeeName"
+        label="Name"
+        error={
+          error === "invalid_name" ? ERROR_MESSAGES.invalid_name : undefined
+        }
+      >
+        <Input
           id="attendeeName"
           name="attendeeName"
           autoComplete="name"
@@ -98,19 +94,17 @@ export function RegistrationForm({
           aria-describedby={
             error === "invalid_name" ? "attendeeName-error" : undefined
           }
-          className="mt-1 min-h-11 w-full rounded border border-neutral-400 bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
+          className="h-11"
         />
-        {error === "invalid_name" ? (
-          <p id="attendeeName-error" className="mt-1 text-sm text-red-700">
-            {ERROR_MESSAGES.invalid_name}
-          </p>
-        ) : null}
-      </div>
-      <div>
-        <label htmlFor="attendeeEmail" className="block text-sm font-medium">
-          Email address
-        </label>
-        <input
+      </FormField>
+      <FormField
+        htmlFor="attendeeEmail"
+        label="Email address"
+        error={
+          error === "invalid_email" ? ERROR_MESSAGES.invalid_email : undefined
+        }
+      >
+        <Input
           id="attendeeEmail"
           name="attendeeEmail"
           type="email"
@@ -120,27 +114,25 @@ export function RegistrationForm({
           aria-describedby={
             error === "invalid_email" ? "attendeeEmail-error" : undefined
           }
-          className="mt-1 min-h-11 w-full rounded border border-neutral-400 bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
+          className="h-11"
         />
-        {error === "invalid_email" ? (
-          <p id="attendeeEmail-error" className="mt-1 text-sm text-red-700">
-            {ERROR_MESSAGES.invalid_email}
-          </p>
-        ) : null}
-      </div>
-      <button
-        type="submit"
-        name="intent"
-        value={showWaitlist ? "join_waitlist" : "register"}
-        disabled={isPending}
-        className="inline-flex min-h-11 w-fit items-center rounded bg-neutral-900 px-4 text-sm font-medium text-white transition-transform duration-150 ease-out motion-reduce:transition-none hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending
-          ? "Submitting…"
-          : showWaitlist
-            ? "Join waitlist"
-            : "Register"}
-      </button>
+      </FormField>
+      <FormActions>
+        <Button
+          type="submit"
+          name="intent"
+          value={showWaitlist ? "join_waitlist" : "register"}
+          disabled={isPending}
+          className="h-11 w-fit"
+        >
+          {isPending ? <Spinner /> : null}
+          {isPending
+            ? "Submitting…"
+            : showWaitlist
+              ? "Join waitlist"
+              : "Register"}
+        </Button>
+      </FormActions>
       <p aria-live="polite" className="sr-only">
         {isPending ? "Submitting registration" : ""}
       </p>

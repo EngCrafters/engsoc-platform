@@ -41,11 +41,16 @@ Tailwind via the `@theme inline` block:
   expects.
 - **Glass** (new): `glass` / `glass-border` — a translucent surface + border
   pair for floating/auth panels only (`Card variant="glass"`). Never use for
-  dashboard data cards.
+  dashboard data cards. The border is intentionally a _different_ tone from
+  both the glass fill and the page background (dark-tinted in light mode,
+  light-tinted in dark mode) so the card stays visible instead of blending
+  into a same-color background — and it needs an `AmbientGlow` (or similar)
+  behind it, or the blur has nothing to show.
 
-Accent usage stays restrained: `primary` (blue) is the one product accent;
-status colors only appear where they communicate state (badges, alerts,
-small indicators), not as card backgrounds.
+`primary`/`accent`/`ring`/`shell`/`shell-accent` are **pure neutral** (zero
+chroma) in both themes — no brand hue. Only `success`/`warning`/`danger`/
+`full`/`quiet` carry color, and only to communicate state (badges, alerts,
+small indicators) — never as a card background.
 
 ## Typography
 
@@ -75,8 +80,15 @@ tracking-wide`).
 
 - **Card variants** (`components/ui/card.tsx`, `variant` prop): `default`
   (dashboard data cards), `subtle` (quiet surface-on-surface), `elevated`
-  (raised shadow), `interactive` (hover shadow, clickable cards), `glass`
-  (auth/floating only — translucent + `backdrop-blur-xl`).
+  (raised shadow, e.g. the public event cards), `interactive` (hover lift +
+  brighter ring — only for a card that _is itself_ the single clickable
+  surface; don't use it on a card that just contains separate links/buttons,
+  that's what `elevated`/`default` are for), `glass` (auth/floating only —
+  translucent + `backdrop-blur-2xl`, plus a one-shot hover shake). The
+  entrance animation for a `glass` card must live on a wrapper, never the
+  Card itself — see the comment in `components/auth/auth-shell.tsx`, since
+  both the entrance and the hover-shake set the CSS `animation` property and
+  sharing an element makes leaving hover replay the entrance.
 - **Badge variants** (`components/ui/badge.tsx`): includes the extended
   `-soft` status set (`primary-soft`, `success`, `warning`, `danger`,
   `full`, `quiet`) used by `EventStatusBadge` and similar.
@@ -85,13 +97,27 @@ tracking-wide`).
   `FormActions`. Not bound to a form library — this codebase drives forms
   with `useActionState`; pass `error`/`description` from action state and
   wire `aria-describedby` on the control using the `{htmlFor}-description` /
-  `{htmlFor}-error` ids.
-- **Feedback states** (`components/ui/state-panel.tsx`): `StatePanel` is the
-  shared icon-circle + heading + description + action shape behind
-  `EmptyState` and `ErrorState` (`components/admin/`). `NoAccessState` stays
-  a standalone full-page component — it has a materially different layout
-  (page-level `<main>`, bullet list, `h1`) and forcing it into the same
-  shape added risk without benefit.
+  `{htmlFor}-error` ids. Used by the auth forms, the public registration
+  form, and (for its two simplest fields) `event-form.tsx` — fields with
+  bespoke conditional helper text or an icon overlay were left hand-rolled
+  rather than forced into the simple description/error API.
+- **Feedback** (`components/ui/state-panel.tsx`, `components/ui/
+message-banner.tsx`): `StatePanel` is the shared icon-circle + heading +
+  description + action shape behind `EmptyState` and `ErrorState`
+  (`components/admin/`). `NoAccessState` stays a standalone full-page
+  component — it has a materially different layout (page-level `<main>`,
+  bullet list, `h1`) and forcing it into the same shape added risk without
+  benefit. `MessageBanner` is the shared success/error banner (icon +
+  role="status"/"alert"); `components/auth/auth-shell.tsx` re-exports it as
+  `AuthMessage` for the auth forms, and the public registration form uses it
+  directly. It forwards its ref to the root element on purpose — a caller
+  that focuses it on error (`ref` + `tabIndex={-1}`) needs the ref on the
+  actual `role="alert"` element, not a wrapper around it, or
+  `getByRole("alert")).toBeFocused()`-style assertions break.
+- **Loading** (`components/ui/spinner.tsx`): `Spinner` (ring + rotating
+  `currentColor` arc) replaces any lucide `Loader2` in a pending button.
+  `Skeleton` (`components/ui/skeleton.tsx`) shimmer-sweeps instead of flat
+  `animate-pulse`.
 - **Theming** (`components/theme-provider.tsx`, `components/ui/
 theme-toggle.tsx`): `next-themes`, `attribute="class"`,
   `defaultTheme="system"`. `ThemeToggle` has a `variant="shell"` styling for
@@ -127,6 +153,25 @@ dashboard interactions (those stay on `motion`):
 
 Extending either beyond the auth surface needs a new decision (see ADR
 0010), not a quiet expansion.
+
+## Layout stability
+
+`html` sets `overflow-y: auto; scrollbar-gutter: stable;` (`app/globals.css`).
+Without a real scroll container and a reserved gutter, anything that changes
+whether/how a scrollbar renders — opening a Radix dropdown/dialog (which
+locks body scroll) or switching `color-scheme` on theme toggle (the native
+scrollbar can redraw) — shifts the whole page by the scrollbar's width. Keep
+this rule; don't remove `overflow-y`/`scrollbar-gutter` from `html` even if
+it looks redundant.
+
+## Marketing surface
+
+`app/(marketing)/*` now uses the same tokens and shared components as the
+rest of the app (it previously hardcoded `neutral-*`/`red-*`/`green-*`
+Tailwind literals, which didn't adapt to dark mode). The public event cards
+use `Card variant="elevated"` (not `interactive` — see the Card variants
+note above), and the registration form uses `FormField`/`Button`/`Spinner`/
+`MessageBanner` like every other form in the app.
 
 ## Accessibility
 
