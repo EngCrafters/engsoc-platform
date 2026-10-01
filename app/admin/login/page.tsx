@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
-import {
-  AuthMessage,
-  AuthShell,
-  authLinkClass,
-} from "@/components/auth/auth-shell";
+import { AuthMessage, AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "./login-form";
 import { safeAdminReturnPath } from "@/lib/auth/paths";
 
@@ -22,16 +18,16 @@ export default async function AdminLoginPage({
       title="Committee administration"
       titleId="admin-login-title"
       footer={
-        <div className="grid gap-2">
-          <Link href="/admin/recovery" className={authLinkClass}>
-            Forgot your password?
-          </Link>
-          <p>
-            Event registration does not require an account.{" "}
-            <Link href="/" className={authLinkClass}>
-              Back to public site
-            </Link>
+        <div className="grid gap-1">
+          <p className="text-muted-foreground/70">
+            Event registration does not require an account.
           </p>
+          <Link
+            href="/"
+            className="font-medium text-foreground/90 underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+          >
+            Back to public site
+          </Link>
         </div>
       }
     >

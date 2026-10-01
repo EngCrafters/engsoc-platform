@@ -51,25 +51,28 @@ export function AuthShell({
           </div>
           <ThemeToggle />
         </div>
-        <Card
-          variant="glass"
-          className="w-full max-w-[26rem] p-6 duration-200 animate-in fade-in-0 slide-in-from-bottom-1 sm:p-8"
-        >
-          <section aria-labelledby={titleId} className="grid gap-5">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/15 text-foreground/70">
-                <Icon aria-hidden="true" className="size-4" />
-              </span>
-              <h1
-                id={titleId}
-                className="text-xl font-semibold tracking-[-0.03em]"
-              >
-                {title}
-              </h1>
-            </div>
-            <div className="grid gap-4">{children}</div>
-          </section>
-        </Card>
+        {/* Entrance animation lives on this wrapper, not the Card itself —
+            the Card's own hover:animate-[card-shake] sets the same
+            `animation` property, and if both were on one element, leaving
+            hover would fall back to this entrance keyframe and replay it. */}
+        <div className="w-full max-w-[26rem] duration-200 animate-in fade-in-0 slide-in-from-bottom-1">
+          <Card variant="glass" className="p-6 sm:p-8">
+            <section aria-labelledby={titleId} className="grid gap-5">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/15 text-foreground/70">
+                  <Icon aria-hidden="true" className="size-4" />
+                </span>
+                <h1
+                  id={titleId}
+                  className="text-xl font-semibold tracking-[-0.03em]"
+                >
+                  {title}
+                </h1>
+              </div>
+              <div className="grid gap-4">{children}</div>
+            </section>
+          </Card>
+        </div>
         {footer ? (
           <div className="w-full max-w-[26rem] text-center text-sm leading-6 text-muted-foreground">
             {footer}
