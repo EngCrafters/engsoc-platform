@@ -28,10 +28,7 @@ export default async function MarketingHomePage({
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            Engineering Society
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-semibold tracking-tight">
             {period === "past" ? "Past events" : "Upcoming events"}
           </h1>
           <p className="mt-3 max-w-2xl text-foreground/80">
@@ -64,7 +61,7 @@ export default async function MarketingHomePage({
               {/* Not variant="interactive" — the card holds two separate
                   links (title, "View event"), not one clickable surface,
                   so a hover-lift/cursor-pointer affordance would mislead. */}
-              <Card variant="elevated" className="h-full">
+              <Card className="h-full">
                 <CardContent className="flex h-full flex-col">
                   <p className="text-sm text-muted-foreground">
                     {formatEventDate(event.eventDate)}

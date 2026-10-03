@@ -36,7 +36,7 @@ export function LoginForm({ next }: { next: string }) {
           autoComplete="email"
           required
           aria-invalid={failed || undefined}
-          className="h-11"
+          className="h-10"
         />
       </FormField>
       <div className="grid gap-1.5">
@@ -48,7 +48,7 @@ export function LoginForm({ next }: { next: string }) {
           autoComplete="current-password"
           required
           aria-invalid={failed || undefined}
-          className="h-11"
+          className="h-10"
         />
         <Link
           href="/admin/recovery"
@@ -58,8 +58,8 @@ export function LoginForm({ next }: { next: string }) {
         </Link>
       </div>
       <FormActions>
-        <Button type="submit" disabled={pending} className="h-11 w-full">
-          {pending ? <Spinner /> : null}
+        <Button type="submit" disabled={pending} className="h-10 w-full">
+          {pending ? <Spinner data-icon="inline-start" /> : null}
           {pending ? "Signing in…" : "Sign in"}
         </Button>
       </FormActions>

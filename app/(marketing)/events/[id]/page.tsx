@@ -27,7 +27,7 @@ export default async function PublicEventPage({
         <p className="text-sm font-medium text-muted-foreground">
           {formatEventDate(event.eventDate, true)}
         </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">
           {event.title}
         </h1>
         <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
@@ -51,7 +51,7 @@ export default async function PublicEventPage({
       </section>
       <section
         aria-labelledby="registration-heading"
-        className="mt-10 rounded-xl border border-border bg-surface p-5 shadow-panel sm:p-7"
+        className="mt-10 rounded-lg border p-5 sm:p-6"
       >
         <h2 id="registration-heading" className="text-xl font-semibold">
           {closed

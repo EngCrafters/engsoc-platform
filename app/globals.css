@@ -51,8 +51,6 @@
   --color-surface-raised: var(--surface-raised);
 
   /* Glass surface — auth/floating panels only. See docs/DESIGN_SYSTEM.md. */
-  --color-glass: var(--glass-bg);
-  --color-glass-border: var(--glass-border);
 
   /* Status/semantic tokens — carry meaning, not decoration. See
      db/schema.ts field comments and CLAUDE.md "Status components". */
@@ -76,14 +74,6 @@
   --color-quiet-foreground: var(--quiet-foreground);
   --color-quiet-soft: var(--quiet-soft);
   --color-quiet-soft-foreground: var(--quiet-soft-foreground);
-
-  /* Deep navy shell — nav rail and other strong structural surfaces. */
-  --color-shell: var(--shell);
-  --color-shell-foreground: var(--shell-foreground);
-  --color-shell-muted: var(--shell-muted);
-  --color-shell-border: var(--shell-border);
-  --color-shell-accent: var(--shell-accent);
-  --color-shell-accent-foreground: var(--shell-accent-foreground);
 
   --shadow-panel: var(--shadow-panel-value);
   --shadow-raised: var(--shadow-raised-value);
@@ -127,30 +117,19 @@ html {
 }
 
 :root {
-  /* Hallmark pre-emit critique: P4 H4 E4 S4 R5 V4.
-     Modern minimal admin workspace · quiet navy and blue ·
-     dark navigation rail, open page framing, one aligned management list. */
-  /* Engineering Society palette — deliberate tokens, not ad-hoc color.
-     Deep slate-navy for structure, engineering blue as primary, a
-     restrained cyan accent, and meaning-carrying status hues. */
-  --background: oklch(0.972 0.006 258);
-  --foreground: oklch(0.208 0.042 265.755);
+  /* Monochrome palette: black, white and neutral grays. Hierarchy comes from
+     contrast and borders, never hue; `destructive` is the only color. See
+     docs/DESIGN_SYSTEM.md. */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.208 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.208 0.042 265.755);
+  --card-foreground: oklch(0.208 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.208 0 0);
 
   --surface: oklch(1 0 0);
-  --surface-foreground: oklch(0.208 0.042 265.755);
+  --surface-foreground: oklch(0.208 0 0);
   --surface-raised: oklch(1 0 0);
-
-  /* Translucent glass surface — use sparingly (auth card, floating
-     overlays). Never a dashboard data-card background. Needs an
-     AmbientGlow (or similar) behind it or the blur has nothing to show.
-     The border is dark (not white-on-white) so the card reads as a
-     distinct surface even against a near-white page. */
-  --glass-bg: oklch(1 0 0 / 72%);
-  --glass-border: oklch(0.145 0 0 / 12%);
 
   /* Primary/accent are pure neutral — no brand hue. Only success/warning/
      danger/full/quiet carry color, and only to communicate state. */
@@ -159,11 +138,11 @@ html {
   --primary-soft: oklch(0.94 0 0);
   --primary-soft-foreground: oklch(0.25 0 0);
 
-  --secondary: oklch(0.968 0.007 247.9);
-  --secondary-foreground: oklch(0.279 0.041 260.03);
+  --secondary: oklch(0.968 0 0);
+  --secondary-foreground: oklch(0.279 0 0);
 
-  --muted: oklch(0.958 0.008 257);
-  --muted-foreground: oklch(0.508 0.04 257.3);
+  --muted: oklch(0.958 0 0);
+  --muted-foreground: oklch(0.508 0 0);
 
   --accent: oklch(0.6 0 0);
   --accent-foreground: oklch(0.985 0 0);
@@ -192,13 +171,13 @@ html {
   --full-soft: oklch(0.954 0.038 75.16);
   --full-soft-foreground: oklch(0.44 0.14 41);
 
-  --quiet: oklch(0.551 0.027 264.36);
-  --quiet-foreground: oklch(0.99 0.003 247.9);
-  --quiet-soft: oklch(0.94 0.008 260);
-  --quiet-soft-foreground: oklch(0.42 0.03 260);
+  --quiet: oklch(0.551 0 0);
+  --quiet-foreground: oklch(0.99 0 0);
+  --quiet-soft: oklch(0.94 0 0);
+  --quiet-soft-foreground: oklch(0.42 0 0);
 
-  --border: oklch(0.895 0.012 258);
-  --input: oklch(0.895 0.012 258);
+  --border: oklch(0.895 0 0);
+  --input: oklch(0.895 0 0);
   --ring: oklch(0.205 0 0);
 
   --chart-1: oklch(0.488 0.196 264.4);
@@ -208,58 +187,44 @@ html {
   --chart-5: oklch(0.646 0.19 41.1);
   --radius: 0.75rem;
 
-  /* Near-black shell — nav rail, strong structural surfaces. Neutral, no
-     brand hue (see --primary above). */
-  --shell: oklch(0.22 0 0);
-  --shell-foreground: oklch(0.95 0 0);
-  --shell-muted: oklch(0.72 0 0);
-  --shell-border: oklch(1 0 0 / 8%);
-  --shell-accent: oklch(0.92 0 0);
-  --shell-accent-foreground: oklch(0.15 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.945 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.91 0 0);
+  --sidebar-ring: oklch(0.205 0 0);
 
-  --sidebar: var(--shell);
-  --sidebar-foreground: var(--shell-foreground);
-  --sidebar-primary: var(--shell-accent);
-  --sidebar-primary-foreground: var(--shell-accent-foreground);
-  --sidebar-accent: oklch(1 0 0 / 6%);
-  --sidebar-accent-foreground: var(--shell-foreground);
-  --sidebar-border: var(--shell-border);
-  --sidebar-ring: var(--shell-accent);
-
-  --shadow-panel-value: 0 1px 2px 0 oklch(0.2 0.04 264 / 0.04);
+  --shadow-panel-value: 0 1px 2px 0 oklch(0.2 0 0 / 0.04);
   --shadow-raised-value:
-    0 1px 2px oklch(0.2 0.04 264 / 0.04),
-    0 8px 24px -8px oklch(0.2 0.04 264 / 0.1);
+    0 1px 2px oklch(0.2 0 0 / 0.04), 0 8px 24px -8px oklch(0.2 0 0 / 0.1);
   --shadow-popover-value:
-    0 4px 12px oklch(0.2 0.04 264 / 0.08),
-    0 16px 40px -12px oklch(0.2 0.04 264 / 0.18);
+    0 4px 12px oklch(0.2 0 0 / 0.08), 0 16px 40px -12px oklch(0.2 0 0 / 0.18);
 }
 
 .dark {
-  --background: oklch(0.16 0.018 264);
-  --foreground: oklch(0.95 0.008 258);
-  --card: oklch(0.208 0.022 264);
-  --card-foreground: oklch(0.95 0.008 258);
-  --popover: oklch(0.208 0.022 264);
-  --popover-foreground: oklch(0.95 0.008 258);
+  --background: oklch(0.16 0 0);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.208 0 0);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.208 0 0);
+  --popover-foreground: oklch(0.95 0 0);
 
-  --surface: oklch(0.208 0.022 264);
-  --surface-foreground: oklch(0.95 0.008 258);
-  --surface-raised: oklch(0.25 0.024 264);
-
-  --glass-bg: oklch(0.28 0.012 264 / 65%);
-  --glass-border: oklch(1 0 0 / 20%);
+  --surface: oklch(0.208 0 0);
+  --surface-foreground: oklch(0.95 0 0);
+  --surface-raised: oklch(0.25 0 0);
 
   --primary: oklch(0.92 0 0);
   --primary-foreground: oklch(0.145 0 0);
   --primary-soft: oklch(0.32 0 0);
   --primary-soft-foreground: oklch(0.85 0 0);
 
-  --secondary: oklch(0.279 0.022 264);
-  --secondary-foreground: oklch(0.95 0.008 258);
+  --secondary: oklch(0.279 0 0);
+  --secondary-foreground: oklch(0.95 0 0);
 
-  --muted: oklch(0.279 0.022 264);
-  --muted-foreground: oklch(0.68 0.02 258);
+  --muted: oklch(0.279 0 0);
+  --muted-foreground: oklch(0.68 0 0);
 
   --accent: oklch(0.4 0 0);
   --accent-foreground: oklch(0.95 0 0);
@@ -288,10 +253,10 @@ html {
   --full-soft: oklch(0.32 0.07 45);
   --full-soft-foreground: oklch(0.86 0.1 55);
 
-  --quiet: oklch(0.65 0.02 260);
-  --quiet-foreground: oklch(0.16 0.02 260);
-  --quiet-soft: oklch(0.3 0.015 260);
-  --quiet-soft-foreground: oklch(0.82 0.015 260);
+  --quiet: oklch(0.65 0 0);
+  --quiet-foreground: oklch(0.16 0 0);
+  --quiet-soft: oklch(0.3 0 0);
+  --quiet-soft-foreground: oklch(0.82 0 0);
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
@@ -303,21 +268,14 @@ html {
   --chart-4: oklch(0.77 0.16 70);
   --chart-5: oklch(0.72 0.18 45);
 
-  --shell: oklch(0.1 0 0);
-  --shell-foreground: oklch(0.95 0 0);
-  --shell-muted: oklch(0.62 0 0);
-  --shell-border: oklch(1 0 0 / 8%);
-  --shell-accent: oklch(0.92 0 0);
-  --shell-accent-foreground: oklch(0.1 0 0);
-
-  --sidebar: var(--shell);
-  --sidebar-foreground: var(--shell-foreground);
-  --sidebar-primary: var(--shell-accent);
-  --sidebar-primary-foreground: var(--shell-accent-foreground);
-  --sidebar-accent: oklch(1 0 0 / 6%);
-  --sidebar-accent-foreground: var(--shell-foreground);
-  --sidebar-border: var(--shell-border);
-  --sidebar-ring: var(--shell-accent);
+  --sidebar: oklch(0.145 0 0);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.92 0 0);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(1 0 0 / 8%);
+  --sidebar-accent-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.85 0 0);
 
   --shadow-panel-value: 0 1px 2px 0 oklch(0 0 0 / 0.3);
   --shadow-raised-value:
@@ -335,25 +293,6 @@ html {
   }
   html {
     @apply font-sans;
-  }
-}
-
-@keyframes card-shake {
-  0%,
-  100% {
-    transform: translateX(0) rotate(0);
-  }
-  20% {
-    transform: translateX(-2px) rotate(-0.3deg);
-  }
-  40% {
-    transform: translateX(2px) rotate(0.3deg);
-  }
-  60% {
-    transform: translateX(-1.5px) rotate(-0.2deg);
-  }
-  80% {
-    transform: translateX(1.5px) rotate(0.2deg);
   }
 }
 
@@ -375,4 +314,14 @@ html {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Admin workspace preferences (Settings > Appearance). Applied as data
+   attributes on the admin shell by components/admin/preferences.tsx. */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }

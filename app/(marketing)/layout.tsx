@@ -15,9 +15,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div className="flex items-center gap-2.5">
           <BrandMark size={32} />
-          <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
-            Engineering Society
-          </p>
+          <p className="text-sm font-semibold">Engineering Society</p>
         </div>
         <ThemeToggle />
       </header>

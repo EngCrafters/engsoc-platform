@@ -1,175 +1,296 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  CalendarPlus,
+  ChevronsUpDown,
+  CircleUserRound,
   Layers3,
   LogOut,
+  Monitor,
+  Moon,
   Settings2,
-  UserRound,
+  Sun,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useTheme } from "next-themes";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/ui/brand-mark";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import {
   adminNavigation,
   isAdminNavActive,
 } from "@/components/admin/admin-navigation";
+
+type Committees = ReadonlyArray<{ id: string; name: string }>;
+type OpenSettings = (trigger: HTMLElement) => void;
+
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+}: {
+  href: string;
+  label: string;
+  icon: (typeof adminNavigation.workspace)[number]["icon"];
+}) {
+  const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
+  const active = isAdminNavActive(pathname, href);
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active} tooltip={label}>
+        <Link
+          href={href}
+          aria-current={active ? "page" : undefined}
+          onClick={() => setOpenMobile(false)}
+        >
+          <Icon aria-hidden="true" />
+          <span>{label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+function SettingsButton({ onOpenSettings }: { onOpenSettings: OpenSettings }) {
+  const { setOpenMobile } = useSidebar();
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        tooltip="Settings"
+        aria-haspopup="dialog"
+        onClick={(event) => {
+          const trigger = event.currentTarget;
+          setOpenMobile(false);
+          onOpenSettings(trigger);
+        }}
+      >
+        <Settings2 aria-hidden="true" />
+        <span>Settings</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+function AccountMenu({
+  email,
+  logoutAction,
+  onOpenSettings,
+}: {
+  email: string | null;
+  logoutAction: () => void | Promise<void>;
+  onOpenSettings: OpenSettings;
+}) {
+  const { isMobile, setOpenMobile } = useSidebar();
+  const { theme, setTheme } = useTheme();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const logoutForm = useRef<HTMLFormElement>(null);
+  const identity = email ?? "Signed in";
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              ref={triggerRef}
+              size="lg"
+              aria-label="Account menu"
+              className="data-[state=open]:bg-sidebar-accent"
+            >
+              <Avatar className="size-8 rounded-lg">
+                <AvatarFallback className="rounded-lg">
+                  {identity.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium" title={identity}>
+                  {identity}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  Committee manager
+                </span>
+              </div>
+              <ChevronsUpDown
+                aria-hidden="true"
+                className="ml-auto size-4 text-muted-foreground"
+              />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="min-w-56 rounded-lg"
+            side={isMobile ? "top" : "right"}
+            align="end"
+            sideOffset={4}
+          >
+            <DropdownMenuLabel className="font-normal">
+              <span className="block truncate text-sm font-medium">
+                {identity}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Committee manager
+              </span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/admin/account"
+                  onClick={() => setOpenMobile(false)}
+                >
+                  <CircleUserRound aria-hidden="true" />
+                  Account
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setOpenMobile(false);
+                  if (triggerRef.current) onOpenSettings(triggerRef.current);
+                }}
+              >
+                <Settings2 aria-hidden="true" />
+                Settings
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Theme
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={theme ?? "system"}
+              onValueChange={setTheme}
+            >
+              <DropdownMenuRadioItem value="light">
+                <Sun aria-hidden="true" />
+                Light
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="dark">
+                <Moon aria-hidden="true" />
+                Dark
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="system">
+                <Monitor aria-hidden="true" />
+                System
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => logoutForm.current?.requestSubmit()}
+            >
+              <LogOut aria-hidden="true" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <form ref={logoutForm} action={logoutAction} className="hidden" />
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
 
 export function AdminSidebar({
   email,
   committees,
   logoutAction,
   onOpenSettings,
+  ...props
 }: {
   email: string | null;
-  committees: ReadonlyArray<{ id: string; name: string }>;
+  committees: Committees;
   logoutAction: () => void | Promise<void>;
-  onOpenSettings: (trigger: HTMLButtonElement) => void;
-}) {
-  const pathname = usePathname();
+  onOpenSettings: OpenSettings;
+} & Omit<React.ComponentProps<typeof Sidebar>, "children">) {
   const scopeLabel = committees.map((committee) => committee.name).join(", ");
 
   return (
-    <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:shrink-0 lg:flex-col lg:border-r lg:border-shell-border lg:bg-shell lg:text-shell-foreground">
-      <div className="px-5 pb-6 pt-5">
-        <Link
-          href="/admin/events"
-          className="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-shell-accent"
-        >
-          <BrandMark size={36} />
-          <span className="min-w-0 truncate text-sm font-semibold tracking-tight">
-            Engineering Society
-          </span>
-        </Link>
-      </div>
-
-      <nav aria-label="Administration" className="flex-1 px-3">
-        <Link
-          href="/admin/events/new"
-          aria-current={pathname === "/admin/events/new" ? "page" : undefined}
-          className="flex min-h-10 items-center justify-center gap-2 rounded-lg bg-shell-accent px-3 text-sm font-semibold text-shell-accent-foreground transition-colors hover:bg-shell-accent/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-shell-accent"
-        >
-          <CalendarPlus
-            aria-hidden="true"
-            className="size-[1.125rem]"
-            strokeWidth={1.8}
-          />
-          Create event
-        </Link>
-        <ul className="mt-5 grid gap-1">
-          {adminNavigation.map((link) => {
-            const active = isAdminNavActive(pathname, link.href);
-            const Icon = link.icon;
-            return (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-shell-accent",
-                    active
-                      ? "bg-shell-foreground/10 text-shell-foreground"
-                      : "text-shell-muted hover:bg-shell-foreground/[0.06] hover:text-shell-foreground"
-                  )}
-                >
-                  <Icon
-                    aria-hidden="true"
-                    className="size-[1.125rem] shrink-0"
-                    strokeWidth={1.8}
-                  />
-                  <span className="truncate">{link.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-          <li>
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              onClick={(event) => onOpenSettings(event.currentTarget)}
-              className={cn(
-                "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-shell-accent",
-                pathname === "/admin/account"
-                  ? "bg-shell-foreground/10 text-shell-foreground"
-                  : "text-shell-muted hover:bg-shell-foreground/[0.06] hover:text-shell-foreground"
-              )}
-            >
-              <Settings2
-                aria-hidden="true"
-                className="size-[1.125rem] shrink-0"
-                strokeWidth={1.8}
-              />
-              <span>Settings</span>
-            </button>
-          </li>
-        </ul>
-      </nav>
-
-      <div className="border-t border-shell-border px-3 py-3">
+    <Sidebar collapsible="offcanvas" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild size="lg">
+              <Link href="/admin/events">
+                <BrandMark size={32} />
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">
+                    Engineering Society
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Committee workspace
+                  </span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu aria-label="Administration">
+              {adminNavigation.workspace.map((link) => (
+                <NavLink key={link.href} {...link} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu aria-label="Account">
+              {adminNavigation.account.map((link) => (
+                <NavLink key={link.href} {...link} />
+              ))}
+              <SettingsButton onOpenSettings={onOpenSettings} />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
         {committees.length > 0 ? (
-          <Badge
-            variant="shell"
+          <p
             role="note"
             aria-label={`Committee scope: ${scopeLabel}`}
             title={scopeLabel}
-            className="mb-3 max-w-full"
+            className="flex items-center gap-2 px-2 text-xs text-muted-foreground"
           >
-            <Layers3 aria-hidden="true" />
-            <span className="text-shell-muted">Scope</span>
-            <span className="min-w-0 truncate">{committees[0].name}</span>
-            {committees.length > 1 ? (
-              <span>+{committees.length - 1}</span>
-            ) : null}
-          </Badge>
+            <Layers3 aria-hidden="true" className="size-4 shrink-0" />
+            <span className="min-w-0 truncate">
+              Scope: {committees[0].name}
+              {committees.length > 1 ? ` +${committees.length - 1}` : ""}
+            </span>
+          </p>
         ) : null}
-        <div className="flex items-center gap-2">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-shell-foreground/[0.08] text-shell-foreground">
-            <UserRound
-              aria-hidden="true"
-              className="size-4"
-              strokeWidth={1.8}
-            />
-          </span>
-          <span className="min-w-0 flex-1 leading-tight">
-            <span
-              className="block truncate text-xs font-medium"
-              title={email ?? undefined}
-            >
-              {email ?? "Signed in"}
-            </span>
-            <span className="block truncate text-xs text-shell-muted">
-              Committee manager
-            </span>
-          </span>
-          <ThemeToggle variant="shell" />
-          <form action={logoutAction}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="submit"
-                  aria-label="Sign out"
-                  className="flex size-9 items-center justify-center rounded-lg text-shell-foreground/85 transition-colors hover:bg-shell-foreground/[0.08] hover:text-shell-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-shell-accent"
-                >
-                  <LogOut
-                    aria-hidden="true"
-                    className="size-[1.125rem]"
-                    strokeWidth={1.8}
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Sign out</TooltipContent>
-            </Tooltip>
-          </form>
-        </div>
-      </div>
-    </aside>
+        <AccountMenu
+          email={email}
+          logoutAction={logoutAction}
+          onOpenSettings={onOpenSettings}
+        />
+      </SidebarFooter>
+    </Sidebar>
   );
 }

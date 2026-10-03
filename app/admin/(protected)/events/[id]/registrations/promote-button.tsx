@@ -1,7 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import { ArrowUpCircle } from "lucide-react";
 import { promoteWaitlistAction } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { adminErrorMessage } from "@/lib/admin-errors";
 
 export function PromoteButton({
@@ -12,30 +15,25 @@ export function PromoteButton({
   registrationId: string;
 }) {
   const [state, action, pending] = useActionState(promoteWaitlistAction, null);
+  const failed = Boolean(state?.code && state.code !== "SUCCESS");
   return (
-    <form
-      action={action}
-      className="grid w-full gap-1 sm:w-48 sm:justify-self-end"
-    >
+    <form action={action} className="flex flex-col items-end gap-1">
       <input type="hidden" name="eventId" value={eventId} />
       <input type="hidden" name="registrationId" value={registrationId} />
-      <div className="flex min-h-8 justify-start sm:justify-end">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md border border-primary/30 bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary-soft/70 disabled:opacity-50"
-        >
-          {pending ? "Promoting…" : "Promote"}
-        </button>
-      </div>
+      <Button type="submit" variant="outline" size="sm" disabled={pending}>
+        {pending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <ArrowUpCircle aria-hidden="true" data-icon="inline-start" />
+        )}
+        {pending ? "Promoting…" : "Promote"}
+      </Button>
       <span
-        role={state?.code && state.code !== "SUCCESS" ? "alert" : undefined}
+        role={failed ? "alert" : undefined}
         aria-live="polite"
-        className="min-h-8 w-full text-right text-xs leading-4 text-danger"
+        className="max-w-56 text-right text-xs text-destructive empty:hidden"
       >
-        {state?.code && state.code !== "SUCCESS"
-          ? adminErrorMessage(state.code)
-          : ""}
+        {failed && state?.code ? adminErrorMessage(state.code) : ""}
       </span>
     </form>
   );

@@ -8,33 +8,42 @@ import {
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
-import { Badge, type badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   EVENT_STATUS_META,
   type EventLifecycleStatus,
 } from "@/lib/admin-events/status";
 import { cn } from "@/lib/utils";
-import type { VariantProps } from "class-variance-authority";
-
-type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
-
-const STATUS_STYLE: Record<
-  EventLifecycleStatus,
-  { icon: LucideIcon; variant: BadgeVariant }
-> = {
-  draft: { icon: PenLine, variant: "quiet" },
-  review: { icon: ShieldAlert, variant: "warning" },
-  approved: { icon: ShieldCheck, variant: "primary-soft" },
-  published: { icon: Globe2, variant: "success" },
-  full: { icon: Ban, variant: "full" },
-  past: { icon: History, variant: "quiet" },
-  archived: { icon: Archive, variant: "quiet" },
-};
 
 /**
- * Status is never carried by color alone: every badge pairs an icon with
- * text. See CLAUDE.md "Status components".
+ * Statuses stay monochrome. Each is told apart by icon, wording, fill,
+ * border style and weight, never by hue alone.
  */
+const STATUS_STYLE: Record<
+  EventLifecycleStatus,
+  {
+    icon: LucideIcon;
+    variant: "default" | "secondary" | "outline";
+    className?: string;
+  }
+> = {
+  draft: { icon: PenLine, variant: "outline" },
+  review: { icon: ShieldAlert, variant: "outline", className: "border-dashed" },
+  approved: { icon: ShieldCheck, variant: "secondary" },
+  published: { icon: Globe2, variant: "default" },
+  full: { icon: Ban, variant: "secondary", className: "font-semibold" },
+  past: {
+    icon: History,
+    variant: "outline",
+    className: "text-muted-foreground",
+  },
+  archived: {
+    icon: Archive,
+    variant: "outline",
+    className: "border-dashed text-muted-foreground",
+  },
+};
+
 export function EventStatusBadge({
   status,
   className,
@@ -42,11 +51,11 @@ export function EventStatusBadge({
   status: EventLifecycleStatus;
   className?: string;
 }) {
-  const { icon: Icon, variant } = STATUS_STYLE[status];
+  const { icon: Icon, variant, className: style } = STATUS_STYLE[status];
   const { label } = EVENT_STATUS_META[status];
   return (
-    <Badge variant={variant} className={cn("gap-1 py-1", className)}>
-      <Icon aria-hidden="true" data-icon="inline-start" className="size-3" />
+    <Badge variant={variant} className={cn(style, className)}>
+      <Icon aria-hidden="true" data-icon="inline-start" />
       {label}
     </Badge>
   );

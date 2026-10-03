@@ -5,7 +5,9 @@ import { getManagerContext } from "@/lib/auth/manager";
 import { getAdminEvent } from "@/lib/admin-events/server";
 import { getEventLifecycleStatus } from "@/lib/admin-events/status";
 import { AdminPageHeader } from "@/components/admin/page-header";
+import { EventDetailTabs } from "@/components/admin/event-detail-tabs";
 import { EventStatusBadge } from "@/components/admin/event-status-badge";
+import { Button } from "@/components/ui/button";
 import { EventForm } from "../event-form";
 import { LifecycleActions } from "../lifecycle-actions";
 
@@ -18,38 +20,52 @@ export default async function EventPage({
   if (!event) notFound();
   const status = getEventLifecycleStatus(event);
   return (
-    <section aria-labelledby="edit-event-title">
+    <section aria-labelledby="edit-event-title" className="flex flex-col gap-6">
       <AdminPageHeader
-        eyebrow={event.committeeName}
         headingId="edit-event-title"
         title={event.title}
         description={`Edit details for this ${event.committeeName} event. Lifecycle controls use the saved revision.`}
-        context={<EventStatusBadge status={status} />}
+        context={
+          <>
+            <EventStatusBadge status={status} />
+            <span className="text-sm text-muted-foreground">
+              {event.committeeName}
+            </span>
+          </>
+        }
+        actions={
+          <Button asChild variant="outline">
+            <Link href={`/admin/events/${event.id}/registrations`}>
+              <Users aria-hidden="true" data-icon="inline-start" />
+              Registrations
+              <span className="text-muted-foreground tabular-nums">
+                {event.confirmedCount + event.waitlistedCount}
+              </span>
+            </Link>
+          </Button>
+        }
       />
-      <EventForm
-        event={event}
-        eventStatus={status}
-        committees={manager.committees}
-      />
-      <div className="mt-8">
-        <Link
-          href={`/admin/events/${event.id}/registrations`}
-          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:border-primary/40 hover:bg-primary-soft/30"
-        >
-          <Users aria-hidden="true" className="size-4" />
-          Manage registrations
-        </Link>
-      </div>
-      <LifecycleActions
-        eventId={event.id}
-        revision={event.revision}
-        status={event.status}
-        archived={Boolean(event.archivedAt)}
-        reviewRequired={event.reviewRequired}
-        isFlagger={event.flaggedBy === manager.userId}
-        isApproved={event.approvedBy !== null}
-        isPast={status === "past"}
-        lifecycleStatus={status}
+      <EventDetailTabs
+        details={
+          <EventForm
+            event={event}
+            eventStatus={status}
+            committees={manager.committees}
+          />
+        }
+        lifecycle={
+          <LifecycleActions
+            eventId={event.id}
+            revision={event.revision}
+            status={event.status}
+            archived={Boolean(event.archivedAt)}
+            reviewRequired={event.reviewRequired}
+            isFlagger={event.flaggedBy === manager.userId}
+            isApproved={event.approvedBy !== null}
+            isPast={status === "past"}
+            lifecycleStatus={status}
+          />
+        }
       />
     </section>
   );

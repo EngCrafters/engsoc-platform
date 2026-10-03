@@ -33,12 +33,12 @@ export function ResetForm() {
           minLength={12}
           aria-invalid={state.status === "error" || undefined}
           aria-describedby="password-description"
-          className="h-11"
+          className="h-10"
         />
       </FormField>
       <FormActions>
-        <Button type="submit" disabled={pending} className="h-11 w-full">
-          {pending ? <Spinner /> : null}
+        <Button type="submit" disabled={pending} className="h-10 w-full">
+          {pending ? <Spinner data-icon="inline-start" /> : null}
           {pending ? "Resetting…" : "Reset password"}
         </Button>
       </FormActions>

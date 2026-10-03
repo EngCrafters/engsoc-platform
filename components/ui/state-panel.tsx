@@ -35,8 +35,8 @@ export function StatePanel({
       className={cn(
         "flex max-w-xl flex-col items-start gap-4 rounded-xl border px-6",
         tone === "danger"
-          ? "border-danger/25 bg-danger-soft py-8"
-          : "border-dashed border-border bg-surface py-10",
+          ? "border-destructive/30 py-8"
+          : "border-dashed border-border py-10",
         className
       )}
     >
@@ -44,8 +44,8 @@ export function StatePanel({
         className={cn(
           "flex items-center justify-center rounded-full",
           tone === "danger"
-            ? "size-10 bg-surface text-danger"
-            : "size-11 bg-primary-soft text-primary-soft-foreground"
+            ? "size-10 bg-muted text-destructive"
+            : "size-11 bg-muted text-muted-foreground"
         )}
       >
         <Icon aria-hidden="true" className="size-5" />
@@ -55,7 +55,7 @@ export function StatePanel({
           id={titleId}
           className={cn(
             "text-lg font-semibold tracking-tight",
-            tone === "danger" && "text-danger-soft-foreground"
+            tone === "danger" && "text-destructive"
           )}
         >
           {title}
@@ -63,9 +63,7 @@ export function StatePanel({
         <p
           className={cn(
             "mt-1.5 max-w-md text-sm leading-6",
-            tone === "danger"
-              ? "text-danger-soft-foreground/90"
-              : "text-muted-foreground"
+            "text-muted-foreground"
           )}
         >
           {description}

@@ -3,10 +3,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/admin/account" }));
 
-import { AccountOverview } from "../components/admin/account-overview";
+import {
+  AccountPermissionsSection,
+  AccountProfileSection,
+  AccountSecuritySection,
+} from "../components/admin/account-sections";
 import { NoAccessState } from "../components/admin/no-access-state";
 import { AdminSidebar } from "../components/admin/admin-sidebar";
-import { AdminMobileNav } from "../components/admin/admin-mobile-nav";
+import { SidebarProvider } from "../components/ui/sidebar";
 import { TooltipProvider } from "../components/ui/tooltip";
 
 const noop = async () => {};
@@ -24,65 +28,86 @@ const committees = [
   { id: "media-id", name: "Media" },
 ];
 
-function account(
-  overrides: Partial<Parameters<typeof AccountOverview>[0]> = {}
+function profile(
+  overrides: Partial<Parameters<typeof AccountProfileSection>[0]> = {}
 ) {
   return renderToStaticMarkup(
-    <AccountOverview
+    <AccountProfileSection
       email="manager@example.test"
       userId="11111111-1111-4111-8111-111111111111"
       committees={committees}
-      logoutAction={noop}
       {...overrides}
     />
   );
 }
 
-describe("admin account page", () => {
+describe("admin account profile", () => {
   it("shows the manager identity and role", () => {
-    const html = account();
+    const html = profile();
     expect(html).toContain("manager@example.test");
     expect(html).toContain("11111111-1111-4111-8111-111111111111");
     expect(html).toContain("Committee manager");
   });
 
   it("uses separate accessible heading IDs in the settings dialog", () => {
-    const html = account({ compact: true, idPrefix: "settings-account" });
+    const html = profile({ idPrefix: "settings-account" });
     expect(html).toContain('aria-labelledby="settings-account-identity-title"');
     expect(html).toContain('id="settings-account-identity-title"');
     expect(html).not.toContain('id="account-identity-title"');
   });
 
   it("lists every active committee scope, each marked active", () => {
-    const html = account();
+    const html = profile();
     expect(html).toContain("Events");
     expect(html).toContain("Media");
     expect(html.match(/>Active</g)).toHaveLength(2);
   });
 
+  it("never labels the user an owner", () => {
+    expect(visibleText(profile())).not.toMatch(/>Owner</);
+    expect(profile()).toMatch(/Not a platform-wide owner or super-admin role/);
+  });
+
+  it("offers no interactive controls", () => {
+    const html = profile();
+    expect(html).not.toContain("<button");
+    expect(html).not.toContain("<input");
+    expect(html).not.toContain("<select");
+    expect(html).not.toContain("href=");
+  });
+});
+
+describe("admin account permissions", () => {
+  const html = renderToStaticMarkup(<AccountPermissionsSection />);
+
   it("explains that this is not a platform-wide owner role", () => {
-    const html = account();
     expect(html).toMatch(/not a platform-wide\s+owner or super-admin role/);
-    expect(html).toMatch(/work outside this\s+application/);
+    expect(html).toMatch(/work\s+outside this application/);
     expect(html).not.toMatch(/Supabase/);
     expect(html).not.toMatch(/>Owner</);
   });
 
+  it("offers no grant, revoke or other maintenance controls", () => {
+    expect(html).not.toContain("<button");
+    expect(html).not.toMatch(/(grant|revoke) access<\/(button|a)>/i);
+  });
+});
+
+describe("admin account security", () => {
+  const html = renderToStaticMarkup(
+    <AccountSecuritySection logoutAction={noop} />
+  );
+
   it("links to recovery and offers sign-out", () => {
-    const html = account();
     expect(html).toContain('href="/admin/recovery"');
     expect(html).toContain("Sign out");
     expect(html).toMatch(/never changes which\s+committees/);
   });
 
-  it("offers no grant, revoke or other maintenance controls", () => {
-    const html = account();
-    // The only interactive controls are the recovery link and sign-out.
+  it("has only the recovery link and the sign-out button", () => {
     expect(html.match(/<button/g)).toHaveLength(1);
-    expect(html).not.toContain("<input");
-    expect(html).not.toContain("<select");
     expect(html.match(/href="/g)).toHaveLength(1);
-    expect(html).not.toMatch(/(grant|revoke) access<\/(button|a)>/i);
+    expect(html).not.toContain("<input");
   });
 });
 
@@ -110,33 +135,36 @@ describe("no-committee-access state", () => {
   });
 });
 
-describe("admin shell identity and scope", () => {
-  const props = {
-    email: "manager@example.test",
-    committees,
-    logoutAction: noop,
-    onOpenSettings: () => {},
-  };
+describe("admin sidebar identity and scope", () => {
+  const html = renderToStaticMarkup(
+    <TooltipProvider>
+      <SidebarProvider>
+        <AdminSidebar
+          email="manager@example.test"
+          committees={committees}
+          logoutAction={noop}
+          onOpenSettings={() => {}}
+        />
+      </SidebarProvider>
+    </TooltipProvider>
+  );
 
-  it("shows identity, role, every committee and a settings dialog trigger (sidebar)", () => {
-    const html = renderToStaticMarkup(
-      <TooltipProvider>
-        <AdminSidebar {...props} />
-      </TooltipProvider>
-    );
+  it("shows identity, role, committee scope and the navigation groups", () => {
     expect(html).toContain("manager@example.test");
     expect(html).toContain("Committee manager");
-    expect(html).toContain("Events");
-    expect(html).toContain("Media");
-    expect(html).toContain('aria-haspopup="dialog"');
-    expect(html).toContain("Settings");
-    expect(html).not.toContain('href="/admin/account"');
-    expect(visibleText(html)).not.toMatch(/owner|super-?admin/i);
+    expect(html).toContain("Scope: Events +1");
+    expect(html).toContain('href="/admin/events"');
+    expect(html).toContain('href="/admin/events/new"');
+    expect(html).toContain('href="/admin/account"');
   });
 
-  it("never labels the user an owner (mobile header)", () => {
-    const html = renderToStaticMarkup(<AdminMobileNav {...props} />);
+  it("marks the current page and exposes a settings dialog trigger", () => {
+    expect(html).toMatch(/aria-current="page"[^>]*href="\/admin\/account"/);
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain("Settings");
+  });
+
+  it("never labels the user an owner", () => {
     expect(visibleText(html)).not.toMatch(/owner|super-?admin/i);
-    expect(html).toContain('aria-label="Open settings"');
   });
 });

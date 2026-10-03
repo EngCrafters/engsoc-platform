@@ -10,8 +10,8 @@ export default function Error({ reset }: { error: Error; reset: () => void }) {
       title="Events could not load"
       description="Your session is still protected. Try loading the events again."
       action={
-        <Button variant="outline" onClick={reset} className="border-danger/30">
-          <RotateCw aria-hidden="true" />
+        <Button variant="outline" onClick={reset}>
+          <RotateCw aria-hidden="true" data-icon="inline-start" />
           Try again
         </Button>
       }

@@ -62,7 +62,7 @@ export function RegistrationForm({
     );
   if (availability === "closed")
     return (
-      <Button type="button" disabled className="h-11">
+      <Button type="button" disabled className="h-10">
         Registration closed
       </Button>
     );
@@ -94,7 +94,7 @@ export function RegistrationForm({
           aria-describedby={
             error === "invalid_name" ? "attendeeName-error" : undefined
           }
-          className="h-11"
+          className="h-10"
         />
       </FormField>
       <FormField
@@ -114,7 +114,7 @@ export function RegistrationForm({
           aria-describedby={
             error === "invalid_email" ? "attendeeEmail-error" : undefined
           }
-          className="h-11"
+          className="h-10"
         />
       </FormField>
       <FormActions>
@@ -123,9 +123,9 @@ export function RegistrationForm({
           name="intent"
           value={showWaitlist ? "join_waitlist" : "register"}
           disabled={isPending}
-          className="h-11 w-fit"
+          className="h-10 w-fit"
         >
-          {isPending ? <Spinner /> : null}
+          {isPending ? <Spinner data-icon="inline-start" /> : null}
           {isPending
             ? "Submitting…"
             : showWaitlist

@@ -48,7 +48,10 @@ export default async function AdminEventsPage({
   ]);
 
   return (
-    <section aria-labelledby="admin-events-title">
+    <section
+      aria-labelledby="admin-events-title"
+      className="flex flex-col gap-6"
+    >
       <AdminPageHeader
         title="Events"
         headingId="admin-events-title"
@@ -62,83 +65,71 @@ export default async function AdminEventsPage({
           </Button>
         }
       />
-      {counts.total > 0 ? (
-        <section
-          aria-label="Event counts in selected committee scope"
-          className="mt-6"
-        >
-          <div className="mb-4 flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold text-foreground">Overview</h2>
-            <p className="text-xs text-muted-foreground">
-              All records in the selected committee scope
-            </p>
-          </div>
-          <EventSummaryStats counts={counts} />
-        </section>
-      ) : null}
+      {counts.total > 0 ? <EventSummaryStats counts={counts} /> : null}
       <EventListFilters
         committees={manager.committees}
         committeeId={committeeId}
         filter={filter}
-      />
-      {cursorResult.invalid ? (
-        <Alert variant="destructive" className="mt-5">
-          <AlertTitle>This page link is invalid</AlertTitle>
-          <AlertDescription>
-            Return to the first page and try again.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {events.length === 0 ? (
-        <EmptyState
-          icon={CalendarRange}
-          title={
-            cursorResult.invalid
-              ? "Open a valid event list"
-              : filter === "all"
-                ? "Start with a draft"
-                : "No matching events"
-          }
-          description={
-            cursorResult.invalid
-              ? "This link cannot be used to load events. Use the first page to start a new filtered view."
-              : filter === "all"
-                ? "Drafts stay private to your committee until their lifecycle requirements are complete. Create one when you're ready to begin planning."
-                : "Try another committee or lifecycle filter, or create a new draft when you are ready to plan one."
-          }
-          action={
-            <Button asChild variant="outline">
-              <Link href="/admin/events/new">
-                <CalendarPlus aria-hidden="true" />
-                Create event
-              </Link>
-            </Button>
-          }
-        />
-      ) : (
-        <>
-          <EventList events={events} />
-          <EventListPagination
-            nextHref={
-              nextCursor
-                ? (() => {
-                    const params = new URLSearchParams();
-                    if (committeeId) params.set("committee", committeeId);
-                    if (filter !== "all") params.set("status", filter);
-                    params.set(
-                      "cursor",
-                      encodeAdminEventCursor(nextCursor, {
-                        committeeId,
-                        filter,
-                      })
-                    );
-                    return `/admin/events?${params.toString()}`;
-                  })()
-                : null
+      >
+        {cursorResult.invalid ? (
+          <Alert variant="destructive">
+            <AlertTitle>This page link is invalid</AlertTitle>
+            <AlertDescription>
+              Return to the first page and try again.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {events.length === 0 ? (
+          <EmptyState
+            icon={CalendarRange}
+            title={
+              cursorResult.invalid
+                ? "Open a valid event list"
+                : filter === "all"
+                  ? "Start with a draft"
+                  : "No matching events"
+            }
+            description={
+              cursorResult.invalid
+                ? "This link cannot be used to load events. Use the first page to start a new filtered view."
+                : filter === "all"
+                  ? "Drafts stay private to your committee until their lifecycle requirements are complete. Create one when you're ready to begin planning."
+                  : "Try another committee or lifecycle filter, or create a new draft when you are ready to plan one."
+            }
+            action={
+              <Button asChild variant="outline">
+                <Link href="/admin/events/new">
+                  <CalendarPlus aria-hidden="true" data-icon="inline-start" />
+                  Create event
+                </Link>
+              </Button>
             }
           />
-        </>
-      )}
+        ) : (
+          <>
+            <EventList events={events} />
+            <EventListPagination
+              nextHref={
+                nextCursor
+                  ? (() => {
+                      const params = new URLSearchParams();
+                      if (committeeId) params.set("committee", committeeId);
+                      if (filter !== "all") params.set("status", filter);
+                      params.set(
+                        "cursor",
+                        encodeAdminEventCursor(nextCursor, {
+                          committeeId,
+                          filter,
+                        })
+                      );
+                      return `/admin/events?${params.toString()}`;
+                    })()
+                  : null
+              }
+            />
+          </>
+        )}
+      </EventListFilters>
     </section>
   );
 }

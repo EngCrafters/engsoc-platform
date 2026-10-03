@@ -11,10 +11,10 @@ export function NoAccessState({
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-4 py-10">
       <section
-        className="w-full rounded-xl border border-border bg-surface p-6 shadow-raised sm:p-8"
+        className="w-full rounded-lg border p-6 sm:p-8"
         aria-labelledby="no-access-title"
       >
-        <span className="flex size-11 items-center justify-center rounded-full bg-warning-soft text-warning-soft-foreground">
+        <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <ShieldAlert aria-hidden="true" className="size-5" />
         </span>
         <h1
@@ -50,8 +50,8 @@ export function NoAccessState({
           </li>
         </ul>
         <form action={logoutAction} className="mt-6">
-          <Button type="submit" variant="outline" className="h-11 px-4">
-            <LogOut aria-hidden="true" />
+          <Button type="submit" variant="outline">
+            <LogOut aria-hidden="true" data-icon="inline-start" />
             Sign out
           </Button>
         </form>

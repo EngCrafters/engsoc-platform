@@ -21,13 +21,10 @@ export function ConflictAlert({ onReload }: { onReload: () => void }) {
         exit={{ opacity: 0, y: -6 }}
         transition={{ duration: DURATION.normal, ease: EASE_OUT }}
       >
-        <Alert
-          variant="destructive"
-          className="border-warning/30 bg-warning-soft text-warning-soft-foreground [&>svg]:text-warning"
-        >
+        <Alert>
           <RefreshCw aria-hidden="true" />
           <AlertTitle>This event changed elsewhere</AlertTitle>
-          <AlertDescription className="text-warning-soft-foreground/90">
+          <AlertDescription>
             <p>
               Another manager saved a newer revision while you were editing.
               Reload to see the current details, then reapply your change.
@@ -37,9 +34,9 @@ export function ConflictAlert({ onReload }: { onReload: () => void }) {
               size="sm"
               variant="outline"
               onClick={onReload}
-              className="mt-3 border-warning/40 bg-surface hover:bg-warning-soft"
+              className="mt-3"
             >
-              <RefreshCw aria-hidden="true" />
+              <RefreshCw aria-hidden="true" data-icon="inline-start" />
               Reload latest revision
             </Button>
           </AlertDescription>

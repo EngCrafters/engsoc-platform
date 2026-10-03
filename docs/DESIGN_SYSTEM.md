@@ -1,206 +1,129 @@
 # Design system
 
-Source of truth for tokens, components, and motion conventions across the
-platform. Written after a refine-and-complete pass over the existing
-foundation — see `docs/adr/0010-project-wide-design-system.md` for why and
-when this work happened, and `docs/CURRENT_WORK.md` for how it relates to
-UC-02. New UI work should consume this, not re-derive conventions from
-scratch or introduce new ad-hoc colors.
+Source of truth for tokens, components, and motion across the platform. See
+`docs/adr/0011-dashboard-ui-refactor.md` for why the visual language changed
+and what it replaced. New UI should consume this, not introduce ad-hoc colors,
+shadows, or layouts.
 
 ## Principles
 
-- **Tokens, not literals.** Every color, radius, shadow, and motion value in
-  application code comes from a named token (`app/globals.css`,
-  `lib/motion/variants.ts`) or a component variant — never a raw hex/OKLCH
-  value or a one-off `duration-[237ms]` in a page or feature component.
-- **Status colors carry meaning, not decoration.** A status is always
-  paired with an icon or text, never color alone (see `EventStatusBadge`).
-- **Effects are restrained and optional.** Canvas UI/GSAP are for one or two
-  memorable moments (the auth page), not the whole product. They must
-  degrade gracefully and never gate core usability.
-- **Refine, don't replace.** This system built on an already-disciplined
-  OKLCH token set; extend it rather than introducing a second system
-  alongside it.
+- **Monochrome.** Black, white, and neutral grays only. Hierarchy comes from
+  contrast, weight, borders, and spacing, never hue. The one exception is
+  `destructive` for errors and destructive actions.
+- **Tokens, not literals.** Every color, radius, and motion value comes from a
+  named token (`app/globals.css`, `lib/motion/variants.ts`) or a component
+  variant.
+- **Borders over shadows.** Surfaces are separated by thin borders. Shadows
+  appear only on floating layers (dialog, sheet, dropdown, popover).
+- **Fewer cards.** Prefer sections, rules, rows, tables and tabs. Use `Card`
+  for metrics and genuinely isolated summaries; never nest cards.
+- **Status is never color alone.** A status pairs an icon with text and
+  differs by fill, border style and weight (see `EventStatusBadge`).
+- **shadcn first.** Use the installed shadcn components (`Sidebar`, `Tabs`,
+  `Table`, `Dialog`, `Sheet`, `ToggleGroup`, `Breadcrumb`...) before custom
+  markup.
 
-## Color tokens
+## Tokens
 
-Semantic tokens defined in `app/globals.css` (`:root` / `.dark`), wired into
-Tailwind via the `@theme inline` block:
+Defined in `app/globals.css` (`:root` / `.dark`) and mapped into Tailwind via
+`@theme inline`. All core tokens (`background`, `foreground`, `card`,
+`popover`, `surface`, `secondary`, `muted`, `border`, `input`, `primary`,
+`accent`, `sidebar-*`) have zero chroma.
 
-- **Surfaces:** `background`, `foreground`, `surface`, `surface-raised`,
-  `card`, `popover`, `muted`.
-- **Brand:** `primary` (+ `-foreground`, `-soft`, `-soft-foreground`),
-  `secondary`, `accent` (+ `-soft`).
-- **Status (each has a `-soft`/`-soft-foreground` pair for badges/banners):**
-  `success`, `warning`, `danger`/`destructive`, `full` (capacity-full),
-  `quiet` (archived/inactive).
-- **Structure:** `border`, `input`, `ring`.
-- **Shell** (dark navy nav rail and other strong structural surfaces):
-  `shell`, `shell-foreground`, `shell-muted`, `shell-border`,
-  `shell-accent` (+ `-foreground`). Mirrored into the `sidebar-*` tokens shadcn
-  expects.
-- **Glass** (new): `glass` / `glass-border` — a translucent surface + border
-  pair for floating/auth panels only (`Card variant="glass"`). Never use for
-  dashboard data cards. The border is intentionally a _different_ tone from
-  both the glass fill and the page background (dark-tinted in light mode,
-  light-tinted in dark mode) so the card stays visible instead of blending
-  into a same-color background — and it needs an `AmbientGlow` (or similar)
-  behind it, or the blur has nothing to show.
-
-`primary`/`accent`/`ring`/`shell`/`shell-accent` are **pure neutral** (zero
-chroma) in both themes — no brand hue. Only `success`/`warning`/`danger`/
-`full`/`quiet` carry color, and only to communicate state (badges, alerts,
-small indicators) — never as a card background.
+- Light: white page, near-white sidebar, light gray muted surfaces, near-black
+  text, light neutral borders.
+- Dark: near-black page and sidebar, slightly raised graphite surfaces, white
+  text, translucent white borders.
+- `success`/`warning`/`full`/`quiet` tokens still exist in the CSS but are not
+  used by application components; do not add new uses.
 
 ## Typography
 
-Geist (variable) via `next/font/google` in `app/layout.tsx`, aliased to
-`font-sans`/`font-heading`. One family, disciplined weights:
+Geist (variable) via `next/font/google`, aliased to `font-sans`/`font-heading`.
 
-- 400 — body text
-- 500 — labels, navigation
-- 600 — section titles, buttons
-- 700 — occasional strong headings only
+| Role              | Size / weight                            |
+| ----------------- | ---------------------------------------- |
+| Page title        | `text-3xl` (about 30px) / 600            |
+| Section title     | `text-lg` / 600                          |
+| Group / row title | `text-sm`–`text-base` / 500–600          |
+| Body              | `text-sm` / 400                          |
+| Label             | `text-sm` / 500                          |
+| Metadata          | `text-xs` / 400, `text-muted-foreground` |
+| Metric            | `text-3xl` / 600, `tabular-nums`         |
 
-Type scale in practice (see `app/dev/design-system` for a live reference):
-display/page title (`text-3xl`+, `tracking-[-0.04em]`), section title
-(`text-lg font-semibold tracking-tight`), card title (`text-base
-font-medium`), body (`text-sm`), small body/caption (`text-xs
-text-muted-foreground`), label (`text-xs font-medium uppercase
-tracking-wide`).
+Use `tabular-nums` for counts, capacity, and any figure in a column.
 
-## Spacing, radius, shadows
+## Layout
 
-- Radius scale in `app/globals.css`: `--radius-sm` … `--radius-4xl`, derived
-  from the single `--radius` base (`0.75rem`).
-- Shadows: `shadow-panel`, `shadow-raised`, `shadow-popover` — increasing
-  elevation, tuned separately for light/dark.
+- **Admin shell** (`components/admin/admin-shell.tsx`): shadcn dashboard-01
+  structure. `SidebarProvider` with `--sidebar-width` 18rem and
+  `--header-height` 3rem, an inset `AdminSidebar`, `SidebarInset`, and
+  `AdminHeader` (sidebar trigger, breadcrumb, theme toggle). Content sits in a
+  `max-w-7xl` column with 16px gutters on mobile and 24px on large screens.
+  On mobile the sidebar is the shadcn `Sheet` and closes after navigation.
+- **Page header** (`AdminPageHeader`): title, one-line description, optional
+  context row (status, committee) and the page's primary action on the right.
+- **Page order:** header, summary, tabs/filters, main content, pagination.
+- **Tabs** organise meaningful content (event Details/Lifecycle, account
+  Profile/Permissions/Security, status filters). Panels that hold forms stay
+  mounted so edits survive a tab switch.
+- **Lists** are shadcn `Table` inside a bordered, rounded container, with
+  secondary columns hidden on small screens and their content folded under the
+  title.
+- **Forms** use `EventFormSection`: a title and description beside a group of
+  fields, sections separated by rules; a bordered Status panel with the primary
+  save action beside them on wide screens.
+- **Settings** (`components/settings-dialog.tsx`): shadcn sidebar-13 pattern in
+  a `Dialog` (full screen on mobile). Rows are `SettingRow` (title and help on
+  the left, control on the right, stacking by container width).
+- **Auth** (`components/auth/*`): a quiet brand panel beside a plain form
+  column; no cards, effects or animation beyond a fade.
 
 ## Components
 
-### Admin dashboard
+- **Buttons:** `default` (black in light, white in dark) is the single primary
+  action; `outline` for secondary; `ghost` for navigation and low priority;
+  `destructive` only for truly destructive steps. Icons use `data-icon`.
+- **Badge:** `default`, `secondary`, `outline`, `ghost`, `destructive` only.
+- **Forms:** `FormField`, `FormDescription`, `FormMessage`, `FormActions`
+  (`components/ui/form-field.tsx`), driven by `useActionState`. Controls are
+  40px (`h-10`) in forms for touch comfort.
+- **Feedback:** `Alert` for callouts, `StatePanel` (via `EmptyState` /
+  `ErrorState`) for empty and error pages, `MessageBanner` for form results,
+  `sonner` toasts for saves. `Spinner` and `Skeleton` for loading.
+- **Brand mark:** `BrandMark` renders `public/brand/engineering-society-logo.png`,
+  the only colored asset.
 
-- The admin rail has one primary Create event action and a short icon navigation. Settings opens a dialog with a section sidebar for Account & security and Appearance. The mobile header has a direct Settings icon. Theme and sign-out stay as direct controls beside the signed-in account.
-- Committee access appears as a compact scope badge in the rail footer. The full list remains available through its accessible label and title; filtering by committee remains in the event list.
-- The Events overview gives total, draft, review, and published counts equal prominence in four cards. Approved, full, past, and archived counts remain visible in a quieter summary row. Use semantic status colors on icons only.
-- Keep content gutters at 16px on narrow screens and 24–32px on larger screens, with 12–16px gaps between summary cards. The navigation and content widths stay fixed when the theme changes.
+## Preferences and theming
 
-- **Brand mark:** `public/brand/engineering-society-logo.png` is the supplied
-  transparent logo. `BrandMark` renders it in the public, admin, and auth
-  headers; the same asset is the browser and touch icon.
-- **Card variants** (`components/ui/card.tsx`, `variant` prop): `default`
-  (dashboard data cards), `subtle` (quiet surface-on-surface), `elevated`
-  (raised shadow, e.g. the public event cards), `interactive` (hover lift +
-  brighter ring — only for a card that _is itself_ the single clickable
-  surface; don't use it on a card that just contains separate links/buttons,
-  that's what `elevated`/`default` are for), `glass` (auth/floating only —
-  translucent + `backdrop-blur-2xl`, plus a one-shot hover shake). The
-  entrance animation for a `glass` card must live on a wrapper, never the
-  Card itself — see the comment in `components/auth/auth-shell.tsx`, since
-  both the entrance and the hover-shake set the CSS `animation` property and
-  sharing an element makes leaving hover replay the entrance.
-- **Badge variants** (`components/ui/badge.tsx`): includes the extended
-  `-soft` status set (`primary-soft`, `success`, `warning`, `danger`,
-  `full`, `quiet`) used by `EventStatusBadge` and similar.
-- **Forms** (`components/ui/form-field.tsx`): `FormField` (label + required
-  mark + control + description/error), `FormDescription`, `FormMessage`,
-  `FormActions`. Not bound to a form library — this codebase drives forms
-  with `useActionState`; pass `error`/`description` from action state and
-  wire `aria-describedby` on the control using the `{htmlFor}-description` /
-  `{htmlFor}-error` ids. Used by the auth forms, the public registration
-  form, and (for its two simplest fields) `event-form.tsx` — fields with
-  bespoke conditional helper text or an icon overlay were left hand-rolled
-  rather than forced into the simple description/error API.
-- **Feedback** (`components/ui/state-panel.tsx`, `components/ui/
-message-banner.tsx`): `StatePanel` is the shared icon-circle + heading +
-  description + action shape behind `EmptyState` and `ErrorState`
-  (`components/admin/`). `NoAccessState` stays a standalone full-page
-  component — it has a materially different layout (page-level `<main>`,
-  bullet list, `h1`) and forcing it into the same shape added risk without
-  benefit. `MessageBanner` is the shared success/error banner (icon +
-  role="status"/"alert"); `components/auth/auth-shell.tsx` re-exports it as
-  `AuthMessage` for the auth forms, and the public registration form uses it
-  directly. It forwards its ref to the root element on purpose — a caller
-  that focuses it on error (`ref` + `tabIndex={-1}`) needs the ref on the
-  actual `role="alert"` element, not a wrapper around it, or
-  `getByRole("alert")).toBeFocused()`-style assertions break.
-- **Loading** (`components/ui/spinner.tsx`): `Spinner` (ring + rotating
-  `currentColor` arc) replaces any lucide `Loader2` in a pending button.
-  `Skeleton` (`components/ui/skeleton.tsx`) shimmer-sweeps instead of flat
-  `animate-pulse`.
-- **Theming** (`components/theme-provider.tsx`, `components/ui/
-theme-toggle.tsx`): `next-themes`, `attribute="class"`,
-  `defaultTheme="system"`. `ThemeToggle` has a `variant="shell"` styling for
-  the dark navy admin shell/auth aside and a default styling for light
-  surfaces. One click switches between the visible light and dark modes;
-  before the first click, the mode follows the system setting. The button is
-  in the admin sidebar footer, the mobile nav sheet header, and both
-  auth-shell placements (desktop aside, mobile header row).
+`next-themes` (`attribute="class"`, `defaultTheme="system"`). Settings >
+Appearance offers Light / Dark / System, Density (comfortable or compact table
+rows) and Motion (enabled or reduced). Density and motion live in this
+browser's localStorage only (`components/admin/preferences.tsx`) and are
+applied as `data-density` / `data-motion` on the shell. `ThemeToggle` in the
+header and auth screens switches light/dark in one click.
 
 ## Motion
 
-`lib/motion/variants.ts` is the single source for easing/duration/stagger
-values — import `DURATION.fast|normal|slow` (140/200/320ms) and
-`EASE_OUT`/`EASE_IN_OUT` rather than inlining transition literals.
-`AdminMotionConfig` wraps the admin shell in `MotionConfig
-reducedMotion="user"`, so ordinary Motion animations already honor the
-user's OS/browser preference.
-
-## Canvas UI / GSAP usage rule
-
-Both are **auth-page-only** for this pass — not routine buttons, forms, or
-dashboard interactions (those stay on `motion`):
-
-- **GSAP** (`components/auth/auth-aside.tsx`): one entrance timeline for the
-  brand mark/eyebrow/heading/description. Explicitly skipped when
-  `prefers-reduced-motion: reduce` matches (checked before the timeline
-  runs, not just slowed down).
-- **Canvas UI Liquid** (`components/canvasui/Liquid.tsx`, registry
-  `@canvas-ui` in `components.json`): scoped to the desktop auth aside only,
-  never the form card. It already degrades on its own — pointer-driven
-  splats no-op under `prefers-reduced-motion`, and it falls back to plain
-  DOM content if WebGL2/float-texture support is missing (`createLiquid`
-  returns `null`). The output canvas is `aria-hidden` and
-  `pointer-events: none`.
-
-Extending either beyond the auth surface needs a new decision (see ADR
-0010), not a quiet expansion.
+`lib/motion/variants.ts` is the single source for easing and duration
+(`DURATION.fast|normal|slow`, `EASE_OUT`). Motion is limited to short feedback:
+alerts, dialogs, sheets, tab and sidebar state. No decorative animation in data
+tables. `AdminPreferencesProvider` wraps the shell in `MotionConfig`, honoring
+the OS reduced-motion setting and the in-app Motion preference.
 
 ## Layout stability
 
-`html` sets `overflow-y: auto; scrollbar-gutter: stable;` (`app/globals.css`).
-Without a real scroll container and a reserved gutter, anything that changes
-whether/how a scrollbar renders — opening a Radix dropdown/dialog (which
-locks body scroll) or switching `color-scheme` on theme toggle (the native
-scrollbar can redraw) — shifts the whole page by the scrollbar's width. Keep
-this rule; don't remove `overflow-y`/`scrollbar-gutter` from `html` even if
-it looks redundant.
-
-## Marketing surface
-
-`app/(marketing)/*` now uses the same tokens and shared components as the
-rest of the app (it previously hardcoded `neutral-*`/`red-*`/`green-*`
-Tailwind literals, which didn't adapt to dark mode). The public event cards
-use `Card variant="elevated"` (not `interactive` — see the Card variants
-note above), and the registration form uses `FormField`/`Button`/`Spinner`/
-`MessageBanner` like every other form in the app.
+`html` sets `overflow-y: auto; scrollbar-gutter: stable;`. Keep it: without a
+reserved gutter, opening a Radix menu or changing `color-scheme` shifts the page
+by the scrollbar width.
 
 ## Accessibility
 
-- Status is never color-only (icon + text pairing).
-- Focus rings use the `ring`/`shell-accent` tokens consistently; interactive
-  elements keep visible `focus-visible` outlines.
-- All decorative motion/effects respect `prefers-reduced-motion`.
-- `ThemeToggle` and Canvas UI output canvases are keyboard/screen-reader
-  inert where appropriate (`aria-hidden`, `pointer-events: none` on the
-  canvas layer; the toggle itself is a real, labeled control).
+- Semantic landmarks, visible focus rings, labeled controls.
+- Dialogs, sheets and menus use Radix primitives for focus trapping and return.
+- Status uses icon plus text; motion respects `prefers-reduced-motion`.
 
 ## Dev-only reference
 
-`app/dev/design-system` renders a live showcase of the above (typography,
-status colors, buttons, card variants, form fields, feedback states). It
-404s via `notFound()` whenever `NODE_ENV === "production"`, so it can never
-ship as a reachable production route — see the empty, untracked
-`app/qa-preview/*` directories this replaced (removed as part of this pass;
-they held no files and were not a live route, but were exactly the pattern
-to avoid repeating).
+`app/dev/design-system` renders a live showcase of typography, buttons, status
+badges, forms and feedback states. It 404s whenever `NODE_ENV === "production"`.

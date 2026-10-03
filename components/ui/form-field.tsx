@@ -31,7 +31,7 @@ export function FormField({
       <Label htmlFor={htmlFor}>
         {label}
         {required ? (
-          <span aria-hidden="true" className="text-danger">
+          <span aria-hidden="true" className="text-destructive">
             *
           </span>
         ) : null}
@@ -77,7 +77,7 @@ export function FormMessage({
     <p
       id={id}
       role="alert"
-      className={cn("text-xs font-medium text-danger", className)}
+      className={cn("text-xs font-medium text-destructive", className)}
     >
       {children}
     </p>

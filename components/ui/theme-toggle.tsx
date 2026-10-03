@@ -5,16 +5,8 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Theme toggle. `variant="shell"` styles the trigger for the dark navy
- * admin shell; the default styles it for a light `surface` background
- * (auth pages). See docs/DESIGN_SYSTEM.md "Theming".
- */
-export function ThemeToggle({
-  variant = "default",
-}: {
-  variant?: "default" | "shell";
-}) {
+/** Light/dark switch. See docs/DESIGN_SYSTEM.md "Theming". */
+export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -35,26 +27,18 @@ export function ThemeToggle({
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={cn(
         "flex items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
-        variant === "shell" ? "size-9" : "size-8",
-        variant === "shell"
-          ? "text-shell-foreground/85 hover:bg-shell-foreground/[0.08] hover:text-shell-foreground focus-visible:outline-shell-accent"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-ring"
+        "size-8",
+        "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-ring"
       )}
     >
       {mounted ? (
         isDark ? (
-          <Sun
-            aria-hidden="true"
-            className={variant === "shell" ? "size-[1.125rem]" : "size-4"}
-          />
+          <Sun aria-hidden="true" className="size-4" />
         ) : (
-          <Moon
-            aria-hidden="true"
-            className={variant === "shell" ? "size-[1.125rem]" : "size-4"}
-          />
+          <Moon aria-hidden="true" className="size-4" />
         )
       ) : (
-        <span className={variant === "shell" ? "size-[1.125rem]" : "size-4"} />
+        <span className="size-4" />
       )}
     </button>
   );

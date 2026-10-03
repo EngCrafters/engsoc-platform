@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { StatePanel } from "@/components/ui/state-panel";
 
 export function EmptyState({
@@ -23,7 +22,7 @@ export function EmptyState({
       titleId="empty-state-title"
       description={description}
       action={action}
-      className={cn("mt-8", className)}
+      className={className}
     />
   );
 }

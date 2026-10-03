@@ -1,61 +1,148 @@
 "use client";
 
-import { Palette, ShieldCheck, X } from "lucide-react";
-import { AccountOverview } from "@/components/admin/account-overview";
+import type { ComponentType } from "react";
+import {
+  CircleUserRound,
+  Monitor,
+  Moon,
+  Paintbrush,
+  ShieldCheck,
+  Sun,
+} from "lucide-react";
+import { useTheme } from "next-themes";
+import {
+  AccountProfileSection,
+  AccountSecuritySection,
+  SettingRow,
+  SettingRows,
+} from "@/components/admin/account-sections";
+import {
+  useAdminPreferences,
+  type Density,
+  type MotionPreference,
+} from "@/components/admin/preferences";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { cn } from "@/lib/utils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+} from "@/components/ui/sidebar";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export type SettingsSection = "account" | "appearance";
+const choice =
+  "data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
 
-const sections = [
-  {
-    id: "account",
-    label: "Account & security",
-    description: "Your identity, committee access, and sign-in security.",
-    icon: ShieldCheck,
-  },
-  {
-    id: "appearance",
-    label: "Appearance",
-    description: "Choose how the platform looks on this device.",
-    icon: Palette,
-  },
-] as const;
+export type SettingsSection = "appearance" | "account" | "security";
+
+const sections: ReadonlyArray<{
+  id: SettingsSection;
+  label: string;
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+}> = [
+  { id: "appearance", label: "Appearance", icon: Paintbrush },
+  { id: "account", label: "Account", icon: CircleUserRound },
+  { id: "security", label: "Security", icon: ShieldCheck },
+];
 
 function AppearanceSettings() {
+  const { theme, setTheme } = useTheme();
+  const {
+    preferences: { density, motion },
+    setPreference,
+  } = useAdminPreferences();
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Color theme</CardTitle>
-        <CardDescription>
-          Switch between light and dark mode with one click.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex items-center justify-between gap-4 border-t border-border pt-4">
-        <div>
-          <p className="text-sm font-medium">Theme</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            The theme switch is also available in the admin sidebar.
-          </p>
-        </div>
-        <ThemeToggle />
-      </CardContent>
-    </Card>
+    <SettingRows>
+      <SettingRow
+        title="Theme"
+        description="Choose how the workspace looks, or follow your device."
+      >
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          aria-label="Theme"
+          value={theme ?? "system"}
+          onValueChange={(value) => value && setTheme(value)}
+        >
+          <ToggleGroupItem className={choice} value="light">
+            <Sun aria-hidden="true" />
+            Light
+          </ToggleGroupItem>
+          <ToggleGroupItem className={choice} value="dark">
+            <Moon aria-hidden="true" />
+            Dark
+          </ToggleGroupItem>
+          <ToggleGroupItem className={choice} value="system">
+            <Monitor aria-hidden="true" />
+            System
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </SettingRow>
+      <SettingRow
+        title="Density"
+        description="Compact tightens the row height in tables and lists."
+      >
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          aria-label="Density"
+          value={density}
+          onValueChange={(value) =>
+            value && setPreference("density", value as Density)
+          }
+        >
+          <ToggleGroupItem className={choice} value="comfortable">
+            Comfortable
+          </ToggleGroupItem>
+          <ToggleGroupItem className={choice} value="compact">
+            Compact
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </SettingRow>
+      <SettingRow
+        title="Motion"
+        description="Reduced removes transitions, in addition to your device setting."
+      >
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          aria-label="Motion"
+          value={motion}
+          onValueChange={(value) =>
+            value && setPreference("motion", value as MotionPreference)
+          }
+        >
+          <ToggleGroupItem className={choice} value="enabled">
+            Enabled
+          </ToggleGroupItem>
+          <ToggleGroupItem className={choice} value="reduced">
+            Reduced
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </SettingRow>
+      <p className="pt-4 text-xs text-muted-foreground">
+        Appearance settings apply instantly and are saved on this device only.
+      </p>
+    </SettingRows>
   );
 }
 
@@ -80,91 +167,101 @@ export function SettingsDialog({
   committees: ReadonlyArray<{ id: string; name: string }>;
   logoutAction: () => void | Promise<void>;
 }) {
-  const currentSection =
-    sections.find((item) => item.id === section) ?? sections[0];
+  const current = sections.find((item) => item.id === section) ?? sections[0];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        showCloseButton={false}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           restoreFocus();
         }}
-        className="flex h-[calc(100dvh-2rem)] max-h-[44rem] flex-col gap-0 overflow-hidden p-0 sm:max-w-[56rem]"
+        className="flex flex-col gap-0 overflow-hidden p-0 max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none md:h-[34rem] md:max-w-3xl"
       >
-        <DialogTitle className="sr-only">Settings</DialogTitle>
-        <DialogDescription className="sr-only">
-          Manage your account, security, and appearance settings.
-        </DialogDescription>
-        <header className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-border px-4 sm:px-6">
-          <div>
-            <p className="text-xs text-muted-foreground">Engineering Society</p>
-            <h2 className="text-lg font-semibold tracking-tight">Settings</h2>
-          </div>
-          <DialogClose asChild>
-            <Button variant="ghost" size="icon-lg" aria-label="Close settings">
-              <X aria-hidden="true" />
-            </Button>
-          </DialogClose>
-        </header>
-        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
-          <aside className="shrink-0 border-b border-shell-border bg-shell px-3 py-3 text-shell-foreground sm:w-56 sm:border-b-0 sm:border-r sm:py-5">
-            <nav aria-label="Settings sections" className="grid gap-1">
-              {sections.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-current={section === item.id ? "true" : undefined}
-                    onClick={() => onSectionChange(item.id)}
-                    className={cn(
-                      "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-shell-accent",
-                      section === item.id
-                        ? "bg-shell-foreground/10 text-shell-foreground"
-                        : "text-shell-muted hover:bg-shell-foreground/[0.06] hover:text-shell-foreground"
-                    )}
-                  >
-                    <Icon
-                      aria-hidden="true"
-                      className="size-[1.125rem] shrink-0"
-                      strokeWidth={1.8}
-                    />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </aside>
-          <section
-            aria-label={currentSection.label}
-            className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+        <DialogHeader className="shrink-0 gap-1 border-b px-4 py-4 pr-12 md:px-6">
+          <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
+          <DialogDescription>
+            Manage your dashboard preferences.
+          </DialogDescription>
+        </DialogHeader>
+        <SidebarProvider className="min-h-0 flex-1 items-stretch">
+          <Sidebar
+            collapsible="none"
+            className="hidden border-r md:flex"
+            aria-label="Settings sections"
           >
-            <div className="border-b border-border px-4 py-4 sm:px-6">
-              <h3 className="text-base font-semibold tracking-tight">
-                {currentSection.label}
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {currentSection.description}
-              </p>
-            </div>
-            <div className="p-4 sm:p-6">
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {sections.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          isActive={item.id === section}
+                          aria-current={
+                            item.id === section ? "page" : undefined
+                          }
+                          onClick={() => onSectionChange(item.id)}
+                        >
+                          <item.icon aria-hidden={true} />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <nav
+              aria-label="Settings sections"
+              className="flex shrink-0 gap-1 overflow-x-auto border-b px-4 py-2 md:hidden"
+            >
+              {sections.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={item.id === section ? "secondary" : "ghost"}
+                  size="sm"
+                  aria-current={item.id === section ? "page" : undefined}
+                  onClick={() => onSectionChange(item.id)}
+                  className="shrink-0"
+                >
+                  <item.icon aria-hidden={true} />
+                  {item.label}
+                </Button>
+              ))}
+            </nav>
+            <header className="hidden h-12 shrink-0 items-center px-6 md:flex">
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>Settings</BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{current.label}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </header>
+            <div className="flex-1 overflow-y-auto p-4 md:px-6 md:pt-2 md:pb-6">
+              {section === "appearance" ? <AppearanceSettings /> : null}
               {section === "account" ? (
-                <AccountOverview
-                  compact
+                <AccountProfileSection
                   idPrefix="settings-account"
                   email={email}
                   userId={userId}
                   committees={committees}
+                />
+              ) : null}
+              {section === "security" ? (
+                <AccountSecuritySection
+                  idPrefix="settings-account"
                   logoutAction={logoutAction}
                 />
-              ) : (
-                <AppearanceSettings />
-              )}
+              ) : null}
             </div>
-          </section>
-        </div>
+          </main>
+        </SidebarProvider>
       </DialogContent>
     </Dialog>
   );

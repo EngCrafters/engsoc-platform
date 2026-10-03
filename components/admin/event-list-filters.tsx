@@ -1,24 +1,24 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LoaderCircle, SlidersHorizontal } from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   type AdminEventFilter,
   ADMIN_EVENT_FILTERS,
 } from "@/lib/admin-events/types";
 
 const FILTER_LABELS: Record<AdminEventFilter, string> = {
-  all: "All non-archived events",
+  all: "All",
   draft: "Draft",
   published: "Published",
   full: "Full",
@@ -26,14 +26,21 @@ const FILTER_LABELS: Record<AdminEventFilter, string> = {
   archived: "Archived",
 };
 
+/**
+ * Lifecycle tabs plus the committee scope select, with the filtered list as
+ * the tab content. Filters live in the URL so the list stays server-rendered
+ * and shareable; "All" means every non-archived event.
+ */
 export function EventListFilters({
   committees,
   committeeId,
   filter,
+  children,
 }: {
   committees: readonly { id: string; name: string }[];
   committeeId: string | null;
   filter: AdminEventFilter;
+  children: ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -52,84 +59,61 @@ export function EventListFilters({
   }
 
   return (
-    <section
-      aria-label="Filter events"
-      className="mt-6 flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between"
+    <Tabs
+      value={filter}
+      onValueChange={(value) => update("status", value)}
+      className="gap-4"
     >
-      <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground lg:pb-2.5">
-        {pending ? (
-          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-        ) : (
-          <SlidersHorizontal
-            aria-hidden="true"
-            className="size-4 text-muted-foreground"
-          />
-        )}
-        <span>{pending ? "Updating events" : "Filters"}</span>
-      </div>
-      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="grid gap-1.5">
-          <label
-            className="text-xs font-medium text-muted-foreground"
-            htmlFor="event-committee-filter"
-          >
-            Committee
-          </label>
-          <Select
-            value={committeeId ?? "all"}
-            onValueChange={(value) => update("committee", value)}
-          >
-            <SelectTrigger
-              id="event-committee-filter"
-              aria-label="Filter by committee"
-              className="h-10 w-full sm:w-52"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Committee</SelectLabel>
-                <SelectItem value="all">All my committees</SelectItem>
-                {committees.map((committee) => (
-                  <SelectItem key={committee.id} value={committee.id}>
-                    {committee.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+      <div
+        role="search"
+        aria-label="Filter events"
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="-mx-4 overflow-x-auto overflow-y-hidden px-4 sm:mx-0 sm:px-0">
+          <TabsList aria-label="Event status">
+            {ADMIN_EVENT_FILTERS.map((value) => (
+              <TabsTrigger key={value} value={value}>
+                {FILTER_LABELS[value]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
         </div>
-        <div className="grid gap-1.5">
-          <label
-            className="text-xs font-medium text-muted-foreground"
-            htmlFor="event-status-filter"
-          >
-            Status
-          </label>
-          <Select
-            value={filter}
-            onValueChange={(value) => update("status", value)}
-          >
-            <SelectTrigger
-              id="event-status-filter"
-              aria-label="Filter by event status"
-              className="h-10 w-full sm:w-48"
+        <div className="flex items-center gap-2">
+          {pending ? (
+            <span role="status" className="flex items-center gap-1.5">
+              <Spinner />
+              <span className="sr-only">Updating events</span>
+            </span>
+          ) : null}
+          {committees.length > 1 ? (
+            <Select
+              value={committeeId ?? "all"}
+              onValueChange={(value) => update("committee", value)}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Lifecycle</SelectLabel>
-                {ADMIN_EVENT_FILTERS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {FILTER_LABELS[value]}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                id="event-committee-filter"
+                aria-label="Filter by committee"
+                className="w-full sm:w-52"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All my committees</SelectItem>
+                  {committees.map((committee) => (
+                    <SelectItem key={committee.id} value={committee.id}>
+                      {committee.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          ) : null}
         </div>
       </div>
-    </section>
+      <TabsContent value={filter} className="flex flex-col gap-4">
+        {children}
+      </TabsContent>
+    </Tabs>
   );
 }

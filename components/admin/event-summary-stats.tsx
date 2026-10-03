@@ -1,98 +1,54 @@
-import {
-  Archive,
-  Ban,
-  CalendarRange,
-  Clock3,
-  Globe2,
-  PenLine,
-  ShieldAlert,
-  ShieldCheck,
-} from "lucide-react";
 import type { AdminEventCounts } from "@/lib/admin-events/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-const primaryStats = [
-  {
-    key: "total",
-    label: "Total records",
-    icon: CalendarRange,
-    tone: "text-muted-foreground",
-  },
-  {
-    key: "draft",
-    label: "Draft",
-    icon: PenLine,
-    tone: "text-quiet-soft-foreground",
-  },
-  {
-    key: "review",
-    label: "Needs review",
-    icon: ShieldAlert,
-    tone: "text-warning-soft-foreground",
-  },
-  {
-    key: "published",
-    label: "Published",
-    icon: Globe2,
-    tone: "text-success-soft-foreground",
-  },
+const metrics = [
+  { key: "total", label: "Total events", hint: "In the selected scope" },
+  { key: "published", label: "Published", hint: "Open to the public" },
+  { key: "review", label: "Needs review", hint: "Awaiting a second manager" },
+  { key: "draft", label: "Drafts", hint: "Private to the committee" },
 ] as const;
 
-const secondaryStats = [
-  { key: "approved", label: "Approved draft", icon: ShieldCheck },
-  { key: "full", label: "Full", icon: Ban },
-  { key: "past", label: "Past", icon: Clock3 },
-  { key: "archived", label: "Archived", icon: Archive },
+const breakdown = [
+  { key: "approved", label: "Approved drafts" },
+  { key: "full", label: "Full" },
+  { key: "past", label: "Past" },
+  { key: "archived", label: "Archived" },
 ] as const;
 
 export function EventSummaryStats({ counts }: { counts: AdminEventCounts }) {
   return (
-    <div className="grid gap-3 sm:gap-4">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {primaryStats.map(({ key, label, icon: Icon, tone }) => (
-          <Card key={key} className="min-w-0 gap-3">
+    <section
+      aria-label="Event counts in selected committee scope"
+      className="flex flex-col gap-3"
+    >
+      <div className="grid grid-cols-2 gap-4 @3xl/main:grid-cols-4">
+        {metrics.map(({ key, label, hint }) => (
+          <Card key={key} size="sm" className="min-w-0">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Icon
-                  aria-hidden="true"
-                  className={cn("size-4 shrink-0", tone)}
-                  strokeWidth={1.8}
-                />
-                <span className="truncate">{label}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+              <CardDescription>{label}</CardDescription>
+              <CardTitle className="text-3xl font-semibold tabular-nums">
                 {counts[key]}
-              </p>
-            </CardContent>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">{hint}</p>
+            </CardHeader>
           </Card>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-border bg-surface px-4 py-3 sm:grid-cols-4 sm:px-5">
-        {secondaryStats.map(({ key, label, icon: Icon }) => (
-          <div key={key} className="flex min-w-0 items-center gap-2">
-            <Icon
-              aria-hidden="true"
-              className={cn(
-                "size-4 shrink-0",
-                key === "approved" && "text-success-soft-foreground",
-                key === "full" && "text-full-soft-foreground",
-                (key === "past" || key === "archived") &&
-                  "text-muted-foreground"
-              )}
-              strokeWidth={1.8}
-            />
-            <span className="min-w-0 truncate text-xs text-muted-foreground">
-              {label}
-            </span>
-            <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
+      <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+        {breakdown.map(({ key, label }) => (
+          <div key={key} className="flex gap-1.5">
+            <dt>{label}</dt>
+            <dd className="font-medium text-foreground tabular-nums">
               {counts[key]}
-            </span>
+            </dd>
           </div>
         ))}
-      </div>
-    </div>
+      </dl>
+    </section>
   );
 }

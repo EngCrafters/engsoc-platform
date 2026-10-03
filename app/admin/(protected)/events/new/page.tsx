@@ -6,9 +6,8 @@ export default async function NewEventPage() {
   const manager = await getManagerContext();
   if (manager.kind !== "manager") return null;
   return (
-    <section aria-labelledby="new-event-title">
+    <section aria-labelledby="new-event-title" className="flex flex-col gap-6">
       <AdminPageHeader
-        eyebrow="Events"
         headingId="new-event-title"
         title="Create an event"
         description="Start with a private draft, then review its details before publication."

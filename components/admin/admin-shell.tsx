@@ -1,14 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { AdminHeader } from "@/components/admin/admin-header";
+import { AdminPreferencesProvider } from "@/components/admin/preferences";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
-import { AdminMotionConfig } from "@/components/admin/admin-motion-config";
 import {
   SettingsDialog,
   type SettingsSection,
 } from "@/components/settings-dialog";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export function AdminShell({
   email,
@@ -25,47 +26,57 @@ export function AdminShell({
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] =
-    useState<SettingsSection>("account");
-  const settingsTrigger = useRef<HTMLButtonElement | null>(null);
+    useState<SettingsSection>("appearance");
+  const settingsTrigger = useRef<HTMLElement | null>(null);
 
-  function openSettings(trigger: HTMLButtonElement) {
+  function openSettings(trigger: HTMLElement) {
     settingsTrigger.current = trigger;
-    setSettingsSection("account");
+    setSettingsSection("appearance");
     setSettingsOpen(true);
   }
 
   return (
-    <AdminMotionConfig>
-      <div className="min-h-screen bg-background text-foreground lg:flex">
-        <AdminSidebar
-          email={email}
-          committees={committees}
-          logoutAction={logoutAction}
-          onOpenSettings={openSettings}
-        />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <AdminMobileNav
+    <AdminPreferencesProvider>
+      {({ density, motion }) => (
+        <SidebarProvider
+          data-density={density}
+          data-motion={motion}
+          className="group/admin"
+          style={
+            {
+              "--sidebar-width": "calc(var(--spacing) * 72)",
+              "--header-height": "calc(var(--spacing) * 12)",
+            } as CSSProperties
+          }
+        >
+          <AdminSidebar
+            variant="inset"
             email={email}
             committees={committees}
             logoutAction={logoutAction}
             onOpenSettings={openSettings}
           />
-          <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-            {children}
-          </main>
-        </div>
-      </div>
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        section={settingsSection}
-        onSectionChange={setSettingsSection}
-        restoreFocus={() => settingsTrigger.current?.focus()}
-        email={email}
-        userId={userId}
-        committees={committees}
-        logoutAction={logoutAction}
-      />
-    </AdminMotionConfig>
+          <SidebarInset>
+            <AdminHeader />
+            <div className="@container/main flex flex-1 flex-col">
+              <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 md:py-6 lg:px-6">
+                {children}
+              </div>
+            </div>
+          </SidebarInset>
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            section={settingsSection}
+            onSectionChange={setSettingsSection}
+            restoreFocus={() => settingsTrigger.current?.focus()}
+            email={email}
+            userId={userId}
+            committees={committees}
+            logoutAction={logoutAction}
+          />
+        </SidebarProvider>
+      )}
+    </AdminPreferencesProvider>
   );
 }

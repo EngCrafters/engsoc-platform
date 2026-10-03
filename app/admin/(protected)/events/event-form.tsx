@@ -4,16 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  AlignLeft,
-  Building2,
-  CalendarClock,
-  Info,
-  Save,
-  Ticket,
-  Type,
-  Users,
-} from "lucide-react";
+import { Save } from "lucide-react";
 import { saveEventAction } from "./actions";
 import { EventFormSection } from "@/components/admin/event-form-section";
 import { EventStatusBadge } from "@/components/admin/event-status-badge";
@@ -102,8 +93,9 @@ export function EventForm({
 
   return (
     <form
+      id="event-form"
       action={action}
-      className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]"
+      className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]"
       noValidate
     >
       {event ? (
@@ -115,7 +107,7 @@ export function EventForm({
         <input type="hidden" name="committeeId" value={committeeId} />
       )}
 
-      <div className="grid min-w-0 gap-5 xl:order-1">
+      <div className="flex min-w-0 flex-col gap-6">
         <div ref={errorRef} tabIndex={-1} className="outline-none">
           <AnimatePresence>
             {state?.code === "CONFLICT" ? (
@@ -138,239 +130,209 @@ export function EventForm({
           </AnimatePresence>
         </div>
 
-        <EventFormSection
-          icon={Type}
-          title="Event basics"
-          description="Give visitors a clear name and description."
-        >
-          {!event ? (
-            <div className="grid gap-1.5">
-              <Label htmlFor="event-committee">
-                <Building2
-                  aria-hidden="true"
-                  className="size-3.5 text-muted-foreground"
-                />
-                Committee
-              </Label>
-              <Select value={committeeId} onValueChange={setCommitteeId}>
-                <SelectTrigger id="event-committee" className="h-11 w-full">
-                  <SelectValue placeholder="Choose a committee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {committees.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Only committees where you are an active manager are shown.
-              </p>
-            </div>
-          ) : null}
-          <FormField htmlFor="event-title" label="Title" required>
-            <Input
-              id="event-title"
-              name="title"
-              disabled={archived}
-              required
-              maxLength={200}
-              defaultValue={event?.title}
-              className="h-11"
-            />
-          </FormField>
-          <div className="grid gap-1.5">
-            <Label htmlFor="event-description">
-              Description
-              <span className="font-normal text-muted-foreground">
-                Required before publication
-              </span>
-            </Label>
-            <div className="relative">
-              <AlignLeft
-                aria-hidden="true"
-                className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground"
+        <div className="flex flex-col divide-y">
+          <EventFormSection
+            title="Event details"
+            description="Give visitors a clear name and description."
+          >
+            {!event ? (
+              <div className="grid gap-1.5">
+                <Label htmlFor="event-committee">Committee</Label>
+                <Select value={committeeId} onValueChange={setCommitteeId}>
+                  <SelectTrigger id="event-committee" className="h-10 w-full">
+                    <SelectValue placeholder="Choose a committee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {committees.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Only committees where you are an active manager are shown.
+                </p>
+              </div>
+            ) : null}
+            <FormField htmlFor="event-title" label="Title" required>
+              <Input
+                id="event-title"
+                name="title"
+                disabled={archived}
+                required
+                maxLength={200}
+                className="h-10"
+                defaultValue={event?.title}
               />
+            </FormField>
+            <div className="grid gap-1.5">
+              <Label htmlFor="event-description">
+                Description
+                <span className="font-normal text-muted-foreground">
+                  Required before publication
+                </span>
+              </Label>
               <Textarea
                 id="event-description"
                 name="description"
                 disabled={archived}
                 defaultValue={event?.description ?? ""}
-                className="min-h-32 pl-9"
+                className="min-h-32"
               />
             </div>
-          </div>
-        </EventFormSection>
+          </EventFormSection>
 
-        <EventFormSection
-          icon={CalendarClock}
-          title="Schedule & venue"
-          description="Choose the time and place attendees should use."
-        >
-          <div className="grid gap-1.5">
-            <Label htmlFor="event-date">
-              Date and time
-              <span className="font-normal text-muted-foreground">
-                Asia/Muscat (UTC+04:00)
-              </span>
-            </Label>
-            <Input
-              id="event-date"
-              name="eventDate"
-              type="datetime-local"
-              disabled={archived}
-              readOnly={
-                past ||
-                Boolean(
-                  event && event.confirmedCount + event.waitlistedCount > 0
-                )
-              }
-              required
-              defaultValue={event ? muscatDateTimeValue(event.eventDate) : ""}
-              className="h-11 w-full sm:w-72"
-            />
-            {eventStatus === "archived" ? (
-              <p className="text-xs leading-5 text-warning-soft-foreground">
-                Archived events are read-only. Restore the event from the
-                lifecycle panel before editing its details.
-              </p>
-            ) : eventStatus === "published" || eventStatus === "full" ? (
-              <p className="text-xs leading-5 text-muted-foreground">
-                While registrations exist, the event date cannot be moved.
-                Capacity cannot be reduced below confirmed registrations.
-              </p>
-            ) : eventStatus === "past" ? (
-              <p className="text-xs leading-5 text-warning-soft-foreground">
-                This event has started. Its date and capacity are locked; update
-                descriptive details only when the lifecycle rules allow it.
-              </p>
-            ) : null}
-          </div>
-          <FormField htmlFor="event-location" label="Location">
-            <Input
-              id="event-location"
-              name="location"
-              disabled={archived}
-              defaultValue={event?.location ?? ""}
-              className="h-11"
-              placeholder="e.g. Block 6, Lecture Hall 3"
-            />
-          </FormField>
-        </EventFormSection>
-
-        <EventFormSection
-          icon={Ticket}
-          title="Registration settings"
-          description="Decide whether this event has a capacity limit."
-        >
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium">Limit capacity</p>
-              <p className="text-xs text-muted-foreground">
-                Confirmed registrations alone consume seats.
-              </p>
-            </div>
-            <Switch
-              checked={hasCapacityLimit}
-              onCheckedChange={setHasCapacityLimit}
-              aria-label="Limit capacity"
-              disabled={archived || past}
-            />
-          </div>
-          {hasCapacityLimit ? (
-            <div className="grid gap-1.5 pt-1">
-              <Label htmlFor="event-capacity">
-                <Users
-                  aria-hidden="true"
-                  className="size-3.5 text-muted-foreground"
-                />
-                Capacity
+          <EventFormSection
+            title="Schedule"
+            description="Choose when attendees should arrive."
+          >
+            <div className="grid gap-1.5">
+              <Label htmlFor="event-date">
+                Date and time
+                <span className="font-normal text-muted-foreground">
+                  Asia/Muscat (UTC+04:00)
+                </span>
               </Label>
               <Input
-                id="event-capacity"
-                name="capacity"
-                type="number"
+                id="event-date"
+                name="eventDate"
+                type="datetime-local"
                 disabled={archived}
-                readOnly={past}
-                min="1"
+                readOnly={
+                  past ||
+                  Boolean(
+                    event && event.confirmedCount + event.waitlistedCount > 0
+                  )
+                }
                 required
-                defaultValue={event?.capacity ?? ""}
-                className="h-11 w-full sm:w-40"
+                defaultValue={event ? muscatDateTimeValue(event.eventDate) : ""}
+                className="h-10 w-full sm:w-72"
               />
+              {eventStatus === "archived" ? (
+                <p className="text-xs text-muted-foreground">
+                  Archived events are read-only. Restore the event from the
+                  Lifecycle tab before editing its details.
+                </p>
+              ) : eventStatus === "published" || eventStatus === "full" ? (
+                <p className="text-xs text-muted-foreground">
+                  While registrations exist, the event date cannot be moved.
+                  Capacity cannot be reduced below confirmed registrations.
+                </p>
+              ) : eventStatus === "past" ? (
+                <p className="text-xs text-muted-foreground">
+                  This event has started. Its date and capacity are locked;
+                  update descriptive details only when the lifecycle rules allow
+                  it.
+                </p>
+              ) : null}
             </div>
-          ) : null}
-        </EventFormSection>
-      </div>
+          </EventFormSection>
 
-      <aside className="xl:order-2">
-        <div className="grid gap-3 xl:sticky xl:top-6">
-          <div className="rounded-xl border border-border bg-surface p-5 shadow-panel">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
-              {event ? "Current event" : "New event"}
-            </p>
-            <div className="mt-3">
-              {eventStatus ? (
-                <EventStatusBadge status={eventStatus} />
-              ) : (
-                <EventStatusBadge status="draft" />
-              )}
-            </div>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              {event
-                ? "Save the details below before changing publication or review state."
-                : "New events begin as private committee drafts."}
-            </p>
-            {event ? (
-              <dl className="mt-4 grid gap-2 border-t border-border pt-4 text-xs">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">Revision</dt>
-                  <dd className="font-medium tabular-nums">{event.revision}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">Capacity</dt>
-                  <dd className="font-medium tabular-nums">
-                    {event.capacity ?? "Unlimited"}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
-            <div className="mt-4 border-t border-border pt-4">
-              <div className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-                <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-                <p>
-                  {event
-                    ? "Lifecycle actions use the current saved revision."
-                    : "You can request second-manager review after creating the draft."}
+          <EventFormSection
+            title="Location"
+            description="Where the event takes place."
+          >
+            <FormField htmlFor="event-location" label="Location">
+              <Input
+                id="event-location"
+                name="location"
+                disabled={archived}
+                defaultValue={event?.location ?? ""}
+                className="h-10"
+                placeholder="e.g. Block 6, Lecture Hall 3"
+              />
+            </FormField>
+          </EventFormSection>
+
+          <EventFormSection
+            title="Registration settings"
+            description="Decide whether this event has a capacity limit."
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Limit capacity</p>
+                <p className="text-sm text-muted-foreground">
+                  Confirmed registrations alone consume seats.
                 </p>
               </div>
+              <Switch
+                checked={hasCapacityLimit}
+                onCheckedChange={setHasCapacityLimit}
+                aria-label="Limit capacity"
+                disabled={archived || past}
+              />
             </div>
-            {event?.reviewRequired && event.approvedBy ? (
-              <Alert className="mt-4 border-warning/30 bg-warning-soft/30">
-                <AlertTitle>Approval will be cleared</AlertTitle>
-                <AlertDescription>
-                  Changing event details creates a new revision. Another active
-                  committee manager must approve it before a later publish or
-                  reopen action. Published changes appear publicly immediately.
-                  Saving unchanged details keeps the approval.
-                </AlertDescription>
-              </Alert>
+            {hasCapacityLimit ? (
+              <div className="grid gap-1.5">
+                <Label htmlFor="event-capacity">Capacity</Label>
+                <Input
+                  id="event-capacity"
+                  name="capacity"
+                  type="number"
+                  disabled={archived}
+                  readOnly={past}
+                  min="1"
+                  required
+                  defaultValue={event?.capacity ?? ""}
+                  className="h-10 w-full sm:w-40"
+                />
+              </div>
             ) : null}
-            <Button
-              type="submit"
-              disabled={pending || archived}
-              className="mt-5 h-11 w-full"
-            >
-              {pending ? <Spinner /> : <Save aria-hidden="true" />}
-              {pending
-                ? "Saving…"
-                : archived
-                  ? "Restore to edit"
-                  : event
-                    ? "Save changes"
-                    : "Create draft"}
-            </Button>
+          </EventFormSection>
+        </div>
+      </div>
+
+      <aside className="xl:sticky xl:top-6 xl:self-start">
+        <div className="flex flex-col gap-4 rounded-lg border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-medium">Status</h2>
+            <EventStatusBadge status={eventStatus ?? "draft"} />
           </div>
+          <p className="text-sm text-muted-foreground">
+            {event
+              ? "Save the details before changing publication or review state. Lifecycle actions use the current saved revision."
+              : "New events begin as private committee drafts. You can request second-manager review after creating the draft."}
+          </p>
+          {event ? (
+            <dl className="flex flex-col gap-2 border-t pt-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Revision</dt>
+                <dd className="font-medium tabular-nums">{event.revision}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Capacity</dt>
+                <dd className="font-medium tabular-nums">
+                  {event.capacity ?? "Unlimited"}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+          {event?.reviewRequired && event.approvedBy ? (
+            <Alert>
+              <AlertTitle>Approval will be cleared</AlertTitle>
+              <AlertDescription>
+                Changing event details creates a new revision. Another active
+                committee manager must approve it before a later publish or
+                reopen action. Published changes appear publicly immediately.
+                Saving unchanged details keeps the approval.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <Button type="submit" disabled={pending || archived}>
+            {pending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <Save aria-hidden="true" data-icon="inline-start" />
+            )}
+            {pending
+              ? "Saving…"
+              : archived
+                ? "Restore to edit"
+                : event
+                  ? "Save changes"
+                  : "Create draft"}
+          </Button>
           <p aria-live="polite" className="sr-only">
             {pending ? "Saving event" : ""}
           </p>

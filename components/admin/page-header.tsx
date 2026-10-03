@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Standard page header: title, one-line description, optional context
+ * (status, committee) and the page's primary action on the right.
+ */
 export function AdminPageHeader({
-  eyebrow,
   title,
   headingId,
   description,
@@ -10,7 +13,6 @@ export function AdminPageHeader({
   context,
   className,
 }: {
-  eyebrow?: string;
   title: string;
   headingId?: string;
   description?: string;
@@ -21,34 +23,32 @@ export function AdminPageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
         className
       )}
     >
-      <div className="min-w-0">
-        {eyebrow ? (
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-primary">
-            {eyebrow}
-          </p>
-        ) : null}
+      <div className="flex min-w-0 flex-col gap-1.5">
         <h1
           id={headingId}
-          className={cn(
-            "break-words text-[1.9rem] font-semibold tracking-[-0.045em] text-foreground sm:text-[2.25rem]",
-            eyebrow ? "mt-1" : ""
-          )}
+          className="text-3xl font-semibold tracking-tight break-words"
         >
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="max-w-2xl text-sm text-muted-foreground">
             {description}
           </p>
         ) : null}
-        {context ? <div className="mt-3">{context}</div> : null}
+        {context ? (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {context}
+          </div>
+        ) : null}
       </div>
       {actions ? (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
       ) : null}
     </div>
   );

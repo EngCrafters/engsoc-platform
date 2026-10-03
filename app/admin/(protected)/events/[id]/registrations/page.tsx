@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download, Users } from "lucide-react";
+import { Download } from "lucide-react";
 import { getManagerContext } from "@/lib/auth/manager";
 import { getAdminEvent } from "@/lib/admin-events/server";
 import {
@@ -13,7 +13,10 @@ import {
 } from "@/lib/admin-registrations/cursor";
 import { parseRegistrationStatus } from "@/lib/admin-registrations/types";
 import { AdminPageHeader } from "@/components/admin/page-header";
-import { EmptyState } from "@/components/admin/empty-state";
+import { RegistrationList } from "@/components/admin/registration-list";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromoteButton } from "./promote-button";
 
 function single(value: string | string[] | undefined) {
@@ -49,125 +52,79 @@ export default async function RegistrationsPage({
     ? `/admin/events/${id}/registrations?status=${status}&cursor=${encodeRegistrationCursor(result.nextCursor, id, status)}`
     : null;
   return (
-    <section aria-labelledby="registrations-title">
-      <Link
-        href={`/admin/events/${id}`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Back to event
-      </Link>
+    <section
+      aria-labelledby="registrations-title"
+      className="flex flex-col gap-6"
+    >
       <AdminPageHeader
-        eyebrow={event.committeeName}
         title={`${event.title} registrations`}
         headingId="registrations-title"
         description="Review private registrations for this event. Waitlist promotion is FIFO and requires contact confirmation."
+        context={
+          <span className="text-sm text-muted-foreground">
+            {event.committeeName}
+          </span>
+        }
+        actions={
+          <form
+            method="post"
+            action={`/admin/events/${id}/registrations/export?status=${status}`}
+          >
+            <Button type="submit" variant="outline">
+              <Download aria-hidden="true" data-icon="inline-start" />
+              Export {status}
+            </Button>
+          </form>
+        }
       />
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <p className="text-sm text-muted-foreground">Confirmed</p>
-          <p className="mt-1 text-3xl font-semibold">
-            {counts.confirmed_count}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <p className="text-sm text-muted-foreground">Waitlisted</p>
-          <p className="mt-1 text-3xl font-semibold">
-            {counts.waitlisted_count}
-          </p>
-        </div>
-      </div>
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-        <nav aria-label="Registration status" className="flex gap-2">
-          <Link
-            className={`rounded-md px-3 py-2 text-sm ${status === "confirmed" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-            href={`/admin/events/${id}/registrations?status=confirmed`}
-          >
-            Confirmed
-          </Link>
-          <Link
-            className={`rounded-md px-3 py-2 text-sm ${status === "waitlisted" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-            href={`/admin/events/${id}/registrations?status=waitlisted`}
-          >
-            Waitlisted
-          </Link>
-        </nav>
-        <form
-          method="post"
-          action={`/admin/events/${id}/registrations/export?status=${status}`}
-        >
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:border-primary/40 hover:bg-primary-soft/30"
-          >
-            <Download className="size-4" /> Export {status}
-          </button>
-        </form>
-      </div>
-      {cursorResult.invalid ? (
-        <p className="mt-5 rounded-lg border border-danger/30 bg-danger-soft/30 p-4 text-sm text-danger">
-          This registration page link is invalid. Return to the first page.
-        </p>
-      ) : null}
-      {result.registrations.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState
-            icon={Users}
-            title="No registrations yet"
-            description={
-              status === "waitlisted"
-                ? "There are no waitlisted registrations for this event."
-                : "There are no confirmed registrations for this event."
-            }
+      <Tabs value={status} className="gap-4">
+        <TabsList aria-label="Registration status">
+          <TabsTrigger value="confirmed" asChild>
+            <Link href={`/admin/events/${id}/registrations?status=confirmed`}>
+              Confirmed
+              <span className="tabular-nums text-muted-foreground">
+                {counts.confirmed_count}
+              </span>
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="waitlisted" asChild>
+            <Link href={`/admin/events/${id}/registrations?status=waitlisted`}>
+              Waitlisted
+              <span className="tabular-nums text-muted-foreground">
+                {counts.waitlisted_count}
+              </span>
+            </Link>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value={status} className="flex flex-col gap-4">
+          {cursorResult.invalid ? (
+            <Alert variant="destructive">
+              <AlertTitle>This page link is invalid</AlertTitle>
+              <AlertDescription>
+                This registration page link is invalid. Return to the first
+                page.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <RegistrationList
+            status={status}
+            registrations={result.registrations}
+            renderPromote={(registrationId) => (
+              <PromoteButton eventId={id} registrationId={registrationId} />
+            )}
           />
-        </div>
-      ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
-          <div className="divide-y divide-border">
-            {result.registrations.map((registration) => (
-              <div
-                key={registration.id}
-                className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {registration.attendeeName}
-                  </p>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {registration.attendeeEmail}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Registered{" "}
-                    {new Date(registration.registeredAt).toLocaleString(
-                      "en-GB",
-                      { dateStyle: "medium", timeStyle: "short" }
-                    )}
-                  </p>
-                </div>
-                {status === "waitlisted" ? (
-                  <PromoteButton
-                    eventId={id}
-                    registrationId={registration.id}
-                  />
-                ) : (
-                  <span className="w-fit rounded-full bg-success-soft px-2.5 py-1 text-xs font-medium text-success-soft-foreground">
-                    Confirmed
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="mt-6 flex justify-end">
-        {nextHref ? (
-          <Link
-            href={nextHref}
-            className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Next page
-          </Link>
-        ) : null}
-      </div>
+          {nextHref ? (
+            <nav
+              aria-label="Registration pagination"
+              className="flex justify-end"
+            >
+              <Button asChild variant="outline">
+                <Link href={nextHref}>Next page</Link>
+              </Button>
+            </nav>
+          ) : null}
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }
