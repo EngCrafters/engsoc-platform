@@ -76,8 +76,9 @@ Use `tabular-nums` for counts, capacity, and any figure in a column.
 - **Settings** (`components/settings-dialog.tsx`): shadcn sidebar-13 pattern in
   a `Dialog` (full screen on mobile). Rows are `SettingRow` (title and help on
   the left, control on the right, stacking by container width).
-- **Auth** (`components/auth/*`): a quiet brand panel beside a plain form
-  column; no cards, effects or animation beyond a fade.
+- **Auth** (`components/auth/*`): one centered card over a decorative `Starfield`
+  canvas (twinkle plus occasional glints, static under reduced motion). No other
+  effects.
 
 ## Components
 

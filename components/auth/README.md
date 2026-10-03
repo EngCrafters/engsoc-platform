@@ -1,10 +1,10 @@
 # Auth UI
 
 Shared frame for the signed-out screens: `/admin/login`, `/admin/recovery`,
-`/auth/reset`. `AuthShell` composes `AuthAside` (desktop brand panel) and a
-plain form column, so the three pages stay consistent without duplicating
-layout. It is deliberately quiet: no cards, canvas effects, or entrance
-animation beyond a short fade (see `docs/DESIGN_SYSTEM.md`).
+`/auth/reset`. `AuthShell` centers one card over the decorative `Starfield` canvas (twinkling
+stars with a few glints; theme-aware, a single static frame under
+`prefers-reduced-motion`, paused when the tab is hidden). The canvas is
+`aria-hidden` and never carries content; the card fades in once.
 
 `AuthMessage` is the shared error/success banner; `authLinkClass` styles the
 plain-text links ("Forgot your password?", "Back to sign in"). Forms
