@@ -29,7 +29,7 @@ export default async function AdminRecoveryPage({
           and use its most recent link.
         </AuthMessage>
       ) : null}
-      <p className="text-sm leading-6 text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground">
         Enter your committee account email. If it matches an account, we&apos;ll
         send a password reset link. Resetting your password does not create an
         account or change which committees you can manage.

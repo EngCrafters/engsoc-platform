@@ -31,7 +31,7 @@ export default async function AdminLoginPage({
           This sign-in link is invalid or expired. Sign in again below.
         </AuthMessage>
       ) : null}
-      <p className="text-sm leading-6 text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground">
         Use the account provisioned for your committee. Platform maintenance
         grants access; there is no self-signup.
       </p>

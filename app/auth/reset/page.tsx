@@ -9,7 +9,7 @@ export default function ResetPasswordPage() {
       title="Choose a new password"
       titleId="reset-title"
     >
-      <p className="text-sm leading-6 text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground">
         Use a password with at least 12 characters. This changes your sign-in
         password only; your committee access stays exactly as it was.
       </p>

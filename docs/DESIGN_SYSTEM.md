@@ -78,7 +78,8 @@ Use `tabular-nums` for counts, capacity, and any figure in a column.
   the left, control on the right, stacking by container width).
 - **Auth** (`components/auth/*`): one centered card over a decorative `Starfield`
   galaxy (rotating band, glowing core, twinkling and glinting stars, an occasional
-  shooting star). The screen is always dark whatever the site theme; the canvas is
+  shooting star) and "Volt", a three.js robot mascot sitting on the card edge
+  (`LoginMascot`). The screen is always dark whatever the site theme; both are
   still under reduced motion. No other effects.
 
 ## Components

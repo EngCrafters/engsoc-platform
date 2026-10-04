@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { Starfield } from "@/components/auth/starfield";
+import { LoginMascot } from "@/components/auth/login-mascot";
 export { MessageBanner as AuthMessage } from "@/components/ui/message-banner";
 
 /**
@@ -48,8 +49,9 @@ export function AuthShell({
         </div>
       </header>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pt-4 pb-16">
-        <div className="w-full max-w-sm duration-500 animate-in fade-in-0 slide-in-from-bottom-3">
-          <Card className="gap-0 bg-card p-6 sm:p-8">
+        <div className="relative mt-32 w-full max-w-sm duration-500 animate-in fade-in-0 slide-in-from-bottom-3">
+          <LoginMascot className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2" />
+          <Card className="gap-0 bg-card px-6 pt-20 pb-6 sm:px-8 sm:pt-[5.5rem] sm:pb-8">
             <section aria-labelledby={titleId} className="flex flex-col gap-6">
               <div className="flex flex-col items-center gap-3 text-center">
                 <span className="flex size-10 items-center justify-center rounded-full border bg-background/60">
