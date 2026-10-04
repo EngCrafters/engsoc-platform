@@ -48,9 +48,24 @@ describe("application access hierarchy", () => {
     const legacyManagerId = process.env.UC02_TEST_LEGACY_MANAGER_ID!;
     const legacyEventId = process.env.UC02_TEST_LEGACY_EVENT_ID!;
     const arabicRelationsId = process.env.UC02_TEST_ARABIC_RELATIONS_ID!;
-    const [legacy] = await admin<{ id: string; slug: string | null }[]>`
-      SELECT id, slug FROM public.committees WHERE id = ${legacyId}`;
-    expect(legacy).toMatchObject({ id: legacyId, slug: null });
+    const [legacy] = await admin<
+      { id: string; slug: string | null; name: string }[]
+    >`
+      SELECT id, slug, name FROM public.committees WHERE id = ${legacyId}`;
+    expect(legacy).toMatchObject({
+      id: legacyId,
+      slug: null,
+      name: "Legacy Events (archived M8 smoke)",
+    });
+    const [archiveAudit] = await admin<
+      { changes: { eventCount: number; registrationCount: number } }[]
+    >`
+      SELECT changes FROM private.uc02_audit
+      WHERE committee_id = ${legacyId} AND action = 'legacy.smoke_archived'`;
+    expect(archiveAudit.changes).toMatchObject({
+      eventCount: 1,
+      registrationCount: 1,
+    });
     const [relations] = await admin<{ id: string; name: string }[]>`
       SELECT id, name FROM public.committees WHERE slug = 'relations'`;
     expect(relations).toMatchObject({

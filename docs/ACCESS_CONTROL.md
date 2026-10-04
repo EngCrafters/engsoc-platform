@@ -63,10 +63,12 @@ cleanup. No final committee inherits that row or its records.
 3. Remove the legacy manager's active access as part of the access migration,
    recording the actual target user and old scope with `actor_kind = migration`.
    Do not assign a replacement role from that historical grant.
-4. After the pilot, perform any allowed deletion or archival with a reviewed,
-   versioned maintenance operation that records what was removed, by whom and
-   when. Preserve the audit evidence needed by the society. Do not run ad-hoc
-   production SQL or change ownership to a real committee to make cleanup easy.
+4. After the pilot, apply migration 0020. It renames only a legacy `Events`
+   row whose events are all archived M8 smoke records and whose registration
+   emails match test patterns. It retains all IDs and relationships and writes
+   `legacy.smoke_archived` with event IDs and counts. If the preconditions fail,
+   it leaves the row untouched for review. Do not run ad-hoc production SQL or
+   change ownership to a real committee to make cleanup easy.
 5. Verify the eight final committees, their event/registration relationships,
    RLS, counts and audit after cleanup. Keep the legacy row isolated if any
    deletion precondition fails.
@@ -113,6 +115,9 @@ Migration 0018 retains explicit nulls in review-rejection audit state.
 Migration 0019 makes Technical ownership transferable while preserving an active
 owner. It adds narrowly granted routines and specific manager, Board and
 Technical audit actions.
+Migration 0020 is the controlled archive of confirmed legacy M8 smoke data;
+it preserves events, registrations and audit foreign keys while making the
+legacy status explicit. It is applied to production only after the pilot.
 
 Every access mutation writes actor, target user, level, committee where
 relevant, previous state, new state, timestamp and an optional bounded note.
@@ -195,16 +200,20 @@ starts only after this layer is proven.
 
 ## Current production assignments
 
-These emails are current assignment data, not authorization constants:
+These emails are assignment data, never authorization constants. The owner will
+grant future manager access as Technical Team lead through `/admin/access`.
 
-| Access               | Committee                     | User / email                     |
-| -------------------- | ----------------------------- | -------------------------------- |
-| Technical Team       | Technical Team                | hishamalhn@gmail.com             |
-| Board Administration | All Committees                | engineeringsociety.squ@gmail.com |
-| Committee Manager    | Support & Logistics Committee | unknown11110000@gmail.com        |
-| Committee Manager    | Finance Committee             | loay1784@gmail.com               |
-| Committee Manager    | Media Committee               | alshifa.alrawahi112@gmail.com    |
+| Access               | Committee                     | User / email                     | Status                                |
+| -------------------- | ----------------------------- | -------------------------------- | ------------------------------------- |
+| Technical Team       | All Committees                | hishamalhn@gmail.com             | Active; invitation pending acceptance |
+| Board Administration | All Committees                | engineeringsociety.squ@gmail.com | Active                                |
+| Committee Manager    | Support & Logistics Committee | To be provided                   | Unassigned                            |
+| Committee Manager    | Finance Committee             | To be assigned by Technical lead | Unassigned                            |
+| Committee Manager    | Media Committee               | To be assigned by Technical lead | Unassigned                            |
 
-Forum, Evening, Relations and Society Affairs intentionally have no ordinary
-manager accounts. Actual provisioning and pilot status are recorded in
-[CURRENT_WORK.md](CURRENT_WORK.md).
+The earlier Support placeholder `unknown11110000@gmail.com` was revoked as
+soon as the owner clarified that it was not the real manager. Its revoked row
+and audit evidence remain, but it has no administrative access. Finance and
+Media accounts were not created or assigned. Forum, Evening, Relations and
+Society Affairs intentionally have no ordinary manager accounts. Actual pilot
+status is recorded in [CURRENT_WORK.md](CURRENT_WORK.md).

@@ -5,8 +5,9 @@
 Accepted specification, October 4, 2026. The owner resolved the legacy
 `Events` row and reviewer authority on this date. The application and database
 implementation follows only after this specification and its UC-02 companions
-are committed, pushed, and verified in CI. The five supplied production emails
-are rollout assignments, not authorization constants.
+are committed, pushed, and verified in CI. Production emails are changeable
+rollout assignments, not authorization constants; the owner withdrew the
+placeholder Support address before the manager pilot.
 
 ## Context
 
@@ -71,8 +72,10 @@ archived smoke records isolated during migration safety verification, with a
 null catalog slug so it is absent from normal administration. Revoke its old
 manager grant as a migration change with audit, without inferring a new role
 for that person. After verifying the five records are only smoke data and have
-no business value, follow a separately documented, audited cleanup procedure.
-Do not copy their history into a real committee.
+no business value, apply the reviewed post-pilot archive migration. It marks
+the legacy identity explicitly while retaining event, registration and audit
+foreign keys, and records the action in audit. Do not copy their history into a
+real committee.
 
 ### Review-required events
 

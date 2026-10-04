@@ -148,7 +148,7 @@ async function applyMigrations(
           VALUES (${legacyManager}, ${legacyId}, ${legacyManager})`;
         await sql`INSERT INTO public.events
           (id, title, description, event_date, committee_id, status, archived_at)
-          VALUES (${legacyEvent}, 'M8 archived smoke event', 'Disposable rehearsal data',
+          VALUES (${legacyEvent}, 'M8 release smoke fixture', 'Disposable rehearsal data',
             now() + interval '7 days', ${legacyId}, 'draft', now())`;
         await sql`INSERT INTO public.registrations
           (id, event_id, attendee_name, attendee_email, status)

@@ -33,6 +33,11 @@ no SELECT privilege. Never expose the view through the public API.
 2. Confirm a restorable backup, current migration version and target project.
    Rehearse the routine in staging before production. Use the managed
    `app_maintenance` connection from the secret store, never a browser key.
+   If that login is unavailable, a verified Supabase project maintainer may
+   invoke the same fixed routine from the privileged SQL executor. Record the
+   exception and result; do not write to the access table directly. Production
+   initial bootstrap used this fallback because the managed connection cannot
+   `SET ROLE app_maintenance`.
 3. Call the fixed routine in one transaction:
 
    ```sql
@@ -116,8 +121,13 @@ inspect recent access and authentication audit history.
 Complete the local and staging rehearsal, production drift and backup checks,
 then apply the reviewed migration. Pilot one real Technical, one real Board
 and one real Committee Manager identity, testing positive and negative paths.
-Only after the pilot passes assign the Support & Logistics, Finance and Media
-managers. Forum, Evening, Relations and Society Affairs remain without
+The owner has withdrawn the earlier Support placeholder; it was revoked and
+cannot be used for the manager pilot. Wait for the real Support identity.
+The Technical Team lead assigns Support & Logistics, Finance and Media through
+`/admin/access` after the pilot, using real users they select. Forum, Evening,
+Relations and Society Affairs remain without
 ordinary managers. Do not deploy the new application code against an
-unmigrated production schema. Preserve the legacy `Events` row until its
-separate documented cleanup gate passes.
+unmigrated production schema. After the named pilot passes, apply the reviewed
+0020 archive migration to the confirmed M8 smoke row. It retains its archived
+records and audit relationships. Staging has non-smoke `Events` data, so 0020
+correctly leaves that staging row untouched.

@@ -2,13 +2,27 @@
 
 **ACCESS HIERARCHY INITIATIVE (October 4, 2026):** The owner has explicitly
 authorized finalizing application access before any landing-page migration.
-The owner has now supplied all five production emails and selected transferable
+The owner initially supplied five emails, then clarified that the Support
+address was a placeholder and that the Technical lead will grant the real
+manager accounts later. The owner selected transferable
 Technical ownership through the application, protected by a last-active-owner
-database rule. ADR 0012 records this update. Migration 0019 and the access UI
-were rehearsed locally and on staging. Local gates passed: format, lint,
-typecheck, 136 tests, Drizzle migration check, production build, 20 Playwright
-browser tests and diff check. Production still runs the prior schema and app
-pending the coordinated cutover; the existing robot/auth UI was left intact.
+database rule. ADR 0012 records this update. Migrations 0016–0019 were
+rehearsed locally and on staging, then applied to production. Local gates
+passed: format, lint, typecheck, 136 tests, Drizzle migration check, production
+build, 20 Playwright browser tests and diff check. Commit `887a3e2` is deployed;
+GitHub CI run `37192635891` passed and Vercel Production deployment
+`6839336389` reached success. The existing robot/auth UI was left intact.
+Technical and Board access rows are active and audited. The placeholder Support
+grant was revoked immediately after clarification; RLS now gives it zero
+visible committees, and `manager.revoked` records both states. Invitations had
+already been sent to Technical and the Support placeholder; the latter cannot
+access administration even if the invitation is accepted. Board Auth already
+existed. Finance and Media accounts were not created or assigned. Human sign-in
+verification for Technical and Board is pending; the manager pilot needs the
+real Support identity from the owner.
+Migration 0020 is prepared for the post-pilot controlled archive of the five
+confirmed M8 smoke records. The archive path passed local backup/restore tests;
+staging's four active non-smoke `Events` records were correctly left untouched.
 [ADR 0012](adr/0012-application-access-hierarchy.md) and
 [ACCESS_CONTROL.md](ACCESS_CONTROL.md) record the three levels, single-committee
 manager rule, eight-committee catalog, audit and rollout gates. The specification
@@ -17,21 +31,25 @@ read-only inspection found one `Events` committee with five archived M8 smoke
 events, four registrations and one active manager; staging had the same
 committee ID, four events and two active managers. The owner decided to keep
 `Events` isolated as legacy smoke data and to allow a different Board or
-Technical actor to review. Migrations 0016–0019 and the access UI are local;
-all four migrations were applied to staging on October 4. Staging now has eight
+Technical actor to review. Migrations 0016–0019 and the access UI were applied
+to staging on October 4. Staging now has eight
 live committees, an isolated legacy row and four events, no active legacy
 access, two migration revocation audits, and FORCE RLS. The old staging manager
 Auth test confirms that the old account has no final committee scope. The
 second migration adds a private Auth identity view because Supabase does not
-retain schema `USAGE` for the custom routine owner. Production remains at 0015.
+retain schema `USAGE` for the custom routine owner. Production has now advanced
+through 0019. Read-only checks found eight live committees, one isolated legacy
+row, no active legacy grant, FORCE RLS on access/events/registrations, and
+correct Technical, Board, Support-placeholder and no-role committee visibility
+(8/8/0/0 after revocation).
 The fresh production logical backup is stored outside the repository at
 `%LOCALAPPDATA%\\engsoc-platform\\backups\\pre-access-2026-10-04.dump` (381,824
 bytes). PostgreSQL 17 `pg_restore --list` found 523 archive entries, and a full
 archive decode to `/dev/null` succeeded. The local migration rehearsal and
 backup/restore test passed. Supabase reports WAL archiving but no listed physical
 backup or PITR window; the logical archive is the confirmed recovery artifact.
-Four of the named production addresses are not yet Auth users and require
-approved invitations before the pilot. No landing-page change has been made.
+Finance and Media addresses were not provisioned after the owner reserved
+manager assignment for the Technical lead. No landing-page change has been made.
 Production's five titles all begin `M8 release smoke`; all five are archived,
 and the four registrations use test-pattern email addresses. Cleanup still
 waits for the reviewed, backed-up post-pilot procedure in ACCESS_CONTROL.md.
@@ -82,10 +100,13 @@ failed after all workflow assertions, was corrected, and a separate read-only
 archived-record verification exited successfully. Vercel's error log query
 returned no errors for this deployment.
 
-**NEXT EXACT TASK:** Provision the four missing named Auth accounts. Coordinate the
-production schema and application delivery, pilot Technical, Board and one
-manager, assign the remaining two current managers, and verify GitHub CI and
-the serving Vercel deployment. Leave the four other committees managerless.
+**NEXT EXACT TASK:** Have the named Technical and Board users sign in and verify
+their live access. The owner must provide the real Support manager before the
+manager pilot can run. The Technical lead will later create/select and assign
+the Finance and Media managers through `/admin/access`; do not send invitations
+or assign those roles on their behalf. After the pilot, apply the prepared 0020
+legacy archive and verify its audit. Leave Forum, Evening, Relations and Society
+Affairs managerless.
 
 **PARALLEL INITIATIVE — DESIGN SYSTEM:** The owner separately authorized a
 project-wide design-system pass (tokens, theming, component foundation,
