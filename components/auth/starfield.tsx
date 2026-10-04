@@ -63,7 +63,7 @@ export function Starfield({ className }: { className?: string }) {
       stars = Array.from({ length: count }, () => {
         const roll = Math.random();
         const kind: Star["kind"] =
-          roll < 0.04 ? "bright" : roll < 0.34 ? "star" : "dust";
+          roll < 0.02 ? "bright" : roll < 0.34 ? "star" : "dust";
         // 60% of the stars cluster along the band, the rest scatter everywhere.
         const inBand = Math.random() < 0.6;
         const x = inBand
@@ -78,7 +78,7 @@ export function Starfield({ className }: { className?: string }) {
           kind,
           r:
             kind === "bright"
-              ? 1.5 + Math.random() * 1.2
+              ? 1.1 + Math.random() * 0.8
               : kind === "star"
                 ? 0.8 + Math.random() * 0.8
                 : 0.35 + Math.random() * 0.5,
@@ -129,7 +129,7 @@ export function Starfield({ className }: { className?: string }) {
         ctx.fillStyle = "#fff";
         if (star.kind === "bright") {
           ctx.shadowColor = "rgba(255,255,255,0.95)";
-          ctx.shadowBlur = 10 + 10 * twinkle;
+          ctx.shadowBlur = 7 + 7 * twinkle;
         }
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
@@ -137,7 +137,7 @@ export function Starfield({ className }: { className?: string }) {
         ctx.shadowBlur = 0;
         if (star.kind === "bright" && twinkle > 0.3) {
           // Glints stay upright on screen while the field rotates.
-          const len = star.r * (4 + 6 * twinkle);
+          const len = star.r * (3.5 + 5 * twinkle);
           ctx.globalAlpha = alpha * 0.6;
           ctx.strokeStyle = "#fff";
           ctx.lineWidth = 0.7;
