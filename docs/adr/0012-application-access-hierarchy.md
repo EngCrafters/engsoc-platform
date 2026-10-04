@@ -72,7 +72,8 @@ archived smoke records isolated during migration safety verification, with a
 null catalog slug so it is absent from normal administration. Revoke its old
 manager grant as a migration change with audit, without inferring a new role
 for that person. After verifying the five records are only smoke data and have
-no business value, apply the reviewed post-pilot archive migration. It marks
+no business value, apply the reviewed archive migration after backup and
+migration safety checks. It marks
 the legacy identity explicitly while retaining event, registration and audit
 foreign keys, and records the action in audit. Do not copy their history into a
 real committee.

@@ -127,7 +127,7 @@ The Technical Team lead assigns Support & Logistics, Finance and Media through
 `/admin/access` after the pilot, using real users they select. Forum, Evening,
 Relations and Society Affairs remain without
 ordinary managers. Do not deploy the new application code against an
-unmigrated production schema. After the named pilot passes, apply the reviewed
-0020 archive migration to the confirmed M8 smoke row. It retains its archived
+unmigrated production schema. After backup and migration safety checks, apply
+the reviewed 0020 archive migration to the confirmed M8 smoke row. It retains its archived
 records and audit relationships. Staging has non-smoke `Events` data, so 0020
 correctly leaves that staging row untouched.

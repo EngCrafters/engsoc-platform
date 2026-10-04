@@ -2,8 +2,9 @@
 
 Status: accepted specification, October 4, 2026. ADR 0012 records the decision.
 The specification gate passed in commit `b73b6ec`; the transferable ownership
-decision is recorded in ADR 0012. Migrations 0016–0019 have been rehearsed
-locally and applied to staging. Production rollout status is tracked in
+decision is recorded in ADR 0012. Migrations 0016–0020 were rehearsed locally
+and applied to production; staging retained its non-smoke legacy records.
+Production assignment and pilot status are tracked in
 [CURRENT_WORK.md](CURRENT_WORK.md).
 
 ## Hierarchy
@@ -29,13 +30,13 @@ An authenticated user without active access has no administrative scope.
 
 | Display name                  | Stable slug         | Current ordinary manager assignment            |
 | ----------------------------- | ------------------- | ---------------------------------------------- |
-| Support & Logistics Committee | `support-logistics` | Planned                                        |
+| Support & Logistics Committee | `support-logistics` | None; Technical lead will assign               |
 | Relations Committee           | `relations`         | None                                           |
 | Society Affairs Committee     | `society-affairs`   | None                                           |
-| Finance Committee             | `finance`           | Planned                                        |
+| Finance Committee             | `finance`           | None; Technical lead will assign               |
 | Forum Committee               | `forum`             | None                                           |
 | Evening Committee             | `evening`           | None                                           |
-| Media Committee               | `media`             | Planned                                        |
+| Media Committee               | `media`             | None; Technical lead will assign               |
 | Technical Team                | `technical-team`    | None; Technical account uses the explicit role |
 
 Technical Team is also a normal event-owning committee. Its slug and name give
@@ -63,7 +64,7 @@ cleanup. No final committee inherits that row or its records.
 3. Remove the legacy manager's active access as part of the access migration,
    recording the actual target user and old scope with `actor_kind = migration`.
    Do not assign a replacement role from that historical grant.
-4. After the pilot, apply migration 0020. It renames only a legacy `Events`
+4. After backup and migration safety verification, apply migration 0020. It renames only a legacy `Events`
    row whose events are all archived M8 smoke records and whose registration
    emails match test patterns. It retains all IDs and relationships and writes
    `legacy.smoke_archived` with event IDs and counts. If the preconditions fail,
@@ -117,7 +118,7 @@ owner. It adds narrowly granted routines and specific manager, Board and
 Technical audit actions.
 Migration 0020 is the controlled archive of confirmed legacy M8 smoke data;
 it preserves events, registrations and audit foreign keys while making the
-legacy status explicit. It is applied to production only after the pilot.
+legacy status explicit. Production application and audit verification passed.
 
 Every access mutation writes actor, target user, level, committee where
 relevant, previous state, new state, timestamp and an optional bounded note.
@@ -203,13 +204,13 @@ starts only after this layer is proven.
 These emails are assignment data, never authorization constants. The owner will
 grant future manager access as Technical Team lead through `/admin/access`.
 
-| Access               | Committee                     | User / email                     | Status                                |
-| -------------------- | ----------------------------- | -------------------------------- | ------------------------------------- |
-| Technical Team       | All Committees                | hishamalhn@gmail.com             | Active; invitation pending acceptance |
-| Board Administration | All Committees                | engineeringsociety.squ@gmail.com | Active                                |
-| Committee Manager    | Support & Logistics Committee | To be provided                   | Unassigned                            |
-| Committee Manager    | Finance Committee             | To be assigned by Technical lead | Unassigned                            |
-| Committee Manager    | Media Committee               | To be assigned by Technical lead | Unassigned                            |
+| Access               | Committee                     | User / email                     | Status                                         |
+| -------------------- | ----------------------------- | -------------------------------- | ---------------------------------------------- |
+| Technical Team       | All Committees                | hishamalhn@gmail.com             | Active; Auth sign-in recorded after deployment |
+| Board Administration | All Committees                | engineeringsociety.squ@gmail.com | Active                                         |
+| Committee Manager    | Support & Logistics Committee | To be provided                   | Unassigned                                     |
+| Committee Manager    | Finance Committee             | To be assigned by Technical lead | Unassigned                                     |
+| Committee Manager    | Media Committee               | To be assigned by Technical lead | Unassigned                                     |
 
 The earlier Support placeholder `unknown11110000@gmail.com` was revoked as
 soon as the owner clarified that it was not the real manager. Its revoked row

@@ -11,18 +11,26 @@ rehearsed locally and on staging, then applied to production. Local gates
 passed: format, lint, typecheck, 136 tests, Drizzle migration check, production
 build, 20 Playwright browser tests and diff check. Commit `887a3e2` is deployed;
 GitHub CI run `37192635891` passed and Vercel Production deployment
-`6839336389` reached success. The existing robot/auth UI was left intact.
+`6839336389` reached success. The follow-up archive commit `dcdd103` also
+passed GitHub CI run `37193456285` and reached Vercel Ready at deployment
+`dpl_EQmpvevsq94DyCDTaQWPdA5pNk5c`. The existing robot/auth UI was left
+intact.
 Technical and Board access rows are active and audited. The placeholder Support
 grant was revoked immediately after clarification; RLS now gives it zero
 visible committees, and `manager.revoked` records both states. Invitations had
 already been sent to Technical and the Support placeholder; the latter cannot
 access administration even if the invitation is accepted. Board Auth already
-existed. Finance and Media accounts were not created or assigned. Human sign-in
-verification for Technical and Board is pending; the manager pilot needs the
-real Support identity from the owner.
-Migration 0020 is prepared for the post-pilot controlled archive of the five
-confirmed M8 smoke records. The archive path passed local backup/restore tests;
-staging's four active non-smoke `Events` records were correctly left untouched.
+existed. Finance and Media accounts were not created or assigned. Technical
+Auth confirmed and signed in after deployment at 09:44 UTC. The Board Auth
+user's latest recorded sign-in predates deployment. Screen-level Technical and
+Board pilot confirmation is pending; the manager pilot needs the real Support
+identity from the owner.
+Migration 0020 was applied to production after backup and migration safety
+checks. It renamed only the confirmed M8 smoke identity to `Legacy Events
+(archived M8 smoke)`, preserved its five event and four registration IDs, and
+recorded the archive with IDs, counts and timestamp. The archive path passed
+local backup/restore tests; staging's four active non-smoke `Events` records
+were correctly left untouched.
 [ADR 0012](adr/0012-application-access-hierarchy.md) and
 [ACCESS_CONTROL.md](ACCESS_CONTROL.md) record the three levels, single-committee
 manager rule, eight-committee catalog, audit and rollout gates. The specification
@@ -50,9 +58,9 @@ backup/restore test passed. Supabase reports WAL archiving but no listed physica
 backup or PITR window; the logical archive is the confirmed recovery artifact.
 Finance and Media addresses were not provisioned after the owner reserved
 manager assignment for the Technical lead. No landing-page change has been made.
-Production's five titles all begin `M8 release smoke`; all five are archived,
-and the four registrations use test-pattern email addresses. Cleanup still
-waits for the reviewed, backed-up post-pilot procedure in ACCESS_CONTROL.md.
+Production's five titles all begin `M8 release smoke`; all five remain archived,
+and the four registrations use test-pattern email addresses. The controlled
+archive is complete without deleting foreign-key-linked audit evidence.
 
 See `docs/UC-02_Acceptance_and_Delivery.md` for release evidence and
 `docs/UC-02_Deep_Dive.md` for the frozen behavior contract.
@@ -104,9 +112,8 @@ returned no errors for this deployment.
 their live access. The owner must provide the real Support manager before the
 manager pilot can run. The Technical lead will later create/select and assign
 the Finance and Media managers through `/admin/access`; do not send invitations
-or assign those roles on their behalf. After the pilot, apply the prepared 0020
-legacy archive and verify its audit. Leave Forum, Evening, Relations and Society
-Affairs managerless.
+or assign those roles on their behalf. Leave Forum, Evening, Relations and
+Society Affairs managerless.
 
 **PARALLEL INITIATIVE — DESIGN SYSTEM:** The owner separately authorized a
 project-wide design-system pass (tokens, theming, component foundation,
