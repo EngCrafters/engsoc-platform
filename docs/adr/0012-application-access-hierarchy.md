@@ -21,11 +21,11 @@ carry the new hierarchy without introducing a general permission engine.
 
 ### Scope and authority
 
-| Access level        | Committee scope                | Operational data                                                                    | Access management                 |
-| ------------------- | ------------------------------ | ----------------------------------------------------------------------------------- | --------------------------------- |
-| `COMMITTEE_MANAGER` | Exactly one assigned committee | Own events, registrations, counts, lifecycle and export                             | None                              |
-| `BOARD_ADMIN`       | All committees                 | Society-wide events, registrations, counts, filters, lifecycle and existing exports | None                              |
-| `TECHNICAL`         | All committees                 | All application operational data and lifecycle functions                            | Managers and Board Administration |
+| Access level        | Committee scope                | Operational data                                                                    | Access management                                  |
+| ------------------- | ------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `COMMITTEE_MANAGER` | Exactly one assigned committee | Own events, registrations, counts, lifecycle and export                             | None                                               |
+| `BOARD_ADMIN`       | All committees                 | Society-wide events, registrations, counts, filters, lifecycle and existing exports | None                                               |
+| `TECHNICAL`         | All committees                 | All application operational data and lifecycle functions                            | Managers, Board Administration, and Technical Team |
 
 Technical authority comes from the explicit access level, never from the
 `Technical Team` committee name, slug, or membership. Board Administration has
@@ -97,8 +97,13 @@ remain in force.
 committee, status and actions. A Technical user can grant, revoke and atomically
 reassign a manager, and grant or revoke Board Administration. A second manager
 committee assignment fails with a specific reassignment result. Technical
-access is changed only through an approved external maintenance/bootstrap
-routine, not by this screen. Board users cannot invoke any access routine.
+users can also grant and revoke Technical Team access through this screen.
+The external maintenance routine is reserved for initial bootstrap and recovery.
+Board users cannot invoke any access routine. The database serializes Technical
+membership changes and refuses to revoke the last active Technical identity,
+including through maintenance. Ownership transfer grants the new Technical
+account first, verifies its access, then revokes the old account. Emails are
+assignment data, never authorization rules.
 Neither a manager nor a board user can promote themselves. Every access change
 records actor, target, level, committee where relevant, prior and new state,
 time and optional note in the existing append-only private audit table. Global
