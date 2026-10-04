@@ -21,10 +21,15 @@ visible committees, and `manager.revoked` records both states. Invitations had
 already been sent to Technical and the Support placeholder; the latter cannot
 access administration even if the invitation is accepted. Board Auth already
 existed. Finance and Media accounts were not created or assigned. Technical
-Auth confirmed and signed in after deployment at 09:44 UTC. The Board Auth
-user's latest recorded sign-in predates deployment. Screen-level Technical and
-Board pilot confirmation is pending; the manager pilot needs the real Support
-identity from the owner.
+Auth confirmed and signed in after deployment at 09:44 UTC. Auth logs also show
+a Board password login after deployment, but no authenticated screen checks
+have been confirmed. The owner controls both inboxes but does not have both
+passwords. Recovery requests between 09:59 and 10:03 UTC for both accounts were
+rejected by Supabase Auth with `over_email_send_rate_limit` (HTTP 429); no reset
+email was sent by those attempts. Retry through `/admin/recovery` only after the
+email quota clears, and let the owner use each private link and choose passwords
+without sharing them. The production pilot remains unverified; the manager pilot
+also needs the real Support identity from the owner.
 Migration 0020 was applied to production after backup and migration safety
 checks. It renamed only the confirmed M8 smoke identity to `Legacy Events
 (archived M8 smoke)`, preserved its five event and four registration IDs, and
