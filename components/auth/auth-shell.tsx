@@ -35,7 +35,7 @@ export function AuthShell({
         <Starfield />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,oklch(0.05_0_0/0.7)_100%)]" />
       </div>
-      <header className="flex items-center px-4 py-4 sm:px-8 sm:py-6">
+      <header className="absolute inset-x-0 top-0 z-20 flex items-center px-4 py-4 sm:px-8 sm:py-6">
         <div className="flex items-center gap-3">
           <BrandMark size={32} />
           <span className="leading-tight">
@@ -48,31 +48,33 @@ export function AuthShell({
           </span>
         </div>
       </header>
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pt-4 pb-16">
-        <div className="relative mt-32 w-full max-w-sm duration-500 animate-in fade-in-0 slide-in-from-bottom-3">
-          <LoginMascot className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2" />
-          <Card className="gap-0 bg-card px-6 pt-20 pb-6 sm:px-8 sm:pt-[5.5rem] sm:pb-8">
-            <section aria-labelledby={titleId} className="flex flex-col gap-6">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <span className="flex size-10 items-center justify-center rounded-full border bg-background/60">
-                  <Icon aria-hidden="true" className="size-5" />
-                </span>
-                <h1
-                  id={titleId}
-                  className="text-2xl font-semibold tracking-tight"
-                >
-                  {title}
-                </h1>
-              </div>
+      {/* The card is centered on the page on its own: the robot rises above it
+          and the footer hangs below it, both absolutely positioned. On short
+          screens the extra top padding keeps the robot from being clipped. */}
+      <div className="flex flex-1 items-center justify-center px-4 pt-12 pb-20 [@media(max-height:820px)]:pt-52">
+        <div className="relative w-full max-w-sm duration-500 animate-in fade-in-0 slide-in-from-bottom-3">
+          <LoginMascot className="pointer-events-none absolute top-0 left-1/2 z-10 -translate-x-1/2" />
+          <Card className="gap-0 bg-card px-6 pt-14 pb-6 sm:px-8 sm:pt-16 sm:pb-8">
+            <section aria-labelledby={titleId} className="flex flex-col gap-5">
+              <h1
+                id={titleId}
+                className="flex items-center justify-center gap-2.5 text-center text-2xl font-semibold tracking-tight"
+              >
+                <Icon
+                  aria-hidden="true"
+                  className="size-5 shrink-0 text-muted-foreground"
+                />
+                {title}
+              </h1>
               <div className="flex flex-col gap-4">{children}</div>
             </section>
           </Card>
+          {footer ? (
+            <div className="absolute inset-x-0 top-full mt-6 text-center text-sm text-muted-foreground">
+              {footer}
+            </div>
+          ) : null}
         </div>
-        {footer ? (
-          <div className="w-full max-w-sm text-center text-sm text-muted-foreground duration-500 animate-in fade-in-0">
-            {footer}
-          </div>
-        ) : null}
       </div>
     </main>
   );

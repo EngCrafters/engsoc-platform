@@ -9,13 +9,13 @@ canvas is `aria-hidden`, shows a single still frame under
 `prefers-reduced-motion`, pauses when the tab is hidden, and never carries
 content. The card fades in once.
 
-`LoginMascot` is "Volt", a small engineer robot in a hard hat (three.js, loaded
-lazily) who sits on the card's top edge, swings his legs while waiting, waves
-once, follows the pointer with his eyes and covers them while a password field
-has focus. Decorative only: `aria-hidden`, no pointer events, a still frame under
-`prefers-reduced-motion`, and silently absent without WebGL.
-
-`AuthMessage` is the shared error/success banner; `authLinkClass` styles the
-plain-text links ("Forgot your password?", "Back to sign in"). Forms
-(`login-form.tsx`, `recovery-form.tsx`, `reset-form.tsx`) use the shared
-`FormField`/`FormActions` primitives from `components/ui/form-field.tsx`.
+`LoginMascot` is "Volt", a small engineer robot (three.js, loaded lazily) who sits
+on the card's top edge: safety-yellow hard hat with beacon and badge, visor
+with glowing eyes and a smile, headphone cups, chest panel with blinking LEDs,
+tool pouch, jointed arms with orange mittens, and swinging legs with bending
+knees. He waves once on load, follows the pointer with his eyes, looks down and
+smiles while the email field has focus, and covers his eyes (blushing, with the
+odd peek) while a password field has focus. The arms are two-bone rigs solved
+onto their targets, so the hands land on his eyes. Decorative only:
+`aria-hidden`, no pointer events, a still frame under `prefers-reduced-motion`,
+and absent (with a console warning) without three.js or WebGL.
