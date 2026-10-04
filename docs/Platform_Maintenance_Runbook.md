@@ -118,11 +118,14 @@ inspect recent access and authentication audit history.
 
 If recovery displays a temporary sending error, check Supabase Auth logs for
 `/recover` and its error code. `over_email_send_rate_limit` means no message was
-sent; wait for the project's email quota to clear before one new request.
-Do not repeatedly retry, change passwords through the Auth admin API, or mark a
-role pilot verified merely because Auth recorded a login. The account holder
-opens the recovery link and sets their password privately, then verifies the
-appropriate admin screens.
+sent; wait for the project's email quota to clear before one new request. The
+account holder must initiate the SSR/PKCE recovery request and open its email
+link in the same browser and device, where the code verifier is stored. An
+operator must not send a recovery request from their own session on behalf of
+someone who will open the link elsewhere. Do not repeatedly retry, change
+passwords through the Auth admin API, or mark a role pilot verified merely
+because Auth recorded a login. The account holder sets their password
+privately, then verifies the appropriate admin screens.
 
 ## Production order
 

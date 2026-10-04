@@ -27,9 +27,12 @@ have been confirmed. The owner controls both inboxes but does not have both
 passwords. Recovery requests between 09:59 and 10:03 UTC for both accounts were
 rejected by Supabase Auth with `over_email_send_rate_limit` (HTTP 429); no reset
 email was sent by those attempts. Retry through `/admin/recovery` only after the
-email quota clears, and let the owner use each private link and choose passwords
-without sharing them. The production pilot remains unverified; the manager pilot
-also needs the real Support identity from the owner.
+email quota clears. Because the SSR recovery flow stores a PKCE verifier in the
+requesting browser, the owner must submit each request and open its email link
+in that same browser/device, then choose passwords without sharing them. An
+agent-initiated recovery request would not complete in the owner's browser.
+The production pilot remains unverified; the manager pilot also needs the real
+Support identity from the owner.
 Migration 0020 was applied to production after backup and migration safety
 checks. It renamed only the confirmed M8 smoke identity to `Legacy Events
 (archived M8 smoke)`, preserved its five event and four registration IDs, and
