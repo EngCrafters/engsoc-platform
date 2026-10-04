@@ -8,12 +8,12 @@ recovery link belongs in this document, git, logs or chat.
 
 ## Authority
 
-| Access                             | Where managed                         | Scope                                              |
-| ---------------------------------- | ------------------------------------- | -------------------------------------------------- |
-| Committee Manager                  | Technical Team at `/admin/access`     | Exactly one committee                              |
-| Board Administration               | Technical Team at `/admin/access`     | Global operational                                 |
-| Technical Team                     | External `app_maintenance` procedure  | Global application                                 |
-| Infrastructure/project maintenance | Supabase/Vercel/GitHub administrators | Database security, secrets, migrations and hosting |
+| Access                             | Where managed                                                  | Scope                                              |
+| ---------------------------------- | -------------------------------------------------------------- | -------------------------------------------------- |
+| Committee Manager                  | Technical Team at `/admin/access`                              | Exactly one committee                              |
+| Board Administration               | Technical Team at `/admin/access`                              | Global operational                                 |
+| Technical Team                     | Technical Team at `/admin/access`; external bootstrap/recovery | Global application                                 |
+| Infrastructure/project maintenance | Supabase/Vercel/GitHub administrators                          | Database security, secrets, migrations and hosting |
 
 The Technical Team committee row is an ordinary event owner; it does not
 confer the `TECHNICAL` access level. Do not infer access from names, emails,
@@ -24,7 +24,7 @@ Migration 0017's `private.access_auth_users` view projects only Auth user IDs
 and emails for private routines. It is owned by `postgres`; browser roles have
 no SELECT privilege. Never expose the view through the public API.
 
-## Technical bootstrap, change and recovery
+## Technical bootstrap and recovery
 
 1. Verify the requested person's identity and the approved access change
    outside the application. Select their **existing, real** Supabase Auth user
@@ -44,19 +44,32 @@ no SELECT privilege. Never expose the view through the public API.
    );
    ```
 
-   Use `false` to revoke Technical access. `SUCCESS` means the access row and
+   Use `false` only for exceptional recovery revocation. `SUCCESS` means the access row and
    audit row committed together. `ALREADY_ACTIVE`, `CONFLICT`, `NOT_FOUND`,
-   `USER_NOT_FOUND` and `ACTOR_NOT_FOUND` mean no change; reconcile identity and
+   `USER_NOT_FOUND`, `ACTOR_NOT_FOUND` and `LAST_TECHNICAL_ADMIN` mean no change; reconcile identity and
    state before retrying. Never change `administrative_access` directly.
 
 4. Read back the target's access level and `revoked_at`, then inspect the
-   `access.technical_changed` audit row. Have the named person sign in and
+   `technical.granted` or `technical.revoked` audit row. Have the named person sign in and
    verify global access and `/admin/access`. A Board or Manager account must
    be denied the Technical screen and routine.
 5. To recover from loss of all Technical accounts, a verified external
    maintainer repeats this procedure for one named Auth user. Do not use a
    hardcoded email, reset a password as an access workaround, or grant a
    committee named Technical Team to simulate the role.
+
+## Technical ownership transfer
+
+An active Technical administrator opens `/admin/access`, selects an existing
+Auth user, chooses **Technical Team**, and confirms the grant of full
+application authority. The database verifies the actor and target, grants
+access and records `technical.granted` atomically. Have the new person sign in,
+verify global scope and access management, then use **Revoke Technical access**
+on the old account if requested. `technical.revoked` records both states.
+`LAST_TECHNICAL_ADMIN` blocks removal of the final active Technical identity,
+including self-removal. Do not edit source code, environment variables or
+database rows to replace a person. The external routine remains available only
+for bootstrap or verified recovery.
 
 ## Board and Committee Manager access
 
@@ -66,8 +79,10 @@ committee for a manager. The server and database routine recheck Technical
 authority. A manager already assigned elsewhere returns `REASSIGN_REQUIRED`;
 use the explicit Reassign action to atomically replace the committee ID.
 Revoke leaves the access row and audit intact. Board users cannot perform any
-access change, including to themselves. Technical changes are unavailable in
-this screen.
+access change, including to themselves. Manager revocation, reassignment and
+Board revocation use the same confirmed UI actions. Their respective audit
+actions are `manager.assigned`, `manager.reassigned`, `manager.revoked`,
+`board_admin.granted` and `board_admin.revoked`.
 
 To add a manager later for Forum, Evening, Relations or Society Affairs,
 select or create the **real** Auth user, then use the same workflow and select

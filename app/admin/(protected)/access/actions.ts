@@ -19,6 +19,9 @@ const MESSAGES: Record<string, string> = {
   USER_NOT_FOUND: "Select an existing authenticated user.",
   COMMITTEE_NOT_FOUND: "Select a valid committee.",
   INVALID_TRANSITION: "This reassignment is not valid.",
+  LAST_TECHNICAL_ADMIN:
+    "At least one active Technical Team administrator must remain. Assign another Technical Team user before removing this account.",
+  SELF_ESCALATION: "You cannot elevate your own account through this action.",
 };
 
 export async function changeAccessAction(
@@ -37,14 +40,17 @@ export async function changeAccessAction(
   if (
     typeof userId !== "string" ||
     !isUuid(userId) ||
-    (level !== "BOARD_ADMIN" && level !== "COMMITTEE_MANAGER") ||
+    (level !== "BOARD_ADMIN" &&
+      level !== "COMMITTEE_MANAGER" &&
+      level !== "TECHNICAL") ||
     (operation !== "grant" &&
       operation !== "reassign" &&
       operation !== "revoke") ||
     typeof committeeId !== "string" ||
     (committeeId !== "" && !isUuid(committeeId)) ||
     (level === "COMMITTEE_MANAGER" && !isUuid(committeeId)) ||
-    (level === "BOARD_ADMIN" && committeeId !== "") ||
+    (level !== "COMMITTEE_MANAGER" && committeeId !== "") ||
+    (level === "TECHNICAL" && operation === "reassign") ||
     typeof note !== "string" ||
     note.length > 200
   ) {

@@ -5,8 +5,8 @@
 Accepted specification, October 4, 2026. The owner resolved the legacy
 `Events` row and reviewer authority on this date. The application and database
 implementation follows only after this specification and its UC-02 companions
-are committed, pushed, and verified in CI. Real production identities remain a
-rollout input, not a specification decision.
+are committed, pushed, and verified in CI. The five supplied production emails
+are rollout assignments, not authorization constants.
 
 ## Context
 

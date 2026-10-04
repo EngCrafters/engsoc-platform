@@ -131,7 +131,7 @@ describe("application access hierarchy", () => {
     expect(legacyGlobalCount.total_count).toBe(0);
     const [technicalAudit] = await runtime<{ action: string }[]>`
       SELECT action FROM private.list_access_audit(${technical}::uuid) LIMIT 1`;
-    expect(technicalAudit.action).toBe("access.granted");
+    expect(technicalAudit.action).toBe("manager.assigned");
     const boardAudit = await runtime`
       SELECT * FROM private.list_access_audit(${board}::uuid)`;
     expect(boardAudit).toHaveLength(0);
@@ -292,7 +292,7 @@ describe("application access hierarchy", () => {
         };
       }[]
     >`
-      SELECT changes FROM private.uc02_audit WHERE action = 'access.reassigned'
+      SELECT changes FROM private.uc02_audit WHERE action = 'manager.reassigned'
         AND changes->>'userId' = ${manager} ORDER BY occurred_at DESC LIMIT 1
     `;
     expect(audit[0].changes.previous.committeeId).toBe(media);
@@ -427,5 +427,112 @@ describe("application access hierarchy", () => {
       changes: { previous: { approvedBy: board }, next: { approvedBy: null } },
     });
     expect(audit[0].occurred_at).toBeInstanceOf(Date);
+  });
+
+  it("transfers Technical ownership through the application with an atomic audit", async () => {
+    const first = randomUUID();
+    const second = randomUUID();
+    await admin`INSERT INTO auth.users (id, email) VALUES
+      (${first}, ${`${first}@example.test`}), (${second}, ${`${second}@example.test`})`;
+    const [bootstrap] = await maintenance<{ result: { code: string } }[]>`
+      SELECT private.set_technical_access(${technical}::uuid, ${first}::uuid, true) AS result`;
+    expect(bootstrap.result.code).toBe("SUCCESS");
+    const [boardDenied] = await runtime<{ result: { code: string } }[]>`
+      SELECT private.change_technical_access(${board}::uuid, ${second}::uuid, 'grant') AS result`;
+    expect(boardDenied.result.code).toBe("FORBIDDEN");
+    const [granted] = await runtime<{ result: { code: string } }[]>`
+      SELECT private.change_technical_access(${first}::uuid, ${second}::uuid,
+        'grant', 'ownership transfer') AS result`;
+    expect(granted.result.code).toBe("SUCCESS");
+    const secondScope = await runtime`
+      SELECT id FROM private.list_admin_events(${second}::uuid, NULL, 'all', NULL, NULL, 20)`;
+    expect(secondScope.length).toBeGreaterThan(0);
+    const [revoked] = await runtime<{ result: { code: string } }[]>`
+      SELECT private.change_technical_access(${second}::uuid, ${first}::uuid,
+        'revoke', 'ownership transfer complete') AS result`;
+    expect(revoked.result.code).toBe("SUCCESS");
+    const firstScope = await runtime`
+      SELECT id FROM private.list_admin_events(${first}::uuid, NULL, 'all', NULL, NULL, 20)`;
+    expect(firstScope).toHaveLength(0);
+    const [audit] = await admin<
+      {
+        changes: { previous: { active: boolean }; next: { active: boolean } };
+      }[]
+    >`
+      SELECT changes FROM private.uc02_audit WHERE action = 'technical.revoked'
+        AND changes->>'userId' = ${first} ORDER BY occurred_at DESC LIMIT 1`;
+    expect(audit.changes).toMatchObject({
+      previous: { active: true },
+      next: { active: false },
+    });
+  });
+
+  it("replaces a manager without changing committee data or retaining old access", async () => {
+    const oldManager = randomUUID();
+    const newManager = randomUUID();
+    await admin`INSERT INTO auth.users (id) VALUES (${oldManager}), (${newManager})`;
+    const [before] = await runtime<{ total_count: number }[]>`
+      SELECT total_count FROM private.count_admin_events(${technical}::uuid, ${media}::uuid)`;
+    const [assigned] = await runtime<{ result: { code: string } }[]>`
+      SELECT private.change_administrative_access(${technical}::uuid, ${oldManager}::uuid,
+        'COMMITTEE_MANAGER', ${media}::uuid, 'grant') AS result`;
+    expect(assigned.result.code).toBe("SUCCESS");
+    const [revoked] = await runtime<{ result: { code: string } }[]>`
+      SELECT private.change_administrative_access(${technical}::uuid, ${oldManager}::uuid,
+        'COMMITTEE_MANAGER', ${media}::uuid, 'revoke') AS result`;
+    expect(revoked.result.code).toBe("SUCCESS");
+    const [replacement] = await runtime<{ result: { code: string } }[]>`
+      SELECT private.change_administrative_access(${technical}::uuid, ${newManager}::uuid,
+        'COMMITTEE_MANAGER', ${media}::uuid, 'grant') AS result`;
+    expect(replacement.result.code).toBe("SUCCESS");
+    const oldEvents = await runtime`
+      SELECT id FROM private.list_admin_events(${oldManager}::uuid, ${media}::uuid,
+        'all', NULL, NULL, 20)`;
+    expect(oldEvents).toHaveLength(0);
+    const newEvents = await runtime`
+      SELECT id FROM private.list_admin_events(${newManager}::uuid, ${media}::uuid,
+        'all', NULL, NULL, 20)`;
+    expect(newEvents.length).toBeGreaterThan(0);
+    const [after] = await runtime<{ total_count: number }[]>`
+      SELECT total_count FROM private.count_admin_events(${technical}::uuid, ${media}::uuid)`;
+    expect(after.total_count).toBe(before.total_count);
+    const audit = await admin<{ action: string }[]>`
+      SELECT action FROM private.uc02_audit
+      WHERE changes->>'userId' = ${oldManager} AND action IN ('manager.assigned','manager.revoked')`;
+    expect(audit.map((row) => row.action).sort()).toEqual([
+      "manager.assigned",
+      "manager.revoked",
+    ]);
+  });
+
+  it("refuses removal of the final Technical owner, including maintenance", async () => {
+    const last = randomUUID();
+    await admin`INSERT INTO auth.users (id) VALUES (${last})`;
+    let runtimeCode: string | undefined;
+    let maintenanceCode: string | undefined;
+    await expect(
+      admin.begin(async (transaction) => {
+        await transaction`UPDATE public.administrative_access
+        SET revoked_at = now() WHERE access_level = 'TECHNICAL' AND revoked_at IS NULL`;
+        await transaction`INSERT INTO public.administrative_access
+        (user_id, access_level, granted_by) VALUES (${last}, 'TECHNICAL', ${last})`;
+        await transaction`SET LOCAL ROLE app_runtime`;
+        const [runtimeResult] = await transaction<
+          { result: { code: string } }[]
+        >`
+        SELECT private.change_technical_access(${last}::uuid, ${last}::uuid, 'revoke') AS result`;
+        runtimeCode = runtimeResult.result.code;
+        await transaction`RESET ROLE`;
+        await transaction`SET LOCAL ROLE app_maintenance`;
+        const [maintenanceResult] = await transaction<
+          { result: { code: string } }[]
+        >`
+        SELECT private.set_technical_access(${last}::uuid, ${last}::uuid, false) AS result`;
+        maintenanceCode = maintenanceResult.result.code;
+        throw new Error("ROLLBACK_LAST_OWNER_FIXTURE");
+      })
+    ).rejects.toThrow("ROLLBACK_LAST_OWNER_FIXTURE");
+    expect(runtimeCode).toBe("LAST_TECHNICAL_ADMIN");
+    expect(maintenanceCode).toBe("LAST_TECHNICAL_ADMIN");
   });
 });

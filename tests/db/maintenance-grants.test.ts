@@ -38,7 +38,7 @@ describe("Technical bootstrap boundary", () => {
       }[]
     >`
       SELECT actor_user_id, changes FROM private.uc02_audit
-      WHERE action = 'access.technical_changed' AND changes->>'userId' = ${target}`;
+      WHERE action = 'technical.granted' AND changes->>'userId' = ${target}`;
     expect(audit.actor_user_id).toBe(actor);
     expect(audit.changes).toMatchObject({
       previous: null,

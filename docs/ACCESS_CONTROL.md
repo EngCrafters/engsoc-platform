@@ -1,10 +1,10 @@
 # Application access contract
 
 Status: accepted specification, October 4, 2026. ADR 0012 records the decision.
-The specification gate passed in commit `b73b6ec`. Migrations 0016–0018
-have been rehearsed locally and applied to staging; production remains on the
-previous schema until the coordinated rollout. Real production identities are
-still needed for the pilot and assignments.
+The specification gate passed in commit `b73b6ec`; the transferable ownership
+decision is recorded in ADR 0012. Migrations 0016–0019 have been rehearsed
+locally and applied to staging. Production rollout status is tracked in
+[CURRENT_WORK.md](CURRENT_WORK.md).
 
 ## Hierarchy
 
@@ -16,6 +16,7 @@ still needed for the pilot and assignments.
 | Committee selector                                     | No                | Yes                  | Yes                                           |
 | Manage committee managers                              | No                | No                   | Yes                                           |
 | Manage Board Administration                            | No                | No                   | Yes                                           |
+| Manage Technical Team access                           | No                | No                   | Yes, with last-owner safeguard                |
 | Application technical controls                         | No                | No                   | Yes                                           |
 | Infrastructure, secrets, RLS, migrations               | No                | No                   | External technical maintenance procedure only |
 
@@ -81,13 +82,14 @@ the old scope immediately, establishes the new scope, and writes an audit row
 with both states. Revocation retains the row and audit. Technical users may
 grant and revoke `BOARD_ADMIN`; Board users cannot invoke this workflow.
 
-`TECHNICAL` access is bootstrapped, changed and recovered only by the approved
-external maintenance role through a fixed audited routine. The in-app access
-screen cannot grant Technical access, including to its current user. Loss of
-all Technical accounts requires an external maintainer with verified project
-authority to restore one named Auth user; recovery does not use a hardcoded
-email or a password in documentation. Infrastructure credentials and secrets
-stay outside the application.
+An active Technical user can grant or revoke `TECHNICAL` through `/admin/access`.
+The database serializes those changes and rejects removal of the final active
+Technical identity, including through the maintenance routine. Transfer
+ownership by granting the replacement first, verifying their account and global
+access, then revoking the old account. The fixed external maintenance routine
+is for initial bootstrap or verified recovery, never for routine replacement.
+Neither route hardcodes an email. Infrastructure credentials and secrets stay
+outside the application.
 
 Any later committee is added as catalog data with a unique slug. Any later
 manager is assigned through the same workflow. Neither action requires a new
@@ -108,11 +110,14 @@ one private, read-only view of Auth user IDs and emails, owned by `postgres` and
 selectable only by the private routine owner. Browser roles cannot query it.
 The view contains no duplicate data or independent authorization state.
 Migration 0018 retains explicit nulls in review-rejection audit state.
+Migration 0019 makes Technical ownership transferable while preserving an active
+owner. It adds narrowly granted routines and specific manager, Board and
+Technical audit actions.
 
 Every access mutation writes actor, target user, level, committee where
 relevant, previous state, new state, timestamp and an optional bounded note.
 The audit covers manager grant/reassignment/revocation, Board grant/revocation
-and Technical bootstrap/change. Audit writes occur in the same transaction as
+and Technical grant/revocation. Audit writes occur in the same transaction as
 access changes. The audit table remains private and append-only; authorized
 Technical inspection uses a narrow server routine, not raw browser table
 access. Do not record passwords, tokens or full attendee exports in audit.
@@ -174,7 +179,7 @@ rehearsed migrations, not UI visibility as security evidence.
 | H07 | A managerless committee is visible and operable to Board and Technical without a placeholder user or error.                                                |
 | H08 | An Auth user with no active access sees no admin data and cannot invoke privileged routines, even with forged metadata or actor IDs.                       |
 | H09 | Anon can read only public-safe event columns; admin operations and attendee PII remain denied.                                                             |
-| H10 | Technical access can change only through the external audited procedure; the in-app access routine rejects it and all self-escalation attempts.            |
+| H10 | Technical access transfers through the Technical-only application routine; the last active owner is protected and all changes are audited.                 |
 | H11 | Catalog migration isolates legacy `Events`, preserves mapped Arabic IDs and event/registration/audit relationships, and creates no duplicate committee.    |
 | H12 | A fresh database and a restored prior-version database both migrate successfully; backup recovery retains access, RLS and audit.                           |
 | H13 | A different Board or Technical actor can approve/reject; manager and self-review are denied; approval and rejection are audited.                           |
@@ -188,9 +193,18 @@ and negative paths; then assign the remaining current managers. Push through
 GitHub `main` and verify GitHub Actions and Vercel. The landing-page migration
 starts only after this layer is proven.
 
-## Production identity input
+## Current production assignments
 
-The owner will supply real users/emails for one Technical, one Board, and the
-Support & Logistics, Finance and Media managers. Production assignment is
-deferred until that mapping arrives. The other four committees receive no
-placeholder manager accounts.
+These emails are current assignment data, not authorization constants:
+
+| Access               | Committee                     | User / email                     |
+| -------------------- | ----------------------------- | -------------------------------- |
+| Technical Team       | Technical Team                | hishamalhn@gmail.com             |
+| Board Administration | All Committees                | engineeringsociety.squ@gmail.com |
+| Committee Manager    | Support & Logistics Committee | unknown11110000@gmail.com        |
+| Committee Manager    | Finance Committee             | loay1784@gmail.com               |
+| Committee Manager    | Media Committee               | alshifa.alrawahi112@gmail.com    |
+
+Forum, Evening, Relations and Society Affairs intentionally have no ordinary
+manager accounts. Actual provisioning and pilot status are recorded in
+[CURRENT_WORK.md](CURRENT_WORK.md).

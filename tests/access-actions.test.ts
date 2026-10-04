@@ -55,13 +55,32 @@ describe("Technical access action", () => {
     expect(state.change).not.toHaveBeenCalled();
   });
 
-  it("never accepts Technical grants from the browser form", async () => {
+  it("sends Technical ownership changes through the authorized server routine", async () => {
     const result = await changeAccessAction(
       initial,
       form("grant", "TECHNICAL", "")
     );
+    expect(result.success).toBe(true);
+    expect(state.change).toHaveBeenCalledWith({
+      actorId: actor,
+      userId: target,
+      level: "TECHNICAL",
+      committeeId: null,
+      operation: "grant",
+      note: "approved change",
+    });
+  });
+
+  it("shows a clear last-owner safeguard error", async () => {
+    state.change.mockResolvedValueOnce({ code: "LAST_TECHNICAL_ADMIN" });
+    const result = await changeAccessAction(
+      initial,
+      form("revoke", "TECHNICAL", "")
+    );
     expect(result.success).toBe(false);
-    expect(state.change).not.toHaveBeenCalled();
+    expect(result.message).toContain(
+      "At least one active Technical Team administrator"
+    );
   });
 
   it("passes an explicit one-committee reassignment and refreshes the list", async () => {

@@ -134,6 +134,13 @@
       "when": 1791079200000,
       "tag": "0018_review_audit_state",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791082800000,
+      "tag": "0019_transferable_technical_ownership",
+      "breakpoints": true
     }
   ]
 }

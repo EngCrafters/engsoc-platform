@@ -2,6 +2,13 @@
 
 **ACCESS HIERARCHY INITIATIVE (October 4, 2026):** The owner has explicitly
 authorized finalizing application access before any landing-page migration.
+The owner has now supplied all five production emails and selected transferable
+Technical ownership through the application, protected by a last-active-owner
+database rule. ADR 0012 records this update. Migration 0019 and the access UI
+were rehearsed locally and on staging. Local gates passed: format, lint,
+typecheck, 136 tests, Drizzle migration check, production build, 20 Playwright
+browser tests and diff check. Production still runs the prior schema and app
+pending the coordinated cutover; the existing robot/auth UI was left intact.
 [ADR 0012](adr/0012-application-access-hierarchy.md) and
 [ACCESS_CONTROL.md](ACCESS_CONTROL.md) record the three levels, single-committee
 manager rule, eight-committee catalog, audit and rollout gates. The specification
@@ -10,8 +17,8 @@ read-only inspection found one `Events` committee with five archived M8 smoke
 events, four registrations and one active manager; staging had the same
 committee ID, four events and two active managers. The owner decided to keep
 `Events` isolated as legacy smoke data and to allow a different Board or
-Technical actor to review. Migrations 0016–0018 and the new UI are local;
-all three migrations were applied to staging on October 4. Staging now has eight
+Technical actor to review. Migrations 0016–0019 and the access UI are local;
+all four migrations were applied to staging on October 4. Staging now has eight
 live committees, an isolated legacy row and four events, no active legacy
 access, two migration revocation audits, and FORCE RLS. The old staging manager
 Auth test confirms that the old account has no final committee scope. The
@@ -23,8 +30,8 @@ bytes). PostgreSQL 17 `pg_restore --list` found 523 archive entries, and a full
 archive decode to `/dev/null` succeeded. The local migration rehearsal and
 backup/restore test passed. Supabase reports WAL archiving but no listed physical
 backup or PITR window; the logical archive is the confirmed recovery artifact.
-Real production identities are required before the coordinated schema/app cutover
-and pilot. No landing-page change has been made.
+Four of the named production addresses are not yet Auth users and require
+approved invitations before the pilot. No landing-page change has been made.
 Production's five titles all begin `M8 release smoke`; all five are archived,
 and the four registrations use test-pattern email addresses. Cleanup still
 waits for the reviewed, backed-up post-pilot procedure in ACCESS_CONTROL.md.
@@ -75,7 +82,7 @@ failed after all workflow assertions, was corrected, and a separate read-only
 archived-record verification exited successfully. Vercel's error log query
 returned no errors for this deployment.
 
-**NEXT EXACT TASK:** Obtain the five named production identity mappings. Coordinate the
+**NEXT EXACT TASK:** Provision the four missing named Auth accounts. Coordinate the
 production schema and application delivery, pilot Technical, Board and one
 manager, assign the remaining two current managers, and verify GitHub CI and
 the serving Vercel deployment. Leave the four other committees managerless.

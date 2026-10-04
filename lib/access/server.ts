@@ -42,12 +42,20 @@ export async function listAccessAudit(actorId: string) {
 export async function changeAccess(input: {
   actorId: string;
   userId: string;
-  level: "COMMITTEE_MANAGER" | "BOARD_ADMIN";
+  level: AccessLevel;
   committeeId: string | null;
   operation: "grant" | "reassign" | "revoke";
   note: string | null;
 }) {
-  const rows = await db.execute<{ result: { code: string } }>(sql`
+  const rows =
+    input.level === "TECHNICAL"
+      ? await db.execute<{ result: { code: string } }>(sql`
+          SELECT private.change_technical_access(
+            ${input.actorId}::uuid, ${input.userId}::uuid,
+            ${input.operation}::text, ${input.note}::text
+          ) AS result
+        `)
+      : await db.execute<{ result: { code: string } }>(sql`
     SELECT private.change_administrative_access(
       ${input.actorId}::uuid, ${input.userId}::uuid,
       ${input.level}::public.administrative_access_level,

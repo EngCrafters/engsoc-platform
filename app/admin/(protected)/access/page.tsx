@@ -38,6 +38,17 @@ function auditState(
   return `${level} · ${committee} · ${state.active ? "Active" : "Revoked"}`;
 }
 
+const auditLabels: Record<string, string> = {
+  "manager.assigned": "Manager assigned",
+  "manager.reassigned": "Manager reassigned",
+  "manager.revoked": "Manager revoked",
+  "board_admin.granted": "Board access granted",
+  "board_admin.revoked": "Board access revoked",
+  "technical.granted": "Technical access granted",
+  "technical.revoked": "Technical access revoked",
+  "access.revoked": "Legacy access revoked",
+};
+
 export default async function AccessPage() {
   const actor = await getManagerContext();
   if (actor.kind !== "manager" || actor.accessLevel !== "TECHNICAL") {
@@ -55,7 +66,7 @@ export default async function AccessPage() {
       <AdminPageHeader
         headingId="access-title"
         title="Technical Administration"
-        description="Manage committee managers and Board Administration access."
+        description="Manage committee, Board Administration, and Technical Team access."
       />
       <AccessManagement
         rows={[...rows]}
@@ -88,7 +99,7 @@ export default async function AccessPage() {
                     })}
                   </TableCell>
                   <TableCell>
-                    {entry.action.replace("access.", "").replaceAll("_", " ")}
+                    {auditLabels[entry.action] ?? entry.action}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {users.find((user) => user.user_id === entry.actor_user_id)

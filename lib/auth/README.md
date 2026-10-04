@@ -20,8 +20,9 @@ Tests: `tests/auth-paths.test.ts`, `tests/manager-context.test.ts`,
 `getManagerContext` resolves the signed-in email, user id and explicit access
 level. Committee Managers have one committee ID; Board Administration and
 Technical Team have global application scope. `Technical Team` in the catalog
-is a normal committee and its name grants no authority. Technical access is
-changed only through the external `app_maintenance` routine. See ADR 0012,
+is a normal committee and its name grants no authority. An active Technical
+user can transfer Technical ownership at `/admin/access`; the external
+`app_maintenance` routine is reserved for bootstrap and recovery. See ADR 0012,
 `docs/ACCESS_CONTROL.md`, and `docs/Platform_Maintenance_Runbook.md`. Never
 branch on a specific email. `/admin/account` shows current scope; password
 recovery never changes administrative access.
