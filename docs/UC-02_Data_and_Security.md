@@ -1,5 +1,12 @@
 # UC-02 data and security contract
 
+**Access revision (October 4, 2026):** [ADR 0012](adr/0012-application-access-hierarchy.md)
+and the [access contract](ACCESS_CONTROL.md) specify the owner's replacement
+hierarchy, single-committee constraint, global reviewers, legacy isolation and
+audit. Sections 1 and 4 through 7 below describe the deployed manager-only
+baseline until the new migration is applied. Public registration and attendee
+privacy rules remain binding.
+
 Revision 3, September 15, 2026. Companion to [the deep dive](UC-02_Deep_Dive.md).
 **Approved data contract.** O-01 and its approval fields were delivered in M2.
 Staging and the selected main project have applied the UC-02 migrations through

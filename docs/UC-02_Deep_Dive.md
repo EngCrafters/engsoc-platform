@@ -1,5 +1,13 @@
 # UC-02: Event announcement, registration, and committee administration
 
+**Access revision (October 4, 2026):** The owner has specified a three-level
+application hierarchy, a single committee per ordinary manager, and global
+Board/Technical review authority. See [ADR 0012](adr/0012-application-access-hierarchy.md)
+and the [access contract](ACCESS_CONTROL.md). The manager-only access text below
+records the deployed UC-02 baseline; those access clauses are superseded by
+the new specification once its migration is applied. Section 11 below records
+the updated O-01 reviewer decision.
+
 **Specification revision:** 3, September 15, 2026.
 **Gate:** O-01 answered by the owner (per-committee two-manager review, section
 11). This revision, both companion contracts, and the section 15 checklist
@@ -438,7 +446,21 @@ Consulted September 15, 2026:
 
 No industry source selects the society's board/committee approval authority.
 
-## 11. O-01 — finalized approval model
+## 11. O-01 — finalized approval model, revised October 4, 2026
+
+The original same-committee second-manager requirement below is historical.
+The owner now requires a different `BOARD_ADMIN` or `TECHNICAL` user to approve
+or reject a review-required event. Board is the normal reviewer; Technical is
+a fallback. An ordinary Committee Manager cannot approve or reject. Reviewer
+authority comes from the explicit application access level, not committee
+membership. The reviewer must differ from the actor whose current action
+requires review; `flaggedBy` identifies that actor and is updated when
+review-relevant edits invalidate approval. Self-approval remains prohibited.
+Rejection retains a review-required draft, clears approval, increments revision,
+and is audited. Approval and rejection audit actor, event, committee, previous
+and resulting state, and timestamp. The existing lifecycle guards still apply.
+
+### Historical September 15 decision
 
 **O-01 — Which events need approval, and who approves?**
 Requirements p7 says some events may require board or committee approval.
@@ -500,6 +522,17 @@ tests, security matrix, concurrency schedule, and dependency-ordered milestones.
 Passing the specification gate does not mean those implementation tests pass.
 
 ## 15. Specification freeze checklist
+
+The October 4 access revision in ADR 0012 adds this gate before access
+implementation. The owner has resolved the two policy decisions. Production
+identity mapping is an assignment input, not a reason to invent identities.
+
+- [x] Three access levels, exact manager scope and eight catalog entries written.
+- [x] Legacy `Events` stays isolated with its smoke history pending verified cleanup.
+- [x] Board/Technical reviewer authority and no-self-review rule written.
+- [x] RLS, routine, count, export, audit and denial matrix written in the access contract.
+- [x] Production pilot and no-placeholder-account order written.
+- [ ] Access revision committed, pushed and CI verified.
 
 - [x] Scope, public flow, registration lifecycle and public UX explicit.
 - [x] Duplicate, capacity, closing and waitlist rules explicit.

@@ -1,5 +1,19 @@
 # Current work — handoff state
 
+**ACCESS HIERARCHY INITIATIVE (October 4, 2026):** The owner has explicitly
+authorized finalizing application access before any landing-page migration.
+Draft [ADR 0012](adr/0012-application-access-hierarchy.md) and
+[ACCESS_CONTROL.md](ACCESS_CONTROL.md) record the three levels, single-committee
+manager rule, eight-committee catalog, audit and rollout gates. Production
+read-only inspection found one `Events` committee with five archived M8 smoke
+events and one active manager; staging has the same committee ID, four events
+and two active managers. Both projects are PostgreSQL 17 with UC-02 migrations
+through 0015 and FORCE RLS on the relevant tables. The owner decided to keep
+`Events` isolated as legacy smoke data and to allow a different Board or
+Technical actor to review. Real production identities are required before the
+pilot. No new access migration or
+landing-page change has been applied.
+
 See `docs/UC-02_Acceptance_and_Delivery.md` for release evidence and
 `docs/UC-02_Deep_Dive.md` for the frozen behavior contract.
 

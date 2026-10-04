@@ -77,8 +77,9 @@ Use `tabular-nums` for counts, capacity, and any figure in a column.
   a `Dialog` (full screen on mobile). Rows are `SettingRow` (title and help on
   the left, control on the right, stacking by container width).
 - **Auth** (`components/auth/*`): one centered card over a decorative `Starfield`
-  canvas (twinkle plus occasional glints, static under reduced motion). No other
-  effects.
+  galaxy (rotating band, glowing core, twinkling and glinting stars, an occasional
+  shooting star). The screen is always dark whatever the site theme; the canvas is
+  still under reduced motion. No other effects.
 
 ## Components
 

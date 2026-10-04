@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { Starfield } from "@/components/auth/starfield";
 export { MessageBanner as AuthMessage } from "@/components/ui/message-banner";
 
 /**
  * Shared frame for the signed-out admin screens (login, recovery, reset): a
- * centered card over a quiet, twinkling starfield. The starfield is
- * decorative and never carries content. See docs/DESIGN_SYSTEM.md.
+ * centered card over a galaxy. The screen is always dark (the `dark` class
+ * scopes the dark tokens to this subtree) so the stars read as space in
+ * either site theme. The galaxy is decorative and never carries content.
+ * See docs/DESIGN_SYSTEM.md.
  */
 export function AuthShell({
   icon: Icon,
@@ -25,15 +26,15 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <main className="relative isolate flex min-h-screen w-full flex-col overflow-hidden bg-background text-foreground">
+    <main className="dark relative isolate flex min-h-screen w-full flex-col overflow-hidden bg-[oklch(0.1_0_0)] text-foreground">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
       >
         <Starfield />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,color-mix(in_oklab,var(--background)_60%,transparent)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,oklch(0.05_0_0/0.7)_100%)]" />
       </div>
-      <header className="flex items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-6">
+      <header className="flex items-center px-4 py-4 sm:px-8 sm:py-6">
         <div className="flex items-center gap-3">
           <BrandMark size={32} />
           <span className="leading-tight">
@@ -45,14 +46,13 @@ export function AuthShell({
             </span>
           </span>
         </div>
-        <ThemeToggle />
       </header>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pt-4 pb-16">
         <div className="w-full max-w-sm duration-500 animate-in fade-in-0 slide-in-from-bottom-3">
-          <Card className="gap-0 bg-card/85 p-6 backdrop-blur-sm sm:p-8">
+          <Card className="gap-0 bg-card p-6 sm:p-8">
             <section aria-labelledby={titleId} className="flex flex-col gap-6">
               <div className="flex flex-col items-center gap-3 text-center">
-                <span className="flex size-10 items-center justify-center rounded-full border bg-background">
+                <span className="flex size-10 items-center justify-center rounded-full border bg-background/60">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <h1

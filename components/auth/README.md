@@ -1,10 +1,13 @@
 # Auth UI
 
 Shared frame for the signed-out screens: `/admin/login`, `/admin/recovery`,
-`/auth/reset`. `AuthShell` centers one card over the decorative `Starfield` canvas (twinkling
-stars with a few glints; theme-aware, a single static frame under
-`prefers-reduced-motion`, paused when the tab is hidden). The canvas is
-`aria-hidden` and never carries content; the card fades in once.
+`/auth/reset`. `AuthShell` centers one card over the decorative `Starfield` galaxy: a slowly
+rotating Milky Way band with a glowing core, star dust, twinkling and glinting
+stars, and an occasional shooting star. The screen is always dark (a scoped
+`dark` class), whatever the site theme, so the galaxy reads as space. The
+canvas is `aria-hidden`, shows a single still frame under
+`prefers-reduced-motion`, pauses when the tab is hidden, and never carries
+content. The card fades in once.
 
 `AuthMessage` is the shared error/success banner; `authLinkClass` styles the
 plain-text links ("Forgot your password?", "Back to sign in"). Forms
