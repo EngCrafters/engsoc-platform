@@ -42,10 +42,10 @@ export function LifecyclePanel({
           )}
           <AlertDescription>
             {isApproved
-              ? "A different manager approved this revision. It can be published."
+              ? "Board Administration or Technical Team approved this revision. It can be published."
               : isFlagger
-                ? "You flagged this revision for review. A different active manager on this committee must approve it before it can publish."
-                : "This revision needs approval from a different active manager on this committee before it can publish."}
+                ? "You flagged this revision for review. A different Board Administration or Technical Team user must approve it before publication."
+                : "This revision needs approval from a different Board Administration or Technical Team user before publication."}
           </AlertDescription>
         </Alert>
       ) : null}

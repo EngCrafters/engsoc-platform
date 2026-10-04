@@ -1,9 +1,9 @@
 # UC-02 admin identity
 
 `server.ts` creates a fresh cookie-backed Supabase client for every request.
-It uses only the public API key and the current user's session, so manager
+It uses only the public API key and the current user's session, so access
 queries remain subject to Supabase RLS. `manager.ts` verifies identity with
-Supabase Auth and then reads active `committee_managers` grants on every
+Supabase Auth and then reads the active `administrative_access` row on every
 request; it never authorizes from user metadata or a cached role claim.
 
 `paths.ts` allows post-auth redirects only to internal `/admin` paths. Session
@@ -17,14 +17,14 @@ Tests: `tests/auth-paths.test.ts`, `tests/manager-context.test.ts`,
 
 ## Authority model
 
-`getManagerContext` resolves the signed-in email, user id and active committee
-grants. There is deliberately no owner or super-admin concept: a committee
-manager is the highest application role, and platform ownership is an external
-maintenance authority (Supabase project + `app_maintenance`). See
-`docs/adr/0009-external-platform-maintenance-authority.md` and
-`docs/Platform_Maintenance_Runbook.md`. Never branch on a specific email.
-`/admin/account` (read-only) shows a manager their identity, scopes and how
-recovery works; recovery changes the Auth password, never committee grants.
+`getManagerContext` resolves the signed-in email, user id and explicit access
+level. Committee Managers have one committee ID; Board Administration and
+Technical Team have global application scope. `Technical Team` in the catalog
+is a normal committee and its name grants no authority. Technical access is
+changed only through the external `app_maintenance` routine. See ADR 0012,
+`docs/ACCESS_CONTROL.md`, and `docs/Platform_Maintenance_Runbook.md`. Never
+branch on a specific email. `/admin/account` shows current scope; password
+recovery never changes administrative access.
 
 `local-review.ts` is a dev-only escape hatch, not a production path: when an
 explicit `UC02_LOCAL_REVIEW_DATABASE_URL` env var points at `127.0.0.1` /

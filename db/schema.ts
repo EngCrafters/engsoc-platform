@@ -51,6 +51,11 @@ export const registrationStatus = pgEnum("registration_status", [
   "waitlisted",
   "superseded",
 ]);
+export const administrativeAccessLevel = pgEnum("administrative_access_level", [
+  "COMMITTEE_MANAGER",
+  "BOARD_ADMIN",
+  "TECHNICAL",
+]);
 
 // ---------------------------------------------------------------------------
 // Minimal stub for Supabase's own auth.users table — we don't own or manage
@@ -99,34 +104,33 @@ export const members = pgTable("members", {
 // ---------------------------------------------------------------------------
 export const committees = pgTable("committees", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull().unique(), // e.g. "Events", "Media", "Archive"
+  name: text("name").notNull().unique(),
+  slug: text("slug").unique(), // null only for isolated legacy rows; authorization uses id
 });
 
 // ---------------------------------------------------------------------------
-// Committee manager — the only application-level authorization capability
-// in UC-02 (D03/section 4 of the data contract). References auth.users
-// directly, independent of Member (UC-01 hasn't shipped). Presence of an
-// active (revoked_at IS NULL) row is the entire capability: no role enum,
-// no board/super-admin tier. Revocation is a recorded state change, never a
-// row deletion, so audit history stays intact.
+// Administrative access — one row per Auth user, independent of Member.
+// An active manager has exactly one committee_id; Board and Technical have
+// global application scope and a null committee_id. Technical authority is
+// explicit, never inferred from the Technical Team committee display name.
+// See ADR 0012 and ACCESS_CONTROL.md. Revocation retains the row and audit.
 //
-// Access rule (migration 0010): rows are written only by the maintenance-only
-// routines private.grant_committee_manager / revoke_committee_manager, which
-// write the grant and its private.uc02_audit row in one transaction. Only
-// app_maintenance (external maintenance authority) can execute them;
-// app_runtime, anon, authenticated and service_role cannot, and app_maintenance
-// has no direct INSERT/UPDATE here. Authenticated users may only SELECT their
-// own rows (authenticated_select_own_grants).
+// Access rule (migration 0016): in-app Board/Manager changes use the audited
+// change_administrative_access routine, callable only through app_runtime.
+// Technical changes use the separate audited maintenance routine. Neither
+// runtime login has direct INSERT/UPDATE access. Authenticated browser users
+// may SELECT only their own access row.
 // ---------------------------------------------------------------------------
-export const committeeManagers = pgTable(
-  "committee_managers",
+export const administrativeAccess = pgTable(
+  "administrative_access",
   {
     userId: uuid("user_id")
       .notNull()
       .references(() => authUsers.id),
-    committeeId: uuid("committee_id")
+    committeeId: uuid("committee_id").references(() => committees.id),
+    accessLevel: administrativeAccessLevel("access_level")
       .notNull()
-      .references(() => committees.id),
+      .default("COMMITTEE_MANAGER"),
     grantedAt: timestamp("granted_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -137,14 +141,18 @@ export const committeeManagers = pgTable(
     revokedBy: uuid("revoked_by").references(() => authUsers.id),
   },
   (table) => [
-    primaryKey({ columns: [table.userId, table.committeeId] }),
-    index("committee_managers_committee_user_idx").on(
+    primaryKey({ columns: [table.userId] }),
+    index("administrative_access_committee_user_idx").on(
       table.committeeId,
       table.userId
     ),
     check(
-      "committee_managers_revocation_consistency",
-      sql`(${table.revokedAt} IS NULL) = (${table.revokedBy} IS NULL)`
+      "administrative_access_revocation_consistency",
+      sql`${table.revokedAt} IS NOT NULL OR ${table.revokedBy} IS NULL`
+    ),
+    check(
+      "administrative_access_scope_check",
+      sql`(${table.accessLevel} = 'COMMITTEE_MANAGER') = (${table.committeeId} IS NOT NULL)`
     ),
   ]
 );
@@ -410,9 +418,7 @@ export const uc02Audit = privateSchema.table(
     occurredAt: timestamp("occurred_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    committeeId: uuid("committee_id")
-      .notNull()
-      .references(() => committees.id),
+    committeeId: uuid("committee_id").references(() => committees.id),
     eventId: uuid("event_id").references(() => events.id),
     registrationId: uuid("registration_id").references(() => registrations.id),
     actorKind: text("actor_kind").notNull(),
@@ -440,9 +446,10 @@ export const uc02Audit = privateSchema.table(
       sql`${table.action} IN (
         'event.created','event.updated','event.published','event.held',
         'event.reopened','event.archived','event.restored',
-        'event.review_flagged','event.review_unflagged','event.approved',
+        'event.review_flagged','event.review_unflagged','event.approved','event.review_rejected',
         'registration.created','registration.waitlisted','registration.promoted',
         'registration.superseded','grant.activated','grant.revoked',
+        'access.granted','access.reassigned','access.revoked','access.technical_changed',
         'registrations.exported','history.imported'
       )`
     ),

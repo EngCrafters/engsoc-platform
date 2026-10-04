@@ -79,7 +79,7 @@ describe("UC-02 manager-scoped admin event detail", () => {
     const fixture = await createFixture(admin, { status: "published" });
     expect(await detail(fixture.reviewerId, fixture.eventId)).toHaveLength(1);
     await admin`
-      UPDATE public.committee_managers
+      UPDATE public.administrative_access
       SET revoked_at = now(), revoked_by = ${fixture.managerId}
       WHERE user_id = ${fixture.reviewerId} AND committee_id = ${fixture.committeeId}
     `;

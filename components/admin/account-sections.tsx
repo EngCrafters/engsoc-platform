@@ -4,21 +4,22 @@ import { Check, KeyRound, LogOut, Wrench, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { AccessLevel } from "@/lib/auth/manager";
 
 const managerCan = [
-  "Create, edit, and publish events in your committees, subject to review.",
-  "Approve a draft flagged by another manager in the same committee.",
+  "Create, edit, and publish events in your assigned committee, subject to review.",
+  "View only your assigned committee's registrations and counts.",
   "View registrations and export event-scoped CSV files.",
 ];
 
 const managerCannot = [
-  "Manage a committee without an active grant.",
+  "Manage another committee.",
   "Grant, revoke, or change committee access, including your own.",
   "Delete events, alter audit history, or export platform-wide data.",
 ];
 
 const maintenanceOnly = [
-  "Provision accounts and committee-manager access.",
+  "Manage infrastructure accounts, secrets, RLS policies or migrations.",
   "Reset system passwords or change platform settings.",
   "Transfer operational ownership.",
 ];
@@ -102,11 +103,13 @@ export function AccountProfileSection({
   email,
   userId,
   committees,
+  accessLevel = "COMMITTEE_MANAGER",
   idPrefix = "account",
 }: {
   email: string | null;
   userId: string;
   committees: ReadonlyArray<{ id: string; name: string }>;
+  accessLevel?: AccessLevel;
   idPrefix?: string;
 }) {
   return (
@@ -125,14 +128,20 @@ export function AccountProfileSection({
       </SettingRow>
       <SettingRow
         title="Role"
-        description="Not a platform-wide owner or super-admin role."
+        description="Application access level, checked on every request."
       >
-        <Badge variant="secondary">Committee manager</Badge>
+        <Badge variant="secondary">
+          {accessLevel === "TECHNICAL"
+            ? "Technical Team"
+            : accessLevel === "BOARD_ADMIN"
+              ? "Board Administration"
+              : "Committee Manager"}
+        </Badge>
       </SettingRow>
       <SettingRow
         title="Committee access"
         titleId={`${idPrefix}-scope-title`}
-        description="Active grants, checked on every request. Revoked grants stop access immediately."
+        description="Active scope, checked on every request. Revocation stops access immediately."
         className="@lg:items-start"
       >
         <ul
@@ -140,7 +149,10 @@ export function AccountProfileSection({
           aria-labelledby={`${idPrefix}-scope-title`}
           className="flex w-full flex-col divide-y rounded-lg border @lg:w-64"
         >
-          {committees.map((committee) => (
+          {(accessLevel === "COMMITTEE_MANAGER"
+            ? committees
+            : [{ id: "all", name: "All Committees" }]
+          ).map((committee) => (
             <li
               key={committee.id}
               className="flex items-center justify-between gap-3 px-3 py-2"
@@ -164,8 +176,10 @@ export function AccountProfileSection({
 }
 
 export function AccountPermissionsSection({
+  accessLevel = "COMMITTEE_MANAGER",
   idPrefix = "account",
 }: {
+  accessLevel?: AccessLevel;
   idPrefix?: string;
 }) {
   return (
@@ -178,36 +192,76 @@ export function AccountPermissionsSection({
         id={`${idPrefix}-role-title`}
         className="max-w-2xl text-sm text-muted-foreground"
       >
-        This committee manager account is not a platform-wide owner or
-        super-admin role. The application has no such role.
+        {accessLevel === "TECHNICAL"
+          ? "Technical Team has global application access and manages application roles. Infrastructure changes use the separate maintenance procedure."
+          : accessLevel === "BOARD_ADMIN"
+            ? "Board Administration has global operational access across committees and can review events. Access management and technical controls remain with the Technical Team."
+            : "Committee Managers have one fixed committee scope. Board Administration or Technical Team reviews flagged events."}
       </p>
       <section aria-labelledby={`${idPrefix}-can-title`}>
         <h3 id={`${idPrefix}-can-title`} className="mb-3 text-sm font-medium">
-          Committee managers can
+          {accessLevel === "TECHNICAL"
+            ? "Technical Team can"
+            : accessLevel === "BOARD_ADMIN"
+              ? "Board Administration can"
+              : "Committee Managers can"}
         </h3>
-        <ItemList items={managerCan} icon={Check} />
+        <ItemList
+          items={
+            accessLevel === "COMMITTEE_MANAGER"
+              ? managerCan
+              : accessLevel === "BOARD_ADMIN"
+                ? [
+                    "View and manage operational data across all committees.",
+                    "Review flagged events from a different actor.",
+                    "View global counts and export authorized registrations.",
+                  ]
+                : [
+                    "View and manage all committee content.",
+                    "Manage Committee Manager and Board Administration access.",
+                    "Review flagged events from a different actor.",
+                  ]
+          }
+          icon={Check}
+        />
       </section>
       <section aria-labelledby={`${idPrefix}-cannot-title`}>
         <h3
           id={`${idPrefix}-cannot-title`}
           className="mb-3 text-sm font-medium"
         >
-          Committee manager limits
+          {accessLevel === "COMMITTEE_MANAGER"
+            ? "Committee Manager limits"
+            : "Access limits"}
         </h3>
-        <ItemList items={managerCannot} icon={X} />
+        <ItemList
+          items={
+            accessLevel === "COMMITTEE_MANAGER"
+              ? managerCannot
+              : accessLevel === "BOARD_ADMIN"
+                ? [
+                    "Manage application access or Technical Team membership.",
+                    "Access infrastructure credentials, secrets, RLS or migrations.",
+                  ]
+                : [
+                    "Grant Technical access from inside the application.",
+                    "Change infrastructure credentials, RLS or migrations from this dashboard.",
+                  ]
+          }
+          icon={X}
+        />
       </section>
       <section aria-labelledby={`${idPrefix}-maintenance-title`}>
         <h3
           id={`${idPrefix}-maintenance-title`}
           className="mb-3 text-sm font-medium"
         >
-          Needs maintenance authority
+          External maintenance
         </h3>
         <ItemList items={maintenanceOnly} icon={Wrench} />
         <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-          Platform maintenance manages hosting and database accounts. They work
-          outside this application; these controls cannot grant or change their
-          access.
+          Platform maintenance manages hosting and database accounts outside
+          this application.
         </p>
       </section>
     </div>

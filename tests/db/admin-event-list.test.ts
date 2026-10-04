@@ -137,7 +137,7 @@ describe("UC-02 manager-scoped admin event list", () => {
     expect(foreign.total_count).toBe(0);
 
     await admin`
-      UPDATE public.committee_managers SET revoked_at = now(), revoked_by = ${fixture.reviewerId}
+      UPDATE public.administrative_access SET revoked_at = now(), revoked_by = ${fixture.reviewerId}
       WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}
     `;
     const [revoked] = await runtime<{ total_count: number }[]>`

@@ -20,7 +20,7 @@ describe("app_runtime database boundary", () => {
     for (const table of [
       "archive_items",
       "certificates",
-      "committee_managers",
+      "administrative_access",
       "committees",
       "events",
       "members",

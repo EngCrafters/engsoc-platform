@@ -25,7 +25,9 @@ export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
   APPROVAL_REQUIRED:
     "This event cannot be published while review approval is required.",
   SELF_APPROVAL_DENIED:
-    "A different active committee manager must approve this revision.",
+    "A different Board Administration or Technical Team user must review this revision.",
+  GLOBAL_ACCESS_REQUIRED:
+    "This action requires Board Administration or Technical Team access.",
   REGISTRATION_CLOSED:
     "Registration is closed for this event, so this operation cannot continue.",
   EVENT_FULL:

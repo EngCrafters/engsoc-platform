@@ -24,6 +24,7 @@ import {
 const manager = {
   kind: "manager" as const,
   userId: "11111111-1111-4111-8111-111111111111",
+  accessLevel: "COMMITTEE_MANAGER" as const,
   committees: [{ id: "22222222-2222-4222-8222-222222222222", name: "Events" }],
 };
 
@@ -145,5 +146,29 @@ describe("admin event actions", () => {
       code: "VALIDATION_ERROR",
     });
     expect(state.writeLifecycleEvent).not.toHaveBeenCalled();
+  });
+
+  it("requires Board or Technical access for review decisions", async () => {
+    const form = new FormData();
+    form.set("operation", "approve_event");
+    form.set("eventId", "33333333-3333-4333-8333-333333333333");
+    form.set("revision", "2");
+    await expect(lifecycleEventAction(null, form)).resolves.toEqual({
+      code: "GLOBAL_ACCESS_REQUIRED",
+    });
+    expect(state.writeLifecycleEvent).not.toHaveBeenCalled();
+    state.manager.mockResolvedValueOnce({
+      ...manager,
+      accessLevel: "BOARD_ADMIN",
+    });
+    await expect(lifecycleEventAction(null, form)).resolves.toMatchObject({
+      code: "SUCCESS",
+    });
+    expect(state.writeLifecycleEvent).toHaveBeenCalledWith(
+      "approve_event",
+      manager.userId,
+      "33333333-3333-4333-8333-333333333333",
+      2
+    );
   });
 });

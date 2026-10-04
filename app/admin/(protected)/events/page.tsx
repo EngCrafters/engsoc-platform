@@ -32,6 +32,15 @@ export default async function AdminEventsPage({
     requestedCommittee && isUuid(requestedCommittee)
       ? requestedCommittee
       : null;
+  if (
+    manager.accessLevel === "COMMITTEE_MANAGER" &&
+    committeeId &&
+    committeeId !== manager.committees[0]?.id
+  ) {
+    return (
+      <p role="alert">You don’t have permission to manage this committee.</p>
+    );
+  }
   const cursorResult = decodeAdminEventCursor(single(query.cursor), {
     committeeId,
     filter,
@@ -55,7 +64,11 @@ export default async function AdminEventsPage({
       <AdminPageHeader
         title="Events"
         headingId="admin-events-title"
-        description="Plan, publish, and manage your committee events."
+        description={
+          manager.accessLevel === "COMMITTEE_MANAGER"
+            ? "Plan, publish, and manage your committee events."
+            : "View and manage events across all committees."
+        }
         actions={
           <Button asChild>
             <Link href="/admin/events/new">
@@ -68,6 +81,7 @@ export default async function AdminEventsPage({
       {counts.total > 0 ? <EventSummaryStats counts={counts} /> : null}
       <EventListFilters
         committees={manager.committees}
+        globalScope={manager.accessLevel !== "COMMITTEE_MANAGER"}
         committeeId={committeeId}
         filter={filter}
       >

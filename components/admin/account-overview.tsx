@@ -7,15 +7,18 @@ import {
   AccountSecuritySection,
 } from "@/components/admin/account-sections";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { AccessLevel } from "@/lib/auth/manager";
 
 export function AccountOverview({
   email,
   userId,
+  accessLevel = "COMMITTEE_MANAGER",
   committees,
   logoutAction,
 }: {
   email: string | null;
   userId: string;
+  accessLevel?: AccessLevel;
   committees: ReadonlyArray<{ id: string; name: string }>;
   logoutAction: () => void | Promise<void>;
 }) {
@@ -36,11 +39,12 @@ export function AccountOverview({
           <AccountProfileSection
             email={email}
             userId={userId}
+            accessLevel={accessLevel}
             committees={committees}
           />
         </TabsContent>
         <TabsContent value="permissions" className="max-w-3xl">
-          <AccountPermissionsSection />
+          <AccountPermissionsSection accessLevel={accessLevel} />
         </TabsContent>
         <TabsContent value="security" className="max-w-3xl">
           <AccountSecuritySection logoutAction={logoutAction} />

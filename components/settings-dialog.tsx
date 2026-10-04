@@ -154,6 +154,7 @@ export function SettingsDialog({
   restoreFocus,
   email,
   userId,
+  accessLevel = "COMMITTEE_MANAGER",
   committees,
   logoutAction,
 }: {
@@ -164,6 +165,7 @@ export function SettingsDialog({
   restoreFocus: () => void;
   email: string | null;
   userId: string;
+  accessLevel?: import("@/lib/auth/manager").AccessLevel;
   committees: ReadonlyArray<{ id: string; name: string }>;
   logoutAction: () => void | Promise<void>;
 }) {
@@ -250,6 +252,7 @@ export function SettingsDialog({
                   idPrefix="settings-account"
                   email={email}
                   userId={userId}
+                  accessLevel={accessLevel}
                   committees={committees}
                 />
               ) : null}

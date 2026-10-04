@@ -30,15 +30,17 @@ export const EVENT_STATUS_META: Record<
 > = {
   draft: {
     label: "Draft",
-    description: "Only visible to committee managers.",
+    description: "Visible to authorized administration only.",
   },
   review: {
     label: "Review required",
-    description: "A different active manager must approve this revision.",
+    description:
+      "A different Board or Technical user must approve this revision.",
   },
   approved: {
     label: "Approved",
-    description: "Approved by another manager and ready to publish.",
+    description:
+      "Approved by Board Administration or Technical Team and ready to publish.",
   },
   published: {
     label: "Published",

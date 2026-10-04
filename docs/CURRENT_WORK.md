@@ -2,24 +2,39 @@
 
 **ACCESS HIERARCHY INITIATIVE (October 4, 2026):** The owner has explicitly
 authorized finalizing application access before any landing-page migration.
-Draft [ADR 0012](adr/0012-application-access-hierarchy.md) and
+[ADR 0012](adr/0012-application-access-hierarchy.md) and
 [ACCESS_CONTROL.md](ACCESS_CONTROL.md) record the three levels, single-committee
-manager rule, eight-committee catalog, audit and rollout gates. Production
+manager rule, eight-committee catalog, audit and rollout gates. The specification
+was pushed in `b73b6ec` and GitHub CI run `37170504881` passed. Production
 read-only inspection found one `Events` committee with five archived M8 smoke
-events and one active manager; staging has the same committee ID, four events
-and two active managers. Both projects are PostgreSQL 17 with UC-02 migrations
-through 0015 and FORCE RLS on the relevant tables. The owner decided to keep
+events, four registrations and one active manager; staging had the same
+committee ID, four events and two active managers. The owner decided to keep
 `Events` isolated as legacy smoke data and to allow a different Board or
-Technical actor to review. Real production identities are required before the
-pilot. No new access migration or
-landing-page change has been applied.
+Technical actor to review. Migrations 0016–0018 and the new UI are local;
+all three migrations were applied to staging on October 4. Staging now has eight
+live committees, an isolated legacy row and four events, no active legacy
+access, two migration revocation audits, and FORCE RLS. The old staging manager
+Auth test confirms that the old account has no final committee scope. The
+second migration adds a private Auth identity view because Supabase does not
+retain schema `USAGE` for the custom routine owner. Production remains at 0015.
+The fresh production logical backup is stored outside the repository at
+`%LOCALAPPDATA%\\engsoc-platform\\backups\\pre-access-2026-10-04.dump` (381,824
+bytes). PostgreSQL 17 `pg_restore --list` found 523 archive entries, and a full
+archive decode to `/dev/null` succeeded. The local migration rehearsal and
+backup/restore test passed. Supabase reports WAL archiving but no listed physical
+backup or PITR window; the logical archive is the confirmed recovery artifact.
+Real production identities are required before the coordinated schema/app cutover
+and pilot. No landing-page change has been made.
+Production's five titles all begin `M8 release smoke`; all five are archived,
+and the four registrations use test-pattern email addresses. Cleanup still
+waits for the reviewed, backed-up post-pilot procedure in ACCESS_CONTROL.md.
 
 See `docs/UC-02_Acceptance_and_Delivery.md` for release evidence and
 `docs/UC-02_Deep_Dive.md` for the frozen behavior contract.
 
-**CURRENT MILESTONE:** UC-02 M8 production release checks passed. UC-02 closure
-awaits an explicit owner choice of the next use case. M7 was delivered on
-September 23, 2026. Do not start another use case before that choice.
+**CURRENT MILESTONE:** Finalize the access hierarchy and production pilot
+before any landing-page migration. UC-02 M8 release history below is retained
+as context; the old maintenance-only manager model is superseded by ADR 0012.
 
 **SOURCE AND CHECKS:** The M8 integrity pass at `2fdc72f` delivered scoped
 overview counts, bounded export, event editing guards, safe recovery guidance,
@@ -60,10 +75,10 @@ failed after all workflow assertions, was corrected, and a separate read-only
 archived-record verification exited successfully. Vercel's error log query
 returned no errors for this deployment.
 
-**NEXT EXACT TASK:** The owner must choose the next use case explicitly so
-UC-02 can close. Until then, maintain UC-02 without starting another milestone.
-For every later push, continue verifying GitHub CI and the serving Vercel
-deployment.
+**NEXT EXACT TASK:** Obtain the five named production identity mappings. Coordinate the
+production schema and application delivery, pilot Technical, Board and one
+manager, assign the remaining two current managers, and verify GitHub CI and
+the serving Vercel deployment. Leave the four other committees managerless.
 
 **PARALLEL INITIATIVE — DESIGN SYSTEM:** The owner separately authorized a
 project-wide design-system pass (tokens, theming, component foundation,

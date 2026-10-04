@@ -14,6 +14,7 @@ import {
   Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import type { AccessLevel } from "@/lib/auth/manager";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/ui/brand-mark";
 import {
@@ -98,10 +99,12 @@ function SettingsButton({ onOpenSettings }: { onOpenSettings: OpenSettings }) {
 
 function AccountMenu({
   email,
+  accessLevel,
   logoutAction,
   onOpenSettings,
 }: {
   email: string | null;
+  accessLevel: AccessLevel;
   logoutAction: () => void | Promise<void>;
   onOpenSettings: OpenSettings;
 }) {
@@ -132,7 +135,11 @@ function AccountMenu({
                   {identity}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  Committee manager
+                  {accessLevel === "TECHNICAL"
+                    ? "Technical Team"
+                    : accessLevel === "BOARD_ADMIN"
+                      ? "Board Administration"
+                      : "Committee Manager"}
                 </span>
               </div>
               <ChevronsUpDown
@@ -152,7 +159,11 @@ function AccountMenu({
                 {identity}
               </span>
               <span className="block text-xs text-muted-foreground">
-                Committee manager
+                {accessLevel === "TECHNICAL"
+                  ? "Technical Team"
+                  : accessLevel === "BOARD_ADMIN"
+                    ? "Board Administration"
+                    : "Committee Manager"}
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -214,12 +225,14 @@ function AccountMenu({
 
 export function AdminSidebar({
   email,
+  accessLevel,
   committees,
   logoutAction,
   onOpenSettings,
   ...props
 }: {
   email: string | null;
+  accessLevel: AccessLevel;
   committees: Committees;
   logoutAction: () => void | Promise<void>;
   onOpenSettings: OpenSettings;
@@ -239,7 +252,9 @@ export function AdminSidebar({
                     Engineering Society
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    Committee workspace
+                    {accessLevel === "TECHNICAL"
+                      ? "Technical Administration"
+                      : "Administration"}
                   </span>
                 </div>
               </Link>
@@ -249,7 +264,7 @@ export function AdminSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>Administration</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu aria-label="Administration">
               {adminNavigation.workspace.map((link) => (
@@ -258,6 +273,18 @@ export function AdminSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {accessLevel === "TECHNICAL" ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Technical Administration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu aria-label="Technical Administration">
+                {adminNavigation.technical.map((link) => (
+                  <NavLink key={link.href} {...link} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
         <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -280,13 +307,15 @@ export function AdminSidebar({
           >
             <Layers3 aria-hidden="true" className="size-4 shrink-0" />
             <span className="min-w-0 truncate">
-              Scope: {committees[0].name}
-              {committees.length > 1 ? ` +${committees.length - 1}` : ""}
+              {accessLevel === "COMMITTEE_MANAGER"
+                ? committees[0].name
+                : "All Committees"}
             </span>
           </p>
         ) : null}
         <AccountMenu
           email={email}
+          accessLevel={accessLevel}
           logoutAction={logoutAction}
           onOpenSettings={onOpenSettings}
         />

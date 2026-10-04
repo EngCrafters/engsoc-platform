@@ -1,9 +1,10 @@
 # Application access contract
 
 Status: accepted specification, October 4, 2026. ADR 0012 records the decision.
-The existing UC-02 authorization sections remain the deployed historical
-baseline until this contract passes the specification gate and its migration is
-rehearsed and applied. Real production identities are still needed for rollout.
+The specification gate passed in commit `b73b6ec`. Migrations 0016–0018
+have been rehearsed locally and applied to staging; production remains on the
+previous schema until the coordinated rollout. Real production identities are
+still needed for the pilot and assignments.
 
 ## Hierarchy
 
@@ -25,16 +26,16 @@ An authenticated user without active access has no administrative scope.
 
 ## Committee catalog
 
-| Display name                  | Stable slug         | Current ordinary manager assignment                       |
-| ----------------------------- | ------------------- | --------------------------------------------------------- |
-| Support & Logistics Committee | `support-logistics` | Planned                                                   |
-| Relations Committee           | `relations`         | None                                                      |
-| Society Affairs Committee     | `society-affairs`   | None                                                      |
-| Finance Committee             | `finance`           | Planned                                                   |
-| Forum Committee               | `forum`             | None                                                      |
-| Evening Committee             | `evening`           | None                                                      |
-| Media Committee               | `media`             | Planned                                                   |
-| Technical Team                | `technical-team`    | Technical account planned; authority is the explicit role |
+| Display name                  | Stable slug         | Current ordinary manager assignment            |
+| ----------------------------- | ------------------- | ---------------------------------------------- |
+| Support & Logistics Committee | `support-logistics` | Planned                                        |
+| Relations Committee           | `relations`         | None                                           |
+| Society Affairs Committee     | `society-affairs`   | None                                           |
+| Finance Committee             | `finance`           | Planned                                        |
+| Forum Committee               | `forum`             | None                                           |
+| Evening Committee             | `evening`           | None                                           |
+| Media Committee               | `media`             | Planned                                        |
+| Technical Team                | `technical-team`    | None; Technical account uses the explicit role |
 
 Technical Team is also a normal event-owning committee. Its slug and name give
 no technical authority. No-manager committees are first-class records: Board
@@ -101,6 +102,12 @@ forbids it for global roles. The database primary key on user ID prevents
 multiple manager scopes. Revoked access stays recorded. Existing grant rows
 and the private UC-02 audit table are preserved; no parallel permission table
 is added.
+
+Supabase restricts custom-role usage of its `auth` schema. Migration 0017 adds
+one private, read-only view of Auth user IDs and emails, owned by `postgres` and
+selectable only by the private routine owner. Browser roles cannot query it.
+The view contains no duplicate data or independent authorization state.
+Migration 0018 retains explicit nulls in review-rejection audit state.
 
 Every access mutation writes actor, target user, level, committee where
 relevant, previous state, new state, timestamp and an optional bounded note.

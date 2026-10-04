@@ -1,4 +1,9 @@
-import { CalendarDays, CalendarPlus, CircleUserRound } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarPlus,
+  CircleUserRound,
+  Shield,
+} from "lucide-react";
 
 export const adminNavigation = {
   workspace: [
@@ -7,6 +12,9 @@ export const adminNavigation = {
   ],
   account: [
     { href: "/admin/account", label: "Account", icon: CircleUserRound },
+  ],
+  technical: [
+    { href: "/admin/access", label: "Access management", icon: Shield },
   ],
 } as const;
 
@@ -28,6 +36,8 @@ export type AdminBreadcrumb = { label: string; href?: string };
 
 /** Location trail for the header breadcrumb. The last item is the current page. */
 export function adminBreadcrumbs(pathname: string): AdminBreadcrumb[] {
+  if (pathname === "/admin/access")
+    return [{ label: "Technical Administration" }];
   if (pathname === "/admin/account") return [{ label: "Account" }];
   if (pathname === "/admin/events/new") {
     return [{ label: "Events", href: "/admin/events" }, { label: "New event" }];

@@ -60,9 +60,10 @@ export async function getLocalReviewCommittees(
   try {
     return await sql<{ id: string; name: string }[]>`
       SELECT c.id, c.name
-      FROM public.committee_managers cm
+      FROM public.administrative_access cm
       JOIN public.committees c ON c.id = cm.committee_id
       WHERE cm.user_id = ${userId} AND cm.revoked_at IS NULL
+        AND cm.access_level = 'COMMITTEE_MANAGER' AND c.slug IS NOT NULL
       ORDER BY c.name
     `;
   } catch {

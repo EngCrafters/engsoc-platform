@@ -113,6 +113,27 @@
       "when": 1790265600000,
       "tag": "0015_uc02_admin_event_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791072000000,
+      "tag": "0016_application_access_hierarchy",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791075600000,
+      "tag": "0017_supabase_auth_access_bridge",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791079200000,
+      "tag": "0018_review_audit_state",
+      "breakpoints": true
     }
   ]
 }

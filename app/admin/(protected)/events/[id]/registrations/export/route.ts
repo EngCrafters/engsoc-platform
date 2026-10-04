@@ -31,7 +31,7 @@ export async function POST(
   const manager = await getManagerContext();
   if (manager.kind !== "manager")
     return failure(
-      "Sign in as a committee manager to export registrations.",
+      "Sign in with administrative access to export registrations.",
       401
     );
   const { id } = await params;

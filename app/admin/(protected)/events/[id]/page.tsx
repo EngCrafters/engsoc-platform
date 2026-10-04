@@ -61,6 +61,7 @@ export default async function EventPage({
             archived={Boolean(event.archivedAt)}
             reviewRequired={event.reviewRequired}
             isFlagger={event.flaggedBy === manager.userId}
+            canReview={manager.accessLevel !== "COMMITTEE_MANAGER"}
             isApproved={event.approvedBy !== null}
             isPast={status === "past"}
             lifecycleStatus={status}

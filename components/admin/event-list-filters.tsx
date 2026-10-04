@@ -33,11 +33,13 @@ const FILTER_LABELS: Record<AdminEventFilter, string> = {
  */
 export function EventListFilters({
   committees,
+  globalScope,
   committeeId,
   filter,
   children,
 }: {
   committees: readonly { id: string; name: string }[];
+  globalScope: boolean;
   committeeId: string | null;
   filter: AdminEventFilter;
   children: ReactNode;
@@ -99,7 +101,9 @@ export function EventListFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="all">All my committees</SelectItem>
+                  <SelectItem value="all">
+                    {globalScope ? "All Committees" : "My Committee"}
+                  </SelectItem>
                   {committees.map((committee) => (
                     <SelectItem key={committee.id} value={committee.id}>
                       {committee.name}

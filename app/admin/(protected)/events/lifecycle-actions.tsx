@@ -32,6 +32,7 @@ type Props = {
   archived: boolean;
   reviewRequired: boolean;
   isFlagger: boolean;
+  canReview: boolean;
   isApproved: boolean;
   isPast: boolean;
   lifecycleStatus: EventLifecycleStatus;
@@ -150,23 +151,45 @@ export function LifecycleActions(props: Props) {
               >
                 {props.reviewRequired
                   ? "Remove review requirement"
-                  : "Require second-manager review"}
+                  : "Require Board or Technical review"}
               </Action>
-              {props.reviewRequired ? (
-                <Action
-                  operation="approve_event"
-                  icon={ShieldCheck}
-                  disabled={props.isFlagger || props.isApproved}
-                  hint={
-                    props.isFlagger
-                      ? "A different active manager must approve this revision."
-                      : props.isApproved
-                        ? "This revision is approved."
-                        : undefined
-                  }
-                >
-                  Approve current revision
-                </Action>
+              {props.reviewRequired && props.canReview ? (
+                <>
+                  <Action
+                    operation="approve_event"
+                    icon={ShieldCheck}
+                    disabled={props.isFlagger || props.isApproved}
+                    hint={
+                      props.isFlagger
+                        ? "A different Board Administration or Technical Team user must review this revision."
+                        : props.isApproved
+                          ? "This revision is approved."
+                          : undefined
+                    }
+                  >
+                    Approve current revision
+                  </Action>
+                  {!props.isApproved ? (
+                    <div className="flex flex-col items-start gap-2">
+                      <label htmlFor="review-note" className="text-sm">
+                        Rejection note (optional)
+                      </label>
+                      <input
+                        id="review-note"
+                        name="note"
+                        maxLength={200}
+                        className="h-9 w-full max-w-sm rounded-md border bg-transparent px-3 text-sm"
+                      />
+                      <Action
+                        operation="reject_review"
+                        icon={ShieldOff}
+                        disabled={props.isFlagger}
+                      >
+                        Reject review
+                      </Action>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
             </Group>
             {props.status === "draft" ||

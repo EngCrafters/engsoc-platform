@@ -532,7 +532,7 @@ identity mapping is an assignment input, not a reason to invent identities.
 - [x] Board/Technical reviewer authority and no-self-review rule written.
 - [x] RLS, routine, count, export, audit and denial matrix written in the access contract.
 - [x] Production pilot and no-placeholder-account order written.
-- [ ] Access revision committed, pushed and CI verified.
+- [x] Access revision committed, pushed and CI verified (commit `b73b6ec`, run `37170504881`).
 
 - [x] Scope, public flow, registration lifecycle and public UX explicit.
 - [x] Duplicate, capacity, closing and waitlist rules explicit.

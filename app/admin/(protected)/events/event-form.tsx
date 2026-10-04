@@ -313,9 +313,10 @@ export function EventForm({
               <AlertTitle>Approval will be cleared</AlertTitle>
               <AlertDescription>
                 Changing event details creates a new revision. Another active
-                committee manager must approve it before a later publish or
-                reopen action. Published changes appear publicly immediately.
-                Saving unchanged details keeps the approval.
+                Board Administration or Technical Team user must approve it
+                before a later publish or reopen action. Published changes
+                appear publicly immediately. Saving unchanged details keeps the
+                approval.
               </AlertDescription>
             </Alert>
           ) : null}

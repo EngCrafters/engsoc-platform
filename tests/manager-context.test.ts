@@ -7,23 +7,24 @@ import { resolveManagerContext } from "../lib/auth/manager";
 
 function clientFor({
   userId = "manager-id",
-  grants = [{ committee_id: "events-id" }],
+  grants = [{ committee_id: "events-id", access_level: "COMMITTEE_MANAGER" }],
   committees = [{ id: "events-id", name: "Events" }],
 }: {
   userId?: string | null;
-  grants?: Array<{ committee_id: string }>;
+  grants?: Array<{ committee_id: string | null; access_level: string }>;
   committees?: Array<{ id: string; name: string }>;
 } = {}) {
   const managerQuery = {
     select: () => ({
-      is: async () => ({ data: grants, error: null }),
+      is: () => ({
+        maybeSingle: async () => ({ data: grants[0] ?? null, error: null }),
+      }),
     }),
   };
   const committeeQuery = {
     select: () => ({
-      in: () => ({
-        order: async () => ({ data: committees, error: null }),
-      }),
+      in: () => ({ order: async () => ({ data: committees, error: null }) }),
+      not: () => ({ order: async () => ({ data: committees, error: null }) }),
     }),
   };
   return {
@@ -36,7 +37,7 @@ function clientFor({
       }),
     },
     from: (table: string) =>
-      table === "committee_managers" ? managerQuery : committeeQuery,
+      table === "administrative_access" ? managerQuery : committeeQuery,
   } as unknown as SupabaseClient;
 }
 
@@ -46,6 +47,7 @@ describe("manager authorization context", () => {
       kind: "manager",
       userId: "manager-id",
       email: "manager@example.test",
+      accessLevel: "COMMITTEE_MANAGER",
       committees: [{ id: "events-id", name: "Events" }],
     });
   });
@@ -60,19 +62,43 @@ describe("manager authorization context", () => {
     });
   });
 
-  it("does not retain a committee that was revoked between scoped reads", async () => {
+  it("resolves Board Administration with global committee scope", async () => {
     await expect(
       resolveManagerContext(
         clientFor({
-          grants: [{ committee_id: "events-id" }, { committee_id: "media-id" }],
-          committees: [{ id: "events-id", name: "Events" }],
+          grants: [{ access_level: "BOARD_ADMIN", committee_id: null }],
+          committees: [
+            { id: "media-id", name: "Media Committee" },
+            { id: "forum-id", name: "Forum Committee" },
+          ],
         })
       )
     ).resolves.toEqual({
       kind: "manager",
       userId: "manager-id",
       email: "manager@example.test",
-      committees: [{ id: "events-id", name: "Events" }],
+      accessLevel: "BOARD_ADMIN",
+      committees: [
+        { id: "media-id", name: "Media Committee" },
+        { id: "forum-id", name: "Forum Committee" },
+      ],
+    });
+  });
+
+  it("does not retain a committee that was revoked between scoped reads", async () => {
+    await expect(
+      resolveManagerContext(
+        clientFor({
+          grants: [
+            { committee_id: "events-id", access_level: "COMMITTEE_MANAGER" },
+          ],
+          committees: [],
+        })
+      )
+    ).resolves.toEqual({
+      kind: "unassigned",
+      userId: "manager-id",
+      email: "manager@example.test",
     });
   });
 

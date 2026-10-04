@@ -51,24 +51,30 @@ export async function createFixture(
   const otherCommitteeId = randomUUID();
   const managerId = randomUUID();
   const reviewerId = randomUUID();
+  const boardReviewerId = randomUUID();
   const otherManagerId = randomUUID();
   const eventId = randomUUID();
   const eventDate = options.eventDate ?? new Date(Date.now() + 86_400_000);
   const capacity = options.capacity ?? null;
   const status = options.status ?? "draft";
 
-  await sql`INSERT INTO auth.users (id) VALUES (${managerId}), (${reviewerId}), (${otherManagerId})`;
+  await sql`INSERT INTO auth.users (id) VALUES (${managerId}), (${reviewerId}), (${boardReviewerId}), (${otherManagerId})`;
   await sql`
-    INSERT INTO public.committees (id, name)
-    VALUES (${committeeId}, ${`Committee ${committeeId}`}), (${otherCommitteeId}, ${`Committee ${otherCommitteeId}`})
+    INSERT INTO public.committees (id, name, slug)
+    VALUES
+      (${committeeId}, ${`Committee ${committeeId}`}, ${`test-${committeeId}`}),
+      (${otherCommitteeId}, ${`Committee ${otherCommitteeId}`}, ${`test-${otherCommitteeId}`})
   `;
   await sql`
-    INSERT INTO public.committee_managers (user_id, committee_id, granted_by)
+    INSERT INTO public.administrative_access (user_id, committee_id, granted_by)
     VALUES
       (${managerId}, ${committeeId}, ${managerId}),
       (${reviewerId}, ${committeeId}, ${managerId}),
       (${otherManagerId}, ${otherCommitteeId}, ${otherManagerId})
   `;
+  await sql`INSERT INTO public.administrative_access
+    (user_id, access_level, granted_by)
+    VALUES (${boardReviewerId}, 'BOARD_ADMIN', ${managerId})`;
   await sql`
     INSERT INTO public.events (id, title, description, event_date, committee_id, status, capacity)
     VALUES (${eventId}, 'UC-02 test event', 'A complete test event description.', ${eventDate}, ${committeeId}, ${status}, ${capacity})
@@ -79,6 +85,7 @@ export async function createFixture(
     otherCommitteeId,
     managerId,
     reviewerId,
+    boardReviewerId,
     otherManagerId,
     eventId,
   };

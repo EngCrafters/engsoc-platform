@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminPreferencesProvider } from "@/components/admin/preferences";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import type { AccessLevel } from "@/lib/auth/manager";
 import {
   SettingsDialog,
   type SettingsSection,
@@ -14,12 +15,14 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 export function AdminShell({
   email,
   userId,
+  accessLevel,
   committees,
   logoutAction,
   children,
 }: {
   email: string | null;
   userId: string;
+  accessLevel: AccessLevel;
   committees: ReadonlyArray<{ id: string; name: string }>;
   logoutAction: () => void | Promise<void>;
   children: ReactNode;
@@ -52,6 +55,7 @@ export function AdminShell({
           <AdminSidebar
             variant="inset"
             email={email}
+            accessLevel={accessLevel}
             committees={committees}
             logoutAction={logoutAction}
             onOpenSettings={openSettings}
@@ -72,6 +76,7 @@ export function AdminShell({
             restoreFocus={() => settingsTrigger.current?.focus()}
             email={email}
             userId={userId}
+            accessLevel={accessLevel}
             committees={committees}
             logoutAction={logoutAction}
           />

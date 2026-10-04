@@ -21,18 +21,17 @@ export function NoAccessState({
           id="no-access-title"
           className="mt-4 text-2xl font-semibold tracking-tight"
         >
-          No committee access assigned
+          Administrative access not assigned
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Signing in worked
+          You’re signed in, but this account does not currently have
+          administrative access.
           {email ? (
             <>
               {" "}
-              as <strong className="text-foreground">{email}</strong>
+              Signed in as <strong className="text-foreground">{email}</strong>.
             </>
           ) : null}
-          , but this account does not have an active committee-manager grant.
-          This is an access issue, not a sign-in problem.
         </p>
         <ul className="mt-4 grid gap-2 text-sm leading-6 text-muted-foreground">
           <li>
@@ -40,10 +39,8 @@ export function NoAccessState({
             you sign in.
           </li>
           <li>
-            Access is granted, and taken away, by the platform maintenance
-            authority: the person or team who looks after the Engineering
-            Society platform’s hosting and database accounts. Ask them to give
-            this account the committee it needs, and quote the email above.
+            Ask the Technical Team to assign the appropriate application role to
+            this account.
           </li>
           <li>
             Once a grant exists, refresh this page. No new sign-in is needed.

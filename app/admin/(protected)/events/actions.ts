@@ -110,6 +110,7 @@ const lifecycleOperations = new Set<LifecycleOperation>([
   "flag_review",
   "unflag_review",
   "approve_event",
+  "reject_review",
   "publish_event",
   "hold_event_full",
   "reopen_event",
@@ -121,24 +122,40 @@ export async function lifecycleEventAction(_previous: unknown, form: FormData) {
   const manager = await getManagerContext();
   if (manager.kind !== "manager") return { code: "AUTH_REQUIRED" };
   const operation = one(form, "operation");
+  if (
+    (operation === "approve_event" || operation === "reject_review") &&
+    manager.accessLevel === "COMMITTEE_MANAGER"
+  )
+    return { code: "GLOBAL_ACCESS_REQUIRED" };
   const eventId = one(form, "eventId");
   const revision = Number(one(form, "revision"));
+  const note = one(form, "note");
   if (
     !operation ||
     !lifecycleOperations.has(operation as LifecycleOperation) ||
     !eventId ||
     !isUuid(eventId) ||
-    !Number.isSafeInteger(revision)
+    !Number.isSafeInteger(revision) ||
+    (operation === "reject_review" && (note === null || note.length > 200))
   )
     return { code: "VALIDATION_ERROR" };
   let result;
   try {
-    result = await writeLifecycleEvent(
-      operation as LifecycleOperation,
-      manager.userId,
-      eventId,
-      revision
-    );
+    result =
+      operation === "reject_review"
+        ? await writeLifecycleEvent(
+            "reject_review",
+            manager.userId,
+            eventId,
+            revision,
+            note
+          )
+        : await writeLifecycleEvent(
+            operation as LifecycleOperation,
+            manager.userId,
+            eventId,
+            revision
+          );
   } catch {
     return { code: "SERVER_ERROR" };
   }

@@ -15,6 +15,7 @@ export default async function AdminAccountPage() {
     <AccountOverview
       email={manager.email}
       userId={manager.userId}
+      accessLevel={manager.accessLevel}
       committees={manager.committees}
       logoutAction={logoutAction}
     />

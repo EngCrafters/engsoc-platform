@@ -107,7 +107,7 @@ async function applyMigrations(
     await sql.unsafe(`
       CREATE EXTENSION IF NOT EXISTS pgcrypto;
       CREATE SCHEMA IF NOT EXISTS auth;
-      CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);
+      CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY, email text UNIQUE);
       CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
       LANGUAGE sql STABLE AS $$
         SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid
@@ -124,6 +124,48 @@ async function applyMigrations(
       .filter((file) => /^\d{4}_.+\.sql$/.test(file))
       .sort();
     for (const migration of migrations) {
+      if (migration === "0016_application_access_hierarchy.sql") {
+        const legacyId = randomUUID();
+        const legacyManager = randomUUID();
+        const arabicId = randomUUID();
+        const arabicEvent = randomUUID();
+        const arabicRegistration = randomUUID();
+        const legacyEvent = randomUUID();
+        const legacyRegistration = randomUUID();
+        process.env.UC02_TEST_LEGACY_COMMITTEE_ID = legacyId;
+        process.env.UC02_TEST_LEGACY_MANAGER_ID = legacyManager;
+        process.env.UC02_TEST_ARABIC_RELATIONS_ID = arabicId;
+        process.env.UC02_TEST_ARABIC_EVENT_ID = arabicEvent;
+        process.env.UC02_TEST_ARABIC_REGISTRATION_ID = arabicRegistration;
+        process.env.UC02_TEST_LEGACY_EVENT_ID = legacyEvent;
+        process.env.UC02_TEST_LEGACY_REGISTRATION_ID = legacyRegistration;
+        await sql`INSERT INTO auth.users (id, email) VALUES
+          (${legacyManager}, 'legacy-events@example.test')`;
+        await sql`INSERT INTO public.committees (id, name) VALUES
+          (${legacyId}, 'Events'), (${arabicId}, 'لجنة العلاقات')`;
+        await sql`INSERT INTO public.committee_managers
+          (user_id, committee_id, granted_by)
+          VALUES (${legacyManager}, ${legacyId}, ${legacyManager})`;
+        await sql`INSERT INTO public.events
+          (id, title, description, event_date, committee_id, status, archived_at)
+          VALUES (${legacyEvent}, 'M8 archived smoke event', 'Disposable rehearsal data',
+            now() + interval '7 days', ${legacyId}, 'draft', now())`;
+        await sql`INSERT INTO public.registrations
+          (id, event_id, attendee_name, attendee_email, status)
+          VALUES (${legacyRegistration}, ${legacyEvent}, 'Smoke fixture',
+            'smoke@example.test', 'confirmed')`;
+        await sql`INSERT INTO public.events
+          (id, title, description, event_date, committee_id, status)
+          VALUES (${arabicEvent}, 'Historical Relations event', 'Preserved relationship',
+            now() + interval '30 days', ${arabicId}, 'draft')`;
+        await sql`INSERT INTO public.registrations
+          (id, event_id, attendee_name, attendee_email, status)
+          VALUES (${arabicRegistration}, ${arabicEvent}, 'History fixture',
+            'history@example.test', 'confirmed')`;
+        await sql`INSERT INTO private.uc02_audit
+          (committee_id, event_id, actor_kind, action, changes)
+          VALUES (${legacyId}, ${legacyEvent}, 'migration', 'history.imported', '{}')`;
+      }
       await sql.unsafe(
         await readFile(join(migrationDirectory, migration), "utf8")
       );

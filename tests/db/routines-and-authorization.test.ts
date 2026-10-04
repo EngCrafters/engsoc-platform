@@ -102,7 +102,7 @@ describe("UC-02 private routines and authorization", () => {
       true,
     ]);
     await callRoutine(runtime, "approve_event", [
-      fixture.reviewerId,
+      fixture.boardReviewerId,
       fixture.eventId,
       2,
     ]);
@@ -162,7 +162,7 @@ describe("UC-02 private routines and authorization", () => {
   it("denies create and edit after a manager grant is revoked", async () => {
     const fixture = await createFixture(admin);
     await admin`
-      UPDATE public.committee_managers
+      UPDATE public.administrative_access
       SET revoked_at = now(), revoked_by = ${fixture.managerId}
       WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}
     `;
@@ -221,11 +221,11 @@ describe("UC-02 private routines and authorization", () => {
         2,
       ])
     ).toMatchObject({
-      code: "SELF_APPROVAL_DENIED",
+      code: "NOT_FOUND",
     });
     expect(
       await callRoutine(runtime, "approve_event", [
-        fixture.reviewerId,
+        fixture.boardReviewerId,
         fixture.eventId,
         2,
       ])
@@ -248,7 +248,7 @@ describe("UC-02 private routines and authorization", () => {
       [{ status: string; approved_by: string }]
     >`SELECT status, approved_by FROM public.events WHERE id = ${fixture.eventId}`;
     expect(status).toBe("published");
-    expect(approvedBy).toBe(fixture.reviewerId);
+    expect(approvedBy).toBe(fixture.boardReviewerId);
     const audit = await admin`
       SELECT action FROM private.uc02_audit
       WHERE event_id = ${fixture.eventId} ORDER BY occurred_at, id
@@ -269,7 +269,7 @@ describe("UC-02 private routines and authorization", () => {
       true,
     ]);
     await callRoutine(runtime, "approve_event", [
-      fixture.reviewerId,
+      fixture.boardReviewerId,
       fixture.eventId,
       2,
     ]);
@@ -286,7 +286,7 @@ describe("UC-02 private routines and authorization", () => {
     });
     expect(
       await callRoutine(runtime, "approve_event", [
-        fixture.reviewerId,
+        fixture.boardReviewerId,
         fixture.eventId,
         1,
       ])
@@ -418,12 +418,12 @@ describe("UC-02 private routines and authorization", () => {
 
     await asAuthenticated(admin, fixture.managerId, async () => {
       await expect(
-        admin`UPDATE public.committee_managers SET revoked_at = now(), revoked_by = ${fixture.managerId} WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}`
+        admin`UPDATE public.administrative_access SET revoked_at = now(), revoked_by = ${fixture.managerId} WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}`
       ).rejects.toMatchObject({ code: "42501" });
     });
 
     await admin`
-      UPDATE public.committee_managers
+      UPDATE public.administrative_access
       SET revoked_at = now(), revoked_by = ${fixture.managerId}
       WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}
     `;

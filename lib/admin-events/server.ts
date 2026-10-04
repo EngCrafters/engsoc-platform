@@ -177,6 +177,7 @@ export type LifecycleOperation =
   | "flag_review"
   | "unflag_review"
   | "approve_event"
+  | "reject_review"
   | "publish_event"
   | "hold_event_full"
   | "reopen_event"
@@ -187,7 +188,8 @@ export async function writeLifecycleEvent(
   operation: LifecycleOperation,
   actorId: string,
   eventId: string,
-  revision: number
+  revision: number,
+  note: string | null = null
 ) {
   const result =
     operation === "flag_review" || operation === "unflag_review"
@@ -198,24 +200,30 @@ export async function writeLifecycleEvent(
         ? await db.execute<{ result: { code: string; revision?: number } }>(
             sql`SELECT private.approve_event(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
           )
-        : operation === "publish_event" || operation === "reopen_event"
+        : operation === "reject_review"
           ? await db.execute<{ result: { code: string; revision?: number } }>(
-              sql`SELECT private.publish_event(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
+              sql`SELECT private.reject_review(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer, ${note}::text) AS result`
             )
-          : operation === "hold_event_full"
+          : operation === "publish_event" || operation === "reopen_event"
             ? await db.execute<{ result: { code: string; revision?: number } }>(
-                sql`SELECT private.hold_event_full(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
+                sql`SELECT private.publish_event(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
               )
-            : operation === "archive_event"
+            : operation === "hold_event_full"
               ? await db.execute<{
                   result: { code: string; revision?: number };
                 }>(
-                  sql`SELECT private.archive_event(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
+                  sql`SELECT private.hold_event_full(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
                 )
-              : await db.execute<{
-                  result: { code: string; revision?: number };
-                }>(
-                  sql`SELECT private.restore_event(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
-                );
+              : operation === "archive_event"
+                ? await db.execute<{
+                    result: { code: string; revision?: number };
+                  }>(
+                    sql`SELECT private.archive_event(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
+                  )
+                : await db.execute<{
+                    result: { code: string; revision?: number };
+                  }>(
+                    sql`SELECT private.restore_event(${actorId}::uuid, ${eventId}::uuid, ${revision}::integer) AS result`
+                  );
   return result[0]?.result ?? { code: "SERVER_ERROR" };
 }

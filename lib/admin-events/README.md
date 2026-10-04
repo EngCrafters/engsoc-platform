@@ -6,7 +6,7 @@ the restricted `app_runtime` database role, and never returns registration
 identity from the list path.
 
 `listAdminEvents` calls `private.list_admin_events`, which rechecks the active
-committee-manager grant, applies the requested lifecycle and committee filter
+administrative access level, applies the requested lifecycle and committee filter
 in PostgreSQL, uses a `(event_date, id)` cursor, and computes only confirmed
 and waitlisted totals. `getAdminEvent` calls `private.get_admin_event`, which
 applies the same grant predicate, so an event visible in the list always opens

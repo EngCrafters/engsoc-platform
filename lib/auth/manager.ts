@@ -6,6 +6,8 @@ import {
   isLocalReviewModeActive,
 } from "./local-review";
 
+export type AccessLevel = "COMMITTEE_MANAGER" | "BOARD_ADMIN" | "TECHNICAL";
+
 export type ManagerContext =
   | { kind: "anonymous" }
   | { kind: "unassigned"; userId: string; email: string | null }
@@ -13,6 +15,7 @@ export type ManagerContext =
       kind: "manager";
       userId: string;
       email: string | null;
+      accessLevel: AccessLevel;
       committees: ReadonlyArray<{ id: string; name: string }>;
     };
 
@@ -40,28 +43,41 @@ export async function resolveManagerContext(
     const committees = await getLocalReviewCommittees(user.id);
     return committees.length === 0
       ? { kind: "unassigned", userId: user.id, email }
-      : { kind: "manager", userId: user.id, email, committees };
+      : {
+          kind: "manager",
+          userId: user.id,
+          email,
+          accessLevel: "COMMITTEE_MANAGER",
+          committees,
+        };
   }
 
-  const { data: grants, error: grantsError } = await supabase
-    .from("committee_managers")
-    .select("committee_id")
-    .is("revoked_at", null);
+  const { data: access, error: grantsError } = await supabase
+    .from("administrative_access")
+    .select("access_level, committee_id")
+    .is("revoked_at", null)
+    .maybeSingle();
 
   if (grantsError) {
     throw new Error("Unable to verify committee authorization.");
   }
 
-  const committeeIds = (grants ?? []).map((grant) => grant.committee_id);
-  if (committeeIds.length === 0) {
+  if (!access) {
     return { kind: "unassigned", userId: user.id, email };
   }
+  const level = access.access_level as AccessLevel;
+  if (!["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"].includes(level)) {
+    throw new Error("Unable to verify committee authorization.");
+  }
+  if (level === "COMMITTEE_MANAGER" && !access.committee_id) {
+    throw new Error("Unable to verify committee authorization.");
+  }
 
-  const { data: committees, error: committeesError } = await supabase
-    .from("committees")
-    .select("id, name")
-    .in("id", committeeIds)
-    .order("name");
+  const query = supabase.from("committees").select("id, name");
+  const { data: committees, error: committeesError } =
+    level === "COMMITTEE_MANAGER"
+      ? await query.in("id", [access.committee_id!]).order("name")
+      : await query.not("slug", "is", null).order("name");
 
   if (committeesError || !committees) {
     throw new Error("Unable to verify committee authorization.");
@@ -77,6 +93,7 @@ export async function resolveManagerContext(
     kind: "manager",
     userId: user.id,
     email,
+    accessLevel: level,
     committees: committees.map((committee) => ({
       id: committee.id,
       name: committee.name,

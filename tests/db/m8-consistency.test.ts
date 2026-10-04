@@ -61,7 +61,7 @@ describe("M8 scoped state and count invariants", () => {
     expect(detail.waitlisted_count).toBe(counts.waitlisted_count);
 
     await admin`
-      UPDATE public.committee_managers SET revoked_at = now(), revoked_by = ${fixture.reviewerId}
+      UPDATE public.administrative_access SET revoked_at = now(), revoked_by = ${fixture.reviewerId}
       WHERE user_id = ${fixture.managerId} AND committee_id = ${fixture.committeeId}
     `;
     expect(

@@ -23,10 +23,7 @@ function visibleText(html: string) {
     .replace(/\s+/g, " ");
 }
 
-const committees = [
-  { id: "events-id", name: "Events" },
-  { id: "media-id", name: "Media" },
-];
+const committees = [{ id: "events-id", name: "Events" }];
 
 function profile(
   overrides: Partial<Parameters<typeof AccountProfileSection>[0]> = {}
@@ -46,7 +43,7 @@ describe("admin account profile", () => {
     const html = profile();
     expect(html).toContain("manager@example.test");
     expect(html).toContain("11111111-1111-4111-8111-111111111111");
-    expect(html).toContain("Committee manager");
+    expect(html).toContain("Committee Manager");
   });
 
   it("uses separate accessible heading IDs in the settings dialog", () => {
@@ -56,16 +53,18 @@ describe("admin account profile", () => {
     expect(html).not.toContain('id="account-identity-title"');
   });
 
-  it("lists every active committee scope, each marked active", () => {
+  it("lists exactly the assigned committee scope", () => {
     const html = profile();
     expect(html).toContain("Events");
-    expect(html).toContain("Media");
-    expect(html.match(/>Active</g)).toHaveLength(2);
+    expect(html).not.toContain("Media");
+    expect(html.match(/>Active</g)).toHaveLength(1);
   });
 
   it("never labels the user an owner", () => {
     expect(visibleText(profile())).not.toMatch(/>Owner</);
-    expect(profile()).toMatch(/Not a platform-wide owner or super-admin role/);
+    expect(profile()).toMatch(
+      /Application access level, checked on every request/
+    );
   });
 
   it("offers no interactive controls", () => {
@@ -81,8 +80,8 @@ describe("admin account permissions", () => {
   const html = renderToStaticMarkup(<AccountPermissionsSection />);
 
   it("explains that this is not a platform-wide owner role", () => {
-    expect(html).toMatch(/not a platform-wide\s+owner or super-admin role/);
-    expect(html).toMatch(/work\s+outside this application/);
+    expect(html).toMatch(/one fixed committee scope/);
+    expect(html).toMatch(/outside this application/);
     expect(html).not.toMatch(/Supabase/);
     expect(html).not.toMatch(/>Owner</);
   });
@@ -117,10 +116,11 @@ describe("no-committee-access state", () => {
   );
 
   it("says authentication succeeded and this is not a sign-in failure", () => {
-    expect(html).toContain("No committee access assigned");
+    expect(html).toContain("Administrative access not assigned");
     expect(html).toContain("pending@example.test");
-    expect(html).toMatch(/Signing in worked/);
-    expect(html).toMatch(/not a sign-in problem/);
+    expect(html).toMatch(
+      /You’re signed in, but this account does not currently have administrative access/
+    );
   });
 
   it("states that a password reset will not restore access", () => {
@@ -128,8 +128,8 @@ describe("no-committee-access state", () => {
     expect(html).not.toContain("/admin/recovery");
   });
 
-  it("names the maintenance authority as the way forward", () => {
-    expect(html).toMatch(/platform maintenance\s+authority/);
+  it("names the Technical Team as the way forward", () => {
+    expect(html).toMatch(/Ask the Technical Team/);
     expect(html).toContain("Sign out");
     expect(html).not.toMatch(/Supabase/);
   });
@@ -140,6 +140,7 @@ describe("admin sidebar identity and scope", () => {
     <TooltipProvider>
       <SidebarProvider>
         <AdminSidebar
+          accessLevel="COMMITTEE_MANAGER"
           email="manager@example.test"
           committees={committees}
           logoutAction={noop}
@@ -151,8 +152,8 @@ describe("admin sidebar identity and scope", () => {
 
   it("shows identity, role, committee scope and the navigation groups", () => {
     expect(html).toContain("manager@example.test");
-    expect(html).toContain("Committee manager");
-    expect(html).toContain("Scope: Events +1");
+    expect(html).toContain("Committee Manager");
+    expect(html).toContain("Events");
     expect(html).toContain('href="/admin/events"');
     expect(html).toContain('href="/admin/events/new"');
     expect(html).toContain('href="/admin/account"');
@@ -166,5 +167,36 @@ describe("admin sidebar identity and scope", () => {
 
   it("never labels the user an owner", () => {
     expect(visibleText(html)).not.toMatch(/owner|super-?admin/i);
+  });
+});
+
+describe("global administration navigation", () => {
+  function sidebar(accessLevel: "BOARD_ADMIN" | "TECHNICAL") {
+    return renderToStaticMarkup(
+      <TooltipProvider>
+        <SidebarProvider>
+          <AdminSidebar
+            accessLevel={accessLevel}
+            email="global@example.test"
+            committees={committees}
+            logoutAction={noop}
+            onOpenSettings={() => {}}
+          />
+        </SidebarProvider>
+      </TooltipProvider>
+    );
+  }
+
+  it("shows Board global scope without Technical controls", () => {
+    const html = sidebar("BOARD_ADMIN");
+    expect(html).toContain("Board Administration");
+    expect(html).toContain("All Committees");
+    expect(html).not.toContain('href="/admin/access"');
+  });
+
+  it("separates Technical Administration and access management", () => {
+    const html = sidebar("TECHNICAL");
+    expect(html).toContain("Technical Administration");
+    expect(html).toContain('href="/admin/access"');
   });
 });

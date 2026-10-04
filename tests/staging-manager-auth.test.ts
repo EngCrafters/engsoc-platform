@@ -14,9 +14,9 @@ const client = configured
     })
   : null;
 
-describe("staging M5 manager JWT boundary", () => {
+describe("staging legacy manager isolation after access migration", () => {
   it.skipIf(!enabled || !configured)(
-    "authenticates the named manager and exposes only its active grants",
+    "authenticates the prior Events manager without granting a final committee",
     async () => {
       const { error: loginError } = await client!.auth.signInWithPassword({
         email: email!,
@@ -25,23 +25,18 @@ describe("staging M5 manager JWT boundary", () => {
       expect(loginError).toBeNull();
 
       const { data: grants, error: grantsError } = await client!
-        .from("committee_managers")
-        .select("committee_id")
-        .is("revoked_at", null);
+        .from("administrative_access")
+        .select("committee_id, access_level, revoked_at");
       expect(grantsError).toBeNull();
       expect(grants).toHaveLength(1);
+      expect(grants![0].access_level).toBe("COMMITTEE_MANAGER");
+      expect(grants![0].revoked_at).not.toBeNull();
 
       const { data: committees, error: committeesError } = await client!
         .from("committees")
-        .select("id, name")
-        .in(
-          "id",
-          (grants ?? []).map((grant) => grant.committee_id)
-        );
+        .select("id, name");
       expect(committeesError).toBeNull();
-      expect(committees).toEqual([
-        { id: grants![0].committee_id, name: "Events" },
-      ]);
+      expect(committees).toEqual([]);
     }
   );
 });
