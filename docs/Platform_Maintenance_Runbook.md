@@ -116,6 +116,15 @@ Supabase organization recovery. Rotate suspected compromised database,
 Supabase, Vercel and GitHub credentials through their secret managers, then
 inspect recent access and authentication audit history.
 
+Request password recovery from the production `/admin/recovery` page. The app
+supplies `/auth/callback?next=/auth/reset` as the redirect and stores the PKCE
+verifier in the requesting browser. A recovery email initiated in the Supabase
+Dashboard can use the project's default Site URL instead and land at `/` with
+session tokens in the URL; it is not a valid test of the application's reset
+flow. Never share a full recovery URL. If one is exposed, globally sign out the
+affected Supabase session, discard that link, and remember that an issued access
+token may remain valid until expiry. Request a fresh email through the app.
+
 If recovery displays a temporary sending error, check Supabase Auth logs for
 `/recover` and its error code. `over_email_send_rate_limit` means no message was
 sent; wait for the project's email quota to clear before one new request. The

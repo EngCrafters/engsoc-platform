@@ -31,6 +31,13 @@ email quota clears. Because the SSR recovery flow stores a PKCE verifier in the
 requesting browser, the owner must submit each request and open its email link
 in that same browser/device, then choose passwords without sharing them. An
 agent-initiated recovery request would not complete in the owner's browser.
+On October 5, the owner reported that a recovery email requested from the
+Supabase Dashboard redirected to the site root with session tokens in the URL.
+The exposed refresh session was globally signed out through Supabase Auth
+(HTTP 204). Access tokens may remain valid until their expiry; the link must
+not be reused. The owner should request a fresh link from the production
+`/admin/recovery` page in the browser where they will open the email. No link,
+token, or password was recorded in this repository.
 The production pilot remains unverified; the manager pilot also needs the real
 Support identity from the owner.
 Migration 0020 was applied to production after backup and migration safety
