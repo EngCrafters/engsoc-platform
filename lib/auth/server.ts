@@ -35,16 +35,26 @@ export async function createAuthServerClient() {
   });
 }
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+/**
+ * The one URL Supabase Auth emails must land on: `<origin>/auth/callback`.
+ * The origin is fixed configuration (`AUTH_REDIRECT_ORIGIN`), never taken from
+ * the request, so a forged Host header cannot redirect a recovery link. In
+ * production it must be https and must not be localhost.
+ */
 export function authRedirectUrl() {
-  const origin = process.env.AUTH_REDIRECT_ORIGIN;
+  const origin = process.env.AUTH_REDIRECT_ORIGIN?.trim();
   if (!origin) return null;
 
   try {
     const url = new URL(origin);
-    if (url.protocol !== "https:" && process.env.NODE_ENV === "production") {
-      return null;
+    if (process.env.NODE_ENV === "production") {
+      if (url.protocol !== "https:" || LOCAL_HOSTS.has(url.hostname)) {
+        return null;
+      }
     }
-    return new URL("/auth/callback?next=/auth/reset", url).toString();
+    return new URL("/auth/callback", url).toString();
   } catch {
     return null;
   }

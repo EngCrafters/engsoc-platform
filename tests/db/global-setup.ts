@@ -107,7 +107,9 @@ async function applyMigrations(
     await sql.unsafe(`
       CREATE EXTENSION IF NOT EXISTS pgcrypto;
       CREATE SCHEMA IF NOT EXISTS auth;
-      CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY, email text UNIQUE);
+      CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY, email text UNIQUE,
+        email_confirmed_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(),
+        last_sign_in_at timestamptz, invited_at timestamptz);
       CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
       LANGUAGE sql STABLE AS $$
         SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid

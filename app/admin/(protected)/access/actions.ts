@@ -10,7 +10,7 @@ export type AccessActionState = { message: string; success: boolean };
 const MESSAGES: Record<string, string> = {
   SUCCESS: "Access updated.",
   REASSIGN_REQUIRED:
-    "This manager already belongs to another committee. Reassign their committee instead of creating a second assignment.",
+    "This user already manages another committee. Reassign their committee instead.",
   FORBIDDEN: "This action is available only to the Technical Team.",
   CONFLICT:
     "This user already has a different active access level. Revoke it before granting a new level.",
@@ -20,7 +20,7 @@ const MESSAGES: Record<string, string> = {
   COMMITTEE_NOT_FOUND: "Select a valid committee.",
   INVALID_TRANSITION: "This reassignment is not valid.",
   LAST_TECHNICAL_ADMIN:
-    "At least one active Technical Team administrator must remain. Assign another Technical Team user before removing this account.",
+    "At least one active Technical Team administrator must remain. Grant Technical access to another user before removing this account.",
   SELF_ESCALATION: "You cannot elevate your own account through this action.",
 };
 

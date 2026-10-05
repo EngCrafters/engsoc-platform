@@ -8,11 +8,22 @@ request; it never authorizes from user metadata or a cached role claim.
 
 `paths.ts` allows post-auth redirects only to internal `/admin` paths. Session
 refresh is performed by the root `proxy.ts` before `/admin` and `/auth` routes
-render. Password recovery needs `AUTH_REDIRECT_ORIGIN`, whose callback URL must
-be allowlisted in Supabase Auth; no secret belongs in that variable or this
-repository.
+render. Password recovery needs `AUTH_REDIRECT_ORIGIN` (an https origin in
+production, never localhost); its `/auth/callback` URL must be allowlisted in
+Supabase Auth. No secret belongs in that variable or this repository.
 
-Tests: `tests/auth-paths.test.ts`, `tests/manager-context.test.ts`,
+`callback.ts` holds the pure recovery rules (link types, destination, expired
+vs invalid, URL-fragment relay decisions, Auth email problems, password policy).
+`app/auth/callback/route.ts` verifies a PKCE `code` or a `token_hash` link and
+`components/auth/auth-hash-relay.tsx` removes session fragments from the URL.
+`admin.ts` is the server-only Supabase Auth Admin module used by the
+Technical-only `/admin/access` actions; it is the only reader of
+`SUPABASE_SERVICE_ROLE_KEY` and never returns a password, token or link. See
+`docs/AUTH_AND_EMAIL.md` and ADR 0013.
+
+Tests: `tests/auth-callback.test.ts`, `tests/auth-callback-route.test.ts`,
+`tests/auth-admin.test.ts`, `tests/user-actions.test.ts`,
+`tests/db/auth-user-directory.test.ts`, `tests/auth-paths.test.ts`, `tests/manager-context.test.ts`,
 `tests/admin-actions.test.ts`, and `tests/e2e/admin-auth.spec.ts`.
 
 ## Authority model

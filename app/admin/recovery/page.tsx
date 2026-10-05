@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { AuthShell, authLinkClass } from "@/components/auth/auth-shell";
 import { AuthMessage } from "@/components/auth/auth-shell";
+import { RECOVERY_EXPIRED_MESSAGE } from "@/lib/auth/callback";
 import { RecoveryForm } from "./recovery-form";
 
 export default async function AdminRecoveryPage({
@@ -23,6 +24,9 @@ export default async function AdminRecoveryPage({
         </Link>
       }
     >
+      {params.link === "expired" ? (
+        <AuthMessage tone="error">{RECOVERY_EXPIRED_MESSAGE}</AuthMessage>
+      ) : null}
       {params.link === "invalid" ? (
         <AuthMessage tone="error">
           This recovery link is invalid or expired. Request a new email below

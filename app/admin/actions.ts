@@ -1,6 +1,13 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  AUTH_EMAIL_PROBLEM_MESSAGES,
+  RECOVERY_INTENT_COOKIE,
+  RECOVERY_INTENT_MAX_AGE_SECONDS,
+  classifyAuthEmailError,
+} from "@/lib/auth/callback";
 import { authRedirectUrl, createAuthServerClient } from "@/lib/auth/server";
 import { safeAdminReturnPath } from "@/lib/auth/paths";
 import type { LoginActionState, RecoveryActionState } from "./action-state";
@@ -71,20 +78,27 @@ export async function requestRecoveryAction(
     };
   }
 
-  // Keep the result generic to avoid account enumeration. Supabase applies its
-  // own recovery rate limits.
+  // The result stays generic so this form never reveals whether an account
+  // exists. Only delivery problems (rate limit, SMTP) are reported, because
+  // they are about the mail system, not about the address.
   try {
     const supabase = await createAuthServerClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });
-    if (error && (error.status === 429 || (error.status ?? 0) >= 500)) {
-      return {
-        status: "error",
-        message:
-          "Recovery email could not be sent right now. Wait a moment and try again.",
-      };
+    const problem = classifyAuthEmailError(error);
+    if (problem) {
+      return { status: "error", message: AUTH_EMAIL_PROBLEM_MESSAGES[problem] };
     }
+    // The PKCE verifier lives in this browser. The marker tells the callback
+    // that a `code` arriving here is the recovery we just requested.
+    (await cookies()).set(RECOVERY_INTENT_COOKIE, "1", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: RECOVERY_INTENT_MAX_AGE_SECONDS,
+    });
   } catch {
     return {
       status: "error",

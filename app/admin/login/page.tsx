@@ -26,6 +26,11 @@ export default async function AdminLoginPage({
         </Link>
       }
     >
+      {params.reset === "success" ? (
+        <AuthMessage tone="success">
+          Your password was updated. Sign in with your new password.
+        </AuthMessage>
+      ) : null}
       {params.auth === "failed" ? (
         <AuthMessage tone="error">
           This sign-in link is invalid or expired. Sign in again below.

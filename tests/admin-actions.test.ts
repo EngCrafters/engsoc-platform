@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   updateUser: vi.fn(),
   redirect: vi.fn(),
   authRedirectUrl: vi.fn(),
+  cookieSet: vi.fn(),
 }));
 
 vi.mock("../lib/auth/server", () => ({
@@ -21,6 +22,9 @@ vi.mock("../lib/auth/server", () => ({
   authRedirectUrl: state.authRedirectUrl,
 }));
 vi.mock("next/navigation", () => ({ redirect: state.redirect }));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ set: state.cookieSet }),
+}));
 
 import {
   loginAction,
@@ -51,9 +55,10 @@ describe("admin authentication actions", () => {
     state.redirect.mockReset().mockImplementation(() => {
       throw new Error("redirect");
     });
+    state.cookieSet.mockReset();
     state.authRedirectUrl
       .mockReset()
-      .mockReturnValue("https://app.example/auth/callback?next=/auth/reset");
+      .mockReturnValue("https://app.example/auth/callback");
   });
 
   it("uses a singular credential form and only an allowlisted return path", async () => {
@@ -107,13 +112,35 @@ describe("admin authentication actions", () => {
     ).resolves.toEqual({ status: "sent" });
     expect(state.resetPasswordForEmail).toHaveBeenCalledWith(
       "manager@example.test",
-      {
-        redirectTo: "https://app.example/auth/callback?next=/auth/reset",
-      }
+      { redirectTo: "https://app.example/auth/callback" }
+    );
+    // The callback learns this browser asked for a recovery from an httpOnly marker.
+    expect(state.cookieSet).toHaveBeenCalledWith(
+      "es-recovery-intent",
+      "1",
+      expect.objectContaining({ httpOnly: true, sameSite: "lax" })
     );
   });
 
-  it("explains a recovery service failure without exposing account existence", async () => {
+  it("reports an Auth email rate limit as a delivery limit, not an account fact", async () => {
+    state.resetPasswordForEmail.mockResolvedValue({
+      error: { status: 429, code: "over_email_send_rate_limit" },
+    });
+    const form = new FormData();
+    form.set("email", "manager@example.test");
+    const result = await requestRecoveryAction(
+      initialRecoveryActionState,
+      form
+    );
+    expect(result).toEqual({
+      status: "error",
+      message:
+        "Email delivery is temporarily limited. Use the Technical password-reset option or try again later.",
+    });
+    expect(state.cookieSet).not.toHaveBeenCalled();
+  });
+
+  it("explains an SMTP failure without exposing account existence", async () => {
     state.resetPasswordForEmail.mockResolvedValue({ error: { status: 503 } });
     const form = new FormData();
     form.set("email", "manager@example.test");
@@ -121,11 +148,21 @@ describe("admin authentication actions", () => {
       initialRecoveryActionState,
       form
     );
-    expect(result.status).toBe("error");
-    if (result.status === "error") {
-      expect(result.message).toMatch(/could not be sent/i);
-      expect(result.message).not.toMatch(/manager@example.test/i);
-    }
+    expect(result).toEqual({
+      status: "error",
+      message: "Authentication email delivery is temporarily unavailable.",
+    });
+  });
+
+  it("treats an unknown address exactly like a known one", async () => {
+    state.resetPasswordForEmail.mockResolvedValue({
+      error: { status: 400, code: "user_not_found" },
+    });
+    const form = new FormData();
+    form.set("email", "nobody@example.test");
+    await expect(
+      requestRecoveryAction(initialRecoveryActionState, form)
+    ).resolves.toEqual({ status: "sent" });
   });
 
   it("does not call Auth when a fixed recovery redirect is not configured", async () => {
@@ -148,15 +185,83 @@ describe("admin authentication actions", () => {
     expect(state.redirect).toHaveBeenCalledWith("/admin/login");
   });
 
-  it("updates a password only with one valid recovery-session submission", async () => {
+  function resetForm(password = "a sufficiently long new password") {
     const form = new FormData();
-    form.set("password", "a sufficiently long new password");
+    form.set("password", password);
+    form.set("confirmPassword", password);
+    return form;
+  }
+
+  it("updates the password, ends the recovery session and sends the user to sign in", async () => {
     await expect(
-      resetPasswordAction(initialResetActionState, form)
+      resetPasswordAction(initialResetActionState, resetForm())
     ).rejects.toThrow("redirect");
     expect(state.updateUser).toHaveBeenCalledWith({
       password: "a sufficiently long new password",
     });
-    expect(state.redirect).toHaveBeenCalledWith("/admin/events");
+    expect(state.signOut).toHaveBeenCalledOnce();
+    expect(state.redirect).toHaveBeenCalledWith("/admin/login?reset=success");
+  });
+
+  it("rejects short passwords and mismatched confirmation before contacting Auth", async () => {
+    const short = await resetPasswordAction(
+      initialResetActionState,
+      resetForm("too short")
+    );
+    expect(short).toMatchObject({ status: "error" });
+    const mismatch = resetForm();
+    mismatch.set("confirmPassword", "something else entirely");
+    await expect(
+      resetPasswordAction(initialResetActionState, mismatch)
+    ).resolves.toEqual({
+      status: "error",
+      message: "The two passwords do not match.",
+    });
+    expect(state.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("reports an expired recovery session and keeps the account signed out", async () => {
+    state.updateUser.mockResolvedValue({
+      error: { status: 401, code: "session_not_found", name: "AuthApiError" },
+    });
+    await expect(
+      resetPasswordAction(initialResetActionState, resetForm())
+    ).resolves.toEqual({
+      status: "expired",
+      message: "This password-reset link has expired. Request a new one.",
+    });
+    expect(state.redirect).not.toHaveBeenCalled();
+  });
+
+  it("explains reuse of the current password and generic update failures safely", async () => {
+    state.updateUser.mockResolvedValueOnce({
+      error: { status: 422, code: "same_password" },
+    });
+    await expect(
+      resetPasswordAction(initialResetActionState, resetForm())
+    ).resolves.toEqual({
+      status: "error",
+      message: "Choose a password different from your current one.",
+    });
+    state.updateUser.mockResolvedValueOnce({
+      error: { status: 500, message: "SQL: relation auth.users" },
+    });
+    const result = await resetPasswordAction(
+      initialResetActionState,
+      resetForm()
+    );
+    expect(result).toEqual({
+      status: "error",
+      message: "The password could not be updated. Try again.",
+    });
+  });
+
+  it("never echoes the submitted password back", async () => {
+    state.updateUser.mockResolvedValue({ error: { status: 500 } });
+    const result = await resetPasswordAction(
+      initialResetActionState,
+      resetForm("a sufficiently long new password")
+    );
+    expect(JSON.stringify(result)).not.toContain("sufficiently");
   });
 });

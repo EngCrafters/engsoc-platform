@@ -65,3 +65,59 @@ export async function changeAccess(input: {
   `);
   return rows[0]?.result ?? { code: "UNAVAILABLE" };
 }
+
+export type AuthDirectoryRow = {
+  user_id: string;
+  email: string;
+  email_confirmed: boolean;
+  created_at: string;
+  last_sign_in_at: string | null;
+  invited: boolean;
+};
+
+/** Identity state only: never passwords, hashes or tokens. */
+export async function listAuthDirectory(actorId: string) {
+  return db.execute<AuthDirectoryRow>(
+    sql`SELECT * FROM private.list_auth_directory(${actorId}::uuid)`
+  );
+}
+
+export type UserAuditRow = {
+  id: string;
+  occurred_at: string;
+  actor_user_id: string | null;
+  action: string;
+  committee_id: string | null;
+  previous_state: unknown;
+  new_state: unknown;
+  note: string | null;
+};
+
+export async function listUserAudit(actorId: string, targetId: string) {
+  return db.execute<UserAuditRow>(
+    sql`SELECT * FROM private.list_user_audit(${actorId}::uuid, ${targetId}::uuid)`
+  );
+}
+
+export type AuthAdminAction =
+  | "user.created"
+  | "user.invited"
+  | "user.invitation_resent"
+  | "user.password_reset_sent"
+  | "user.password_admin_reset";
+
+/** Audit label only. `detail` is a short fixed word, never a secret. */
+export async function recordAuthAdminAction(input: {
+  actorId: string;
+  targetId: string;
+  action: AuthAdminAction;
+  detail?: string;
+}) {
+  const rows = await db.execute<{ result: { code: string } }>(sql`
+    SELECT private.record_auth_admin_action(
+      ${input.actorId}::uuid, ${input.targetId}::uuid,
+      ${input.action}::text, ${input.detail ?? null}::text
+    ) AS result
+  `);
+  return rows[0]?.result ?? { code: "UNAVAILABLE" };
+}
