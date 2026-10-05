@@ -218,3 +218,11 @@ and audit evidence remain, but it has no administrative access. Finance and
 Media accounts were not created or assigned. Forum, Evening, Relations and
 Society Affairs intentionally have no ordinary manager accounts. Actual pilot
 status is recorded in [CURRENT_WORK.md](CURRENT_WORK.md).
+
+## User administration
+
+Technical users manage Auth accounts and application access at `/admin/access`
+(directory, add user, invite, reset email, write-only temporary passwords,
+role changes, history). An Auth account is an identity only: creating one grants
+no access, and revoking access never deletes it. See `docs/AUTH_AND_EMAIL.md`
+and ADR 0013.

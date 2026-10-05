@@ -155,6 +155,13 @@
       "when": 1791090000000,
       "tag": "0021_auth_user_directory_and_admin_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791093600000,
+      "tag": "0022_jwt_claims_for_committee_policy",
+      "breakpoints": true
     }
   ]
 }

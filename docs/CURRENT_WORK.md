@@ -1,5 +1,45 @@
 # Current work — handoff state
 
+**AUTH + USER ADMINISTRATION (October 5, 2026):** Commit `de0a1c1` fixed
+password recovery and added the Technical-only user directory at
+`/admin/access` (see `docs/AUTH_AND_EMAIL.md` and ADR 0013). Recovery now lands
+on `/auth/callback` (PKCE code or token-hash link), `/auth/reset` requires a live
+recovery session and a confirmed password, and a root-level relay removes any
+`#access_token` fragment (for example from a Dashboard-sent email) from the URL
+and completes the sign-in. A production end-to-end run with a throwaway account
+passed: fragment relay, callback landing, validation, password update, session
+end, sign-in, and the expired-link message. Production Auth URLs were probed
+(Site URL and the `/auth/callback` allow-list correct; localhost and foreign
+hosts not honoured). Migrations 0021 (directory, per-user audit, secret-free
+Auth admin audit) and 0022 were applied to staging then production.
+
+**ACCESS BUG FOUND AND FIXED (0022):** the committee RLS helper read only the
+legacy `request.jwt.claim.sub` setting, which Supabase's API no longer sets, so a
+signed-in Technical, Board or Manager user saw zero committees and the app
+showed "Administrative access not assigned". The local test harness hid it by
+setting only the legacy setting. Fixed to read the JSON `request.jwt.claims`
+first; the harness's `auth.uid()` stub now mirrors Supabase and
+`tests/db/jwt-claims-policy.test.ts` covers it. Production was re-checked in a
+rolled-back transaction under real claims: Technical 8 committees, Board 8, no
+access 0. Real accounts have not yet signed in since the fix.
+
+**PRODUCTION IDENTITIES (reconciled October 5):** Technical `hishamalhn@gmail.com`;
+Board `engineeringsociety.squ@gmail.com`; Committee Managers
+`unknown11110000@gmail.com` (Support & Logistics; invitation still unaccepted,
+email unconfirmed), `loay1784@gmail.com` (Finance) and
+`alshifa.alrawahi112@gmail.com` (Media); the last two were created confirmed
+with no password and no email, so they set a password through "Forgot your
+password?" once email works, or the Technical team uses a temporary password.
+Forum, Evening, Relations and Society Affairs have no manager. Each assignment
+is audited with an owner-directed reconciliation note.
+
+**OPEN (owner actions):** (1) enter the Mailtrap Sandbox SMTP credentials in
+Supabase and paste the token-hash templates (`docs/AUTH_AND_EMAIL.md` sections
+3-4), then run its verification checklist; Mailtrap is a sandbox only and real
+delivery needs a verified domain and provider; (2) the Technical, Board and
+Support users sign in to complete the pilot; (3) consider enabling Auth
+leaked-password protection (advisor warning).
+
 **ACCESS HIERARCHY INITIATIVE (October 4, 2026):** The owner has explicitly
 authorized finalizing application access before any landing-page migration.
 The owner initially supplied five emails, then clarified that the Support

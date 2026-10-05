@@ -112,7 +112,11 @@ async function applyMigrations(
         last_sign_in_at timestamptz, invited_at timestamptz);
       CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
       LANGUAGE sql STABLE AS $$
-        SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid
+        -- Mirrors Supabase: the JSON claims PostgREST sets, then the legacy GUC.
+        SELECT COALESCE(
+          NULLIF(NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub', ''),
+          NULLIF(current_setting('request.jwt.claim.sub', true), '')
+        )::uuid
       $$;
       DO $$ BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;

@@ -19,6 +19,11 @@ export default defineConfig({
   test: {
     exclude: ["tests/e2e/**", "node_modules/**"],
     environment: "node",
+    // The database suites share one PostgreSQL container, and some assert
+    // global invariants (for example "the last active Technical owner cannot be
+    // removed"). Running files one at a time keeps them independent of each
+    // other's fixtures.
+    fileParallelism: false,
     globalSetup: ["./tests/db/global-setup.ts"],
     // These tests hit the real staging Supabase project over the network
     // (see tests/rls-staging-anon.test.ts) — the default 5s timeout is
