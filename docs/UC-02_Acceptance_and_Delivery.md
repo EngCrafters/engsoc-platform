@@ -3,15 +3,16 @@
 **Access revision (October 4, 2026):** The new hierarchy and
 security test matrix are in [ADR 0012](adr/0012-application-access-hierarchy.md)
 and [ACCESS_CONTROL.md](ACCESS_CONTROL.md). The original multi-committee-user
-fixture and manager-only matrix below describe the deployed UC-02 baseline;
-the new H01–H13 matrix replaces those access assertions after migration. Public flow
+fixture and manager-only matrix below describe the historical UC-02 baseline;
+the H01–H13 matrix replaced those access assertions in production. Public flow
 and lifecycle acceptance tests remain required.
 
 Revision 3, September 15, 2026. Behavior:
 [deep dive](UC-02_Deep_Dive.md). Fields/security:
 [data contract](UC-02_Data_and_Security.md).
-**O-01 answered September 15, 2026 (per-committee two-manager review); freeze
-confirmed by commit `9c5b733` and green CI (deep dive section 15).**
+**Historical O-01 freeze (September 15, 2026):** per-committee two-manager
+review was superseded by ADR 0012. The original freeze was confirmed by commit
+`9c5b733` and green CI (deep dive section 15).
 Test definitions below are requirements, not claims of implemented coverage.
 
 ## 1. Acceptance criteria

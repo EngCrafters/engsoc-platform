@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted; owner decision, September 21, 2026.
+Superseded for application access by ADR 0012 (October 4, 2026). External
+infrastructure maintenance remains separate from application Technical access.
+The decision below records the historical M5 model and must not be used to
+authorize current application behavior.
 
 ## Context
 

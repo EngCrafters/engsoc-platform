@@ -199,10 +199,12 @@ and negative paths; then assign the remaining current managers. Push through
 GitHub `main` and verify GitHub Actions and Vercel. The landing-page migration
 starts only after this layer is proven.
 
-## Current production assignments
+## Original rollout assignments (historical)
 
-These emails are assignment data, never authorization constants. The owner will
-grant future manager access as Technical Team lead through `/admin/access`.
+This table records the initial October 4 rollout plan. It is not a current
+production directory; later October 5 reconciliations are in
+[CURRENT_WORK.md](CURRENT_WORK.md). Emails are assignment data, never
+authorization constants. Future changes go through `/admin/access`.
 
 | Access               | Committee                     | User / email                     | Status                                         |
 | -------------------- | ----------------------------- | -------------------------------- | ---------------------------------------------- |

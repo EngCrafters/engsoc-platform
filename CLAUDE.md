@@ -61,13 +61,14 @@ it:
 - At minimum it needs: event list (draft/published/full), create/edit
   event, and a per-event registration list with attendee count.
 - Committee-scoped access and event-scoped CSV are specified there.
-  The owner answered publication approval authority (O-01) with per-committee
-  two-manager review when review is required.
+  ADR 0012 supersedes the original O-01 reviewer choice: a different active
+  Board or Technical user reviews when review is required.
 
 The UC-02 specification freeze passed at commit `9c5b733` and CI verified it.
-The current milestone is **UC-02 M8 release and closure**. Earlier milestones
-have been implemented in dependency order; use `docs/CURRENT_WORK.md` for the
-current release gate and exact handoff task.
+The authentication/access-control milestone is complete. The current task is a
+repository and production hardening pass before any landing-page migration.
+Earlier UC-02 milestones were implemented in dependency order; use
+`docs/CURRENT_WORK.md` for current evidence and remaining verification.
 
 ## How we work
 

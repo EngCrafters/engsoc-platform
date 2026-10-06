@@ -1,5 +1,17 @@
 # Current work — handoff state
 
+**CURRENT (October 7, 2026):** Authentication and access control are the
+completed milestone. The repository hardening pass is documented in
+`HARDENING_AUDIT_2026-10-07.md`. Landing-page migration remains on hold for
+production evidence: rotate the staging migration credential exposed during
+the audit, inspect live production grants/data and backup status, and verify
+Resend delivery and the real Technical/Board/Manager pilot. The October 5
+handoff and earlier M8 entries below are historical evidence. Current access
+authority is ADR 0012 and `docs/ACCESS_CONTROL.md`: Technical owns application
+access, Board has global operational access, and each Committee Manager has
+exactly one committee. Resend is the current Auth email provider per the owner;
+former Mailtrap sandbox instructions below are retained only as dated history.
+
 **AUTH + USER ADMINISTRATION (October 5, 2026):** Commit `de0a1c1` fixed
 password recovery and added the Technical-only user directory at
 `/admin/access` (see `docs/AUTH_AND_EMAIL.md` and ADR 0013). Recovery now lands
@@ -33,7 +45,7 @@ password?" once email works, or the Technical team uses a temporary password.
 Forum, Evening, Relations and Society Affairs have no manager. Each assignment
 is audited with an owner-directed reconciliation note.
 
-**OPEN (owner actions):** (1) enter the Mailtrap Sandbox SMTP credentials in
+**HISTORICAL OCTOBER 5 OPEN ITEMS (superseded by the current note above):** (1) enter the Mailtrap Sandbox SMTP credentials in
 Supabase and paste the token-hash templates (`docs/AUTH_AND_EMAIL.md` sections
 3-4), then run its verification checklist; Mailtrap is a sandbox only and real
 delivery needs a verified domain and provider; (2) the Technical, Board and
@@ -120,7 +132,7 @@ archive is complete without deleting foreign-key-linked audit evidence.
 See `docs/UC-02_Acceptance_and_Delivery.md` for release evidence and
 `docs/UC-02_Deep_Dive.md` for the frozen behavior contract.
 
-**CURRENT MILESTONE:** Finalize the access hierarchy and production pilot
+**HISTORICAL MILESTONE:** Finalize the access hierarchy and production pilot
 before any landing-page migration. UC-02 M8 release history below is retained
 as context; the old maintenance-only manager model is superseded by ADR 0012.
 

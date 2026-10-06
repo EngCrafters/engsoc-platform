@@ -151,3 +151,31 @@ unmigrated production schema. After backup and migration safety checks, apply
 the reviewed 0020 archive migration to the confirmed M8 smoke row. It retains its archived
 records and audit relationships. Staging has non-smoke `Events` data, so 0020
 correctly leaves that staging row untouched.
+
+## Failure diagnosis
+
+| Symptom                              | First evidence to inspect                                                                                                                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login, callback or recovery failure  | Supabase Authentication logs, then Vercel function logs for the route; never copy a token or full recovery URL into an incident note.                                                 |
+| Email accepted but absent from inbox | Supabase Auth SMTP result, Resend delivery/bounce/complaint events, then sending-domain SPF/DKIM/DMARC.                                                                               |
+| Access denied unexpectedly           | `/admin/access` grant state and `private.uc02_audit`; compare the actor's live Auth ID with the access row. Check committee RLS under real `request.jwt.claims`.                      |
+| Event or registration action fails   | Vercel function logs, the returned domain error code, then the scoped database routine and audit row. The `app_runtime` role cannot inspect tables directly.                          |
+| Migration failure                    | GitHub commit, migration journal, database error, and the pre-change backup; stop before rerunning a partially applied change.                                                        |
+| Deployment failure                   | GitHub Actions CI run and Vercel deployment build/runtime logs for the exact commit SHA.                                                                                              |
+| Auth administration audit failure    | Vercel `auth_admin_audit_failed` log. The Auth API change can have succeeded before its separate database audit write; reconcile the target's live Auth state and record an incident. |
+
+## Backup and isolated recovery
+
+The October 4 pre-access logical archive recorded in `CURRENT_WORK.md` was
+validated with `pg_restore --list` and a full decode. It is historical evidence,
+not a current recovery point. Supabase previously reported WAL archiving but no
+listed physical backup or proven PITR window. Do not claim a disaster-recovery
+objective or a successful production restore from that evidence.
+
+Before a destructive schema or data change, confirm the project's current
+backup entitlement and retention in Supabase, take a fresh restorable logical
+backup outside this repository, inspect its archive, and restore it to an
+isolated PostgreSQL instance. Apply pending migrations there, run the database
+security suite and verify row counts, key relationships, grants and audit.
+Review the rollback or forward repair for the exact migration before applying
+it to production. Never restore into the live project as a rehearsal.

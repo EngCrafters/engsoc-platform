@@ -89,7 +89,8 @@ db/schema.ts            Implemented schema; UC-02 target ER addendum is in docs/
 db/index.ts             Drizzle client, server-only
 lib/events/             Domain module: reading/publishing events
 lib/registrations/      Domain module: registering for an event
-lib/supabase.ts         Supabase client helpers (browser + server)
+lib/auth/server.ts      Caller-scoped Supabase Auth client
+lib/auth/admin.ts       Technical-only server Auth administration
 docs/                   Governing PDFs and use-case implementation specifications
 .claude/skills/         Claude Code skills for this project
 drizzle.config.ts       Database migration config
@@ -100,10 +101,10 @@ drizzle.config.ts       Database migration config
 **Phase 0 (Foundation):** done, except this repo, which is what you're
 looking at right now.
 
-**Phase 1 (Registration):** UC-02 (public event announcement and registration)
-is the active use case. UC-01 (member profiles) is deliberately deferred,
-not cancelled. See `CLAUDE.md` for the build-order decision and
-`docs/UC-02_Deep_Dive.md` for the implementation scope and open decisions.
+**Phase 1 (Registration):** UC-02's authentication and access-control milestone
+is complete. A repository and production hardening pass precedes the landing-page
+migration. UC-01 (member profiles) is deliberately deferred, not cancelled. See
+`docs/CURRENT_WORK.md` for current evidence and outstanding verification.
 
 ## How we work
 

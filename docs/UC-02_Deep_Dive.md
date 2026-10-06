@@ -5,12 +5,13 @@ application hierarchy, a single committee per ordinary manager, and global
 Board/Technical review authority. See [ADR 0012](adr/0012-application-access-hierarchy.md)
 and the [access contract](ACCESS_CONTROL.md). The manager-only access text below
 records the deployed UC-02 baseline; those access clauses are superseded by
-the new specification once its migration is applied. Section 11 below records
+the new specification; its migration is applied. Section 11 below records
 the updated O-01 reviewer decision.
 
 **Specification revision:** 3, September 15, 2026.
-**Gate:** O-01 answered by the owner (per-committee two-manager review, section
-11). This revision, both companion contracts, and the section 15 checklist
+**Historical freeze gate:** O-01 was originally answered with per-committee
+two-manager review; ADR 0012 supersedes reviewer authority (section 11).
+This revision, both companion contracts, and the section 15 checklist
 were committed at `9c5b733` and confirmed green in CI. Implementation followed
 the dependency-ordered roadmap.
 

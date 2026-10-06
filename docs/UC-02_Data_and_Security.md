@@ -134,6 +134,13 @@ checked_in_at=null; future attendance implementations must preserve eligibility.
 
 ## 4. Committee and manager grant
 
+**Historical UC-02 baseline:** ADR 0012 and [ACCESS_CONTROL.md](ACCESS_CONTROL.md)
+supersede this section's manager-only, multi-committee grant model. The current
+database uses one `administrative_access` row per Auth user: Technical and Board
+have global application scope; an ordinary manager has exactly one committee.
+Technical access is explicit and never inferred from committee identity. The
+tables and fields below remain as migration history, not a current schema guide.
+
 Committee retains id UUID PK default random, name text N UNIQUE; names are
 nonempty, operational identifiers. No new committee creation/renaming UI.
 

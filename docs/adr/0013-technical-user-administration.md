@@ -3,6 +3,8 @@
 ## Status
 
 Accepted; owner decision, October 5, 2026. Extends ADR 0012 (access hierarchy).
+The Mailtrap pilot and pre-SMTP consequences below are historical; Resend is
+the current production Auth email provider (see `docs/AUTH_AND_EMAIL.md`).
 
 ## Context
 

@@ -127,49 +127,29 @@ happens, request a new one.
 Supabase's built-in mailer is rate limited (about two emails per hour) and is
 not intended for production. Auth email must go through custom SMTP.
 
-**Current pilot: Mailtrap Email Sandbox.** The sandbox captures messages in a
-Mailtrap inbox and delivers nothing to real addresses. It proves the flow and
-templates; it does **not** prove delivery to Gmail or Outlook. Do not describe
-email as production-ready while the sandbox is in use.
+**Current provider: Resend.** The owner reports that production Auth email now
+works through Resend. The former Mailtrap sandbox was a pilot and is not the
+current delivery path. Supabase Auth sends recovery and invitation messages
+through its custom SMTP configuration; the `RESEND_API_KEY` Vercel variable is
+separate and is not used by the current UC-02 application flows.
 
-Configure (an owner step; credentials are entered only in the Supabase
-Dashboard and never in chat, the repository, logs or screenshots):
+Production verification (record pass/fail and timestamps only, never credentials,
+message contents or links):
 
-1. Mailtrap: Email Testing, Inboxes, choose an inbox, SMTP Settings, Integrations
-   "Nodemailer"/SMTP. Note host, port, username and password there.
-2. Supabase Dashboard, Authentication, Emails, SMTP Settings, enable custom
-   SMTP:
-   - Host: the Mailtrap sandbox host shown in the inbox (for example
-     `sandbox.smtp.mailtrap.io`)
-   - Port: `2525` (or the port shown)
-   - Username / Password: from the inbox
-   - Sender name: `Engineering Society`
-   - Sender email: any address Mailtrap accepts for the sandbox, for example
-     `no-reply@engineering-society.test`
-3. Authentication, Rate Limits: raise "emails sent per hour" to a pilot value
-   (the limit applies per project; keep it modest).
-4. Save, then paste the templates from section 3.
-
-Verification checklist (record only pass/fail, never message contents):
-
-1. Recovery: request at `/admin/recovery`; the message appears in the Mailtrap
-   inbox; open its link in the same browser; you land on `/auth/reset`
-   without a token in the address bar; set a password; you arrive at
-   `/admin/login` with the success notice; sign in.
-2. Resend: request again; a second message appears.
-3. Invitation: `/admin/access`, Add user, "Send invitation email"; the invite
-   appears; its link opens `/auth/reset`.
-4. Confirmation and email change: only if those flows are enabled.
-5. No link in any message points at localhost or a host other than
-   `engsoc-platform.vercel.app`.
-
-**Future real production email.** After a domain is acquired and verified,
-move Auth SMTP to a real transactional provider (Resend, Mailtrap Email
-Sending, Postmark or SES): add the provider's SPF/DKIM/DMARC DNS records,
-replace the SMTP host and credentials in the same Supabase screen, set a sender
-on the verified domain, and repeat the checklist with real inboxes. Until then
-real-user delivery is **not** complete. Event email from the application
-(Resend, `RESEND_API_KEY`) is separate and has the same domain requirement.
+1. In Supabase Authentication > Emails > SMTP Settings, verify custom SMTP is
+   enabled, the host is `smtp.resend.com`, the sender is on the verified domain,
+   and the configured rate limit is appropriate. Do not reveal the SMTP key.
+2. In Resend Domains, verify the sending domain and its SPF/DKIM records. Check
+   the domain's DMARC policy in DNS. Review Resend delivery, bounce and complaint
+   events for a real inbox test.
+3. Request recovery from `/admin/recovery` for a controlled account, open the
+   delivered link, complete `/auth/reset`, and verify the old link cannot be
+   reused. Check that no link points to localhost or a foreign host.
+4. Send an invitation from `/admin/access` to a controlled account and verify
+   delivery and password setup. Check signup confirmation and email-change
+   templates only if those flows are enabled.
+5. Confirm the Resend delivery event and the corresponding Supabase Auth log.
+   An accepted recovery request alone does not prove inbox delivery.
 
 ## 5. Technical user management (`/admin/access`)
 
@@ -249,8 +229,8 @@ No message exposes SQL, a stack trace, a provider error or a token.
 - **"Authentication email delivery is temporarily unavailable"**: the SMTP
   host/port/credentials in Supabase are wrong or the provider is down. Check
   Authentication, Logs for the sending error and re-enter the credentials.
-- **Message not in Mailtrap**: confirm the SMTP username belongs to the inbox
-  you are looking at and that custom SMTP is enabled.
+- **Message not delivered**: inspect the Supabase Auth sending log and Resend
+  delivery/bounce log; verify custom SMTP, sender domain, SPF and DKIM.
 - **Link opens the home page with a long URL**: the email was sent from the
   Dashboard or the default template. The relay recovers it; fix the template
   (section 3) and request the next email from `/admin/recovery`.
