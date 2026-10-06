@@ -14,7 +14,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "format:check": "prettier --check .",
+    "format:check": "node scripts/check-format.mjs",
     "db:check": "drizzle-kit check"
   },
   "dependencies": {
@@ -25,7 +25,7 @@
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.47.0",
     "motion": "^13.4.0",
-    "next": "16.3.4",
+    "next": "16.3.6",
     "next-themes": "^0.4.6",
     "postgres": "^3.4.9",
     "radix-ui": "^1.6.7",
@@ -47,7 +47,7 @@
     "@types/three": "^0.186.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.3.6",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.9.6",
@@ -58,5 +58,9 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md}": "prettier --write"
+  },
+  "overrides": {
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
   }
 }

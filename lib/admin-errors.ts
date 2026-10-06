@@ -1,8 +1,9 @@
 /** Shared user-facing messages for expected manager operation outcomes. */
 export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
-  AUTH_REQUIRED: "Your manager session has expired. Sign in again to continue.",
+  AUTH_REQUIRED:
+    "Your administrator session has expired. Sign in again to continue.",
   ACTOR_NOT_FOUND:
-    "The maintenance actor is unavailable. Check the account and try again.",
+    "The administrator account is unavailable. Check the account and try again.",
   USER_NOT_FOUND:
     "The target user was not found. Check the account and try again.",
   COMMITTEE_NOT_FOUND:
@@ -11,7 +12,7 @@ export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
     "This manager already has an active committee grant. Refresh the access list.",
   ALREADY_REVOKED:
     "This committee grant is already revoked. Refresh the access list.",
-  DENIED: "This action requires platform maintenance authority.",
+  DENIED: "This action is not available to your account.",
   NOT_FOUND:
     "This record is no longer available in your committee scope. Refresh the page and try again.",
   VALIDATION_ERROR:
@@ -40,7 +41,7 @@ export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
     "The database is temporarily unavailable. Wait a moment and try again.",
   TIMEOUT: "The request timed out. Refresh the page before trying again.",
   FORBIDDEN:
-    "You no longer have permission to manage this committee. Refresh your session or contact the platform maintenance authority.",
+    "You no longer have permission to manage this committee. Refresh your session or contact the Technical Team.",
   SERVER_ERROR:
     "We couldn't complete this action because of an unexpected server error. Try again; if it continues, contact the platform maintenance authority.",
 };

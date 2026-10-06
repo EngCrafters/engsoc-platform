@@ -1,7 +1,7 @@
 // Database schema for the Engineering Society platform.
 //
-// This file is the direct implementation of Technical_Blueprint.pdf, Part 2
-// (Full data model, v1.0). Every table below maps to one box in that diagram.
+// This file began with Technical_Blueprint.pdf, Part 2 (Full data model,
+// v1.0). Later UC-02 migrations and ADR 0012 supersede its access model.
 // If you need a field that isn't here, update the ER diagram first (open a
 // short ADR note), then add it here. Don't add a column that isn't backed by
 // a decision, see UC-01_Deep_Dive.pdf, Part 2 for why.
@@ -117,7 +117,7 @@ export const committees = pgTable("committees", {
 //
 // Access rule (migration 0016): in-app Board/Manager changes use the audited
 // change_administrative_access routine, callable only through app_runtime.
-// Technical changes use the separate audited maintenance routine. Neither
+// Technical changes use the separate audited Technical-access routine. Neither
 // runtime login has direct INSERT/UPDATE access. Authenticated browser users
 // may SELECT only their own access row.
 // ---------------------------------------------------------------------------
@@ -163,15 +163,15 @@ export const administrativeAccess = pgTable(
 // RLS (see docs/UC-02_Data_and_Security.md section 7, superseding
 // docs/adr/0006 as of M2): `anon` may SELECT rows where status IN
 // ('published','full') and archived_at IS NULL, public columns only.
-// `authenticated` may SELECT/mutate only rows in their own committee grant
-// (docs/UC-02_Data_and_Security.md section 6/7). All writes go through the
+// `authenticated` SELECT follows live Technical/Board/global or exact Manager
+// committee scope (ADR 0012). All writes go through the
 // private routines below, never a direct table UPDATE from anon/authenticated.
 //
 // review_required/flagged_by/approved_by/approved_at/approved_revision are
-// the O-01 per-committee two-manager review fields (deep dive section 11):
-// the owning manager flags a draft as needing review; a different manager
-// of the same committee approves the current revision; editing reviewed
-// fields clears the three approved_* columns, forcing re-approval.
+// the review state (ADR 0012): a different active Board or Technical actor
+// approves the current revision. A manager cannot approve; self-approval is
+// denied. Editing review-relevant fields clears approval and makes the editor
+// the current review subject.
 // ---------------------------------------------------------------------------
 export const events = pgTable(
   "events",

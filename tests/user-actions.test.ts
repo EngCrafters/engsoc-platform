@@ -365,6 +365,29 @@ describe("Technical user administration actions", () => {
     expect(mocks.setTemporaryPassword).not.toHaveBeenCalled();
   });
 
+  it("rejects duplicate password fields and preserves intentional whitespace", async () => {
+    const duplicate = form({
+      userId: OTHER,
+      password: "a long temporary password",
+      confirmPassword: "a long temporary password",
+    });
+    duplicate.append("password", "attacker value");
+    const rejected = await setTemporaryPasswordAction(
+      initialUserActionState,
+      duplicate
+    );
+    expect(rejected.status).toBe("error");
+    expect(mocks.setTemporaryPassword).not.toHaveBeenCalled();
+
+    const password = "  a long temporary password  ";
+    const accepted = await setTemporaryPasswordAction(
+      initialUserActionState,
+      form({ userId: OTHER, password, confirmPassword: password })
+    );
+    expect(accepted.status).toBe("success");
+    expect(mocks.setTemporaryPassword).toHaveBeenCalledWith(OTHER, password);
+  });
+
   it("maps a failed password update to a safe message", async () => {
     mocks.setTemporaryPassword.mockResolvedValue({
       code: "PASSWORD_UPDATE_FAILED",

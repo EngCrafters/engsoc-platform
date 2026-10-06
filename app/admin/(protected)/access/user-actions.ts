@@ -45,6 +45,13 @@ function text(form: FormData, field: string) {
     : null;
 }
 
+function passwordText(form: FormData, field: string) {
+  const values = form.getAll(field);
+  return values.length === 1 && typeof values[0] === "string"
+    ? values[0]
+    : null;
+}
+
 async function directoryEntry(actorId: string, userId: string) {
   const rows = await listAuthDirectory(actorId);
   return rows.find((row) => row.user_id === userId) ?? null;
@@ -57,10 +64,19 @@ async function audit(
   detail?: string
 ) {
   try {
-    await recordAuthAdminAction({ actorId, targetId, action, detail });
+    const result = await recordAuthAdminAction({
+      actorId,
+      targetId,
+      action,
+      detail,
+    });
+    if (result.code !== "SUCCESS") {
+      console.error("auth_admin_audit_failed", { action, code: result.code });
+    }
   } catch {
     // The account change already happened; a missing audit label must not
     // surface as a failure of the operation itself.
+    console.error("auth_admin_audit_failed", { action, code: "UNAVAILABLE" });
   }
 }
 
@@ -85,8 +101,8 @@ export async function createUserAction(
   const level = text(form, "level") as Level | null;
   const committeeId = text(form, "committeeId") ?? "";
   const method = text(form, "method") as Method | null;
-  const password = text(form, "password");
-  const confirmation = text(form, "confirmPassword");
+  const password = passwordText(form, "password");
+  const confirmation = passwordText(form, "confirmPassword");
 
   if (
     !isPlausibleEmail(email) ||
@@ -206,18 +222,14 @@ export async function setTemporaryPasswordAction(
   const userId = text(form, "userId") ?? "";
   if (!isUuid(userId)) return error("USER_NOT_FOUND");
   if (userId === actor.userId) return error("SELF_TARGET");
-  const problem = validateNewPassword(
-    form.get("password") as string | null,
-    form.get("confirmPassword") as string | null
-  );
+  const password = passwordText(form, "password");
+  const confirmation = passwordText(form, "confirmPassword");
+  const problem = validateNewPassword(password, confirmation);
   if (problem) return { status: "error", message: problem };
   const entry = await directoryEntry(actor.userId, userId);
   if (!entry) return error("USER_NOT_FOUND");
 
-  const result = await setTemporaryPassword(
-    userId,
-    form.get("password") as string
-  );
+  const result = await setTemporaryPassword(userId, password as string);
   if (result.code !== "SUCCESS") return error(result.code);
   await audit(actor.userId, userId, "user.password_admin_reset");
   revalidatePath("/admin/access");

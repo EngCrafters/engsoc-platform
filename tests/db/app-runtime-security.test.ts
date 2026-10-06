@@ -51,6 +51,14 @@ describe("app_runtime database boundary", () => {
     ).rejects.toMatchObject({
       code: "42501",
     });
+    for (const role of ["anon", "authenticated", "app_runtime"]) {
+      const [{ can_create: canCreate }] = await admin<
+        { can_create: boolean }[]
+      >`SELECT has_schema_privilege(${role}, 'public', 'CREATE') AS can_create`;
+      expect(canCreate, `${role} must not shadow SECURITY DEFINER names`).toBe(
+        false
+      );
+    }
   });
 
   it("can execute an approved routine but not an unapproved private routine", async () => {
