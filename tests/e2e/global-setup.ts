@@ -92,6 +92,9 @@ export default async function globalSetup() {
   );
   await runToCompletion([nextBin, "build"], {
     ...process.env,
+    // A clean CI runner has no .env.local. The build evaluates server modules,
+    // so it needs the same disposable restricted role as the started app.
+    APP_RUNTIME_DATABASE_URL: process.env.UC02_TEST_APP_RUNTIME_DATABASE_URL!,
     NEXT_PUBLIC_SUPABASE_URL:
       process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co",
     NEXT_PUBLIC_SUPABASE_ANON_KEY:

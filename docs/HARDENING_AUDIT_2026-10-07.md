@@ -38,6 +38,11 @@ changed.
 | Format gate scanned user-managed untracked artifacts; CI omitted format, migration check and browsers | Local gate failed on an untracked template, while CI did not repeat all core checks                                                                         | Format checks tracked files only; CI now runs format, migration consistency and Playwright browser tests                                                           |
 | Current docs mixed Mailtrap and manager-only history with the live hierarchy                          | An operator could follow obsolete access or email instructions                                                                                              | Marked historical contracts, updated current Resend operations and added failure/backup procedures                                                                 |
 
+The first clean CI browser build revealed that the test setup had relied on a
+local `.env.local` value for `APP_RUNTIME_DATABASE_URL`. The Playwright setup now
+passes its disposable restricted database URL to both the build and running app;
+it uses no production credential.
+
 ## Remaining findings and operator actions
 
 1. **High — rotate the staging migration database credential.** During this
