@@ -289,7 +289,7 @@ describe("application access hierarchy", () => {
       SELECT private.change_administrative_access(
         ${technical}::uuid, ${manager}::uuid, 'COMMITTEE_MANAGER', ${finance}::uuid, 'grant') AS result
     `;
-    expect(duplicate[0].result.code).toBe("REASSIGN_REQUIRED");
+    expect(duplicate[0].result.code).toBe("SECOND_MANAGER_SCOPE");
     const moved = await runtime<{ result: { code: string } }[]>`
       SELECT private.change_administrative_access(
         ${technical}::uuid, ${manager}::uuid, 'COMMITTEE_MANAGER', ${finance}::uuid, 'reassign') AS result

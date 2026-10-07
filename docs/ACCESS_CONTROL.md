@@ -1,11 +1,8 @@
 # Application access contract
 
-Status: accepted specification, October 4, 2026. ADR 0012 records the decision.
-The specification gate passed in commit `b73b6ec`; the transferable ownership
-decision is recorded in ADR 0012. Migrations 0016–0020 were rehearsed locally
-and applied to production; staging retained its non-smoke legacy records.
-Production assignment and pilot status are tracked in
-[CURRENT_WORK.md](CURRENT_WORK.md).
+Status: accepted specification, extended October 7, 2026 by ADR 0014.
+ADRs 0012/0013 retain the hierarchy and identity boundary. Current deployment,
+assignment and pilot evidence is in [CURRENT_WORK.md](CURRENT_WORK.md).
 
 ## Hierarchy
 
@@ -26,18 +23,20 @@ has global operational scope. `TECHNICAL` has full application scope. None of
 these levels is inferred from a name, email, Auth user metadata or UI state.
 An authenticated user without active access has no administrative scope.
 
-## Committee catalog
+## Committee catalog (stable structure)
 
-| Display name                  | Stable slug         | Current ordinary manager assignment            |
-| ----------------------------- | ------------------- | ---------------------------------------------- |
-| Support & Logistics Committee | `support-logistics` | None; Technical lead will assign               |
-| Relations Committee           | `relations`         | None                                           |
-| Society Affairs Committee     | `society-affairs`   | None                                           |
-| Finance Committee             | `finance`           | None; Technical lead will assign               |
-| Forum Committee               | `forum`             | None                                           |
-| Evening Committee             | `evening`           | None                                           |
-| Media Committee               | `media`             | None; Technical lead will assign               |
-| Technical Team                | `technical-team`    | None; Technical account uses the explicit role |
+Live assignments are recorded in CURRENT_WORK.md and the production directory.
+
+| Display name                  | Stable slug       |
+| ----------------------------- | ----------------- |
+| Support & Logistics Committee | support-logistics |
+| Relations Committee           | relations         |
+| Society Affairs Committee     | society-affairs   |
+| Finance Committee             | finance           |
+| Forum Committee               | forum             |
+| Evening Committee             | evening           |
+| Media Committee               | media             |
+| Technical Team                | technical-team    |
 
 Technical Team is also a normal event-owning committee. Its slug and name give
 no technical authority. No-manager committees are first-class records: Board
@@ -82,7 +81,7 @@ real authenticated user and one committee to grant `COMMITTEE_MANAGER`. If the
 user already manages a different committee, the grant is rejected and the UI
 offers explicit reassignment. Reassignment changes one row atomically, removes
 the old scope immediately, establishes the new scope, and writes an audit row
-with both states. Revocation retains the row and audit. Technical users may
+with both states. Revocation retains the historical row and audit but removes all effective role/scope. The directory displays None and no committee for inactive grants. Technical users may
 grant and revoke `BOARD_ADMIN`; Board users cannot invoke this workflow.
 
 An active Technical user can grant or revoke `TECHNICAL` through `/admin/access`.
@@ -97,6 +96,42 @@ outside the application.
 Any later committee is added as catalog data with a unique slug. Any later
 manager is assigned through the same workflow. Neither action requires a new
 route, RLS policy or role type.
+
+## Lifecycle and replacement (ADR 0014)
+
+Auth existence/confirmation, active application role, committee scope and audit
+attribution are distinct. Add user can choose **None ? sign-in account only**,
+which creates/audits identity without calling an access-grant routine. Later
+assignment needs only that identity, a role and (for managers) one committee.
+
+**Replace manager** is available on an active manager's contextual menu. Select
+an existing account with no active application access. For a new real person,
+first Add user with role None, then replace. The fixed routine validates the
+current Technical actor, expected old committee and replacement identity under
+one transaction lock. It revokes the old grant, assigns the new grant and writes
+two correlated audit records atomically. An already scoped/elevated replacement
+is denied, as is a stale old assignment. A failed audit rolls back both changes.
+
+The approved model allows several people to manage a committee, each with one
+scope. Replacement swaps the selected person only. `COMMITTEE_MANAGER_EXISTS`
+is therefore not an error in this model; imposing exclusivity needs a separate
+staffing-policy decision. Concurrent assignments cannot give one person two roles
+or committees, including a race between Technical and ordinary grants.
+
+Revocation takes effect for new requests immediately after commit. A privileged
+DB operation already holding the grant's share lock finishes before revocation;
+an operation waiting behind revocation rechecks the row and is denied. No logout
+or JWT refresh is needed for authorization to disappear. Auth sessions are not
+silently banned or invalidated: the supported Admin sign-out API needs a target
+JWT, which this application does not collect. User-initiated global sign-out
+remains available. Do not record a session-invalidated event without an actual
+successful supported operation.
+
+Default offboarding retains Auth identity/history. The old Support test identity
+has historical references and is ineligible for deletion. Exceptional deletion
+of a proven unreferenced disposable identity is an infrastructure procedure in
+`Platform_Maintenance_Runbook.md`, using the supported Auth Admin API. No cascade,
+audit rewrite or generic deletion control is permitted.
 
 ## Data and audit
 
@@ -142,13 +177,13 @@ without waiting for a JWT refresh.
 
 The UI repeats these exact safe errors:
 
-| Condition                 | Message                                                                                                              |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| No admin access           | You’re signed in, but this account does not currently have administrative access.                                    |
-| Wrong committee           | You don’t have permission to manage this committee.                                                                  |
-| Global access required    | This action requires Board Administration or Technical Team access.                                                  |
-| Technical only            | This action is available only to the Technical Team.                                                                 |
-| Second manager assignment | This manager already belongs to another committee. Reassign their committee instead of creating a second assignment. |
+| Condition                 | Message                                                                           |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| No admin access           | You’re signed in, but this account does not currently have administrative access. |
+| Wrong committee           | You don’t have permission to manage this committee.                               |
+| Global access required    | This action requires Board Administration or Technical Team access.               |
+| Technical only            | This action is available only to the Technical Team.                              |
+| Second manager assignment | This user already manages another committee. Reassign their committee instead.    |
 
 SQL, RLS and credential errors are never shown to users.
 

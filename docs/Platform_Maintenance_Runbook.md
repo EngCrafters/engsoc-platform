@@ -81,7 +81,7 @@ for bootstrap or verified recovery.
 An active Technical user opens `/admin/access`, selects an existing Auth user,
 chooses Board Administration or Committee Manager, and selects **one**
 committee for a manager. The server and database routine recheck Technical
-authority. A manager already assigned elsewhere returns `REASSIGN_REQUIRED`;
+authority. A manager already assigned elsewhere returns `SECOND_MANAGER_SCOPE`;
 use the explicit Reassign action to atomically replace the committee ID.
 Revoke leaves the access row and audit intact. Board users cannot perform any
 access change, including to themselves. Manager revocation, reassignment and
@@ -136,7 +136,9 @@ Complete local/staging rehearsal, inspect production drift and backup capability
 then apply a reviewed migration. Pilot real Technical, Board and Manager accounts
 with positive and negative paths. Current October 7 identities are recorded in
 `CURRENT_WORK.md`: Support, Finance and Media each have one live assignment.
-Support's invitation is still unaccepted at inspection. Do not reinstate obsolete
+The old disposable Support identity is now revoked and still unconfirmed; the
+real Support identity is pending the owner's email. Recovery and Board production
+pilots are owner-confirmed PASS. Do not ask to repeat them absent a regression. Do not reinstate obsolete
 placeholder decisions from the dated October 4 notes.
 
 Production already has migrations through 0022. The legacy Events committee and
@@ -256,3 +258,59 @@ retention. Before future schema changes, take a fresh archive and repeat the
 isolated check. On migration failure, inspect the journal and transaction outcome;
 prepare a reviewed forward correction or an isolated restore/cutover plan. Never
 rerun destructive SQL or overwrite production as a diagnostic step.
+
+## Access lifecycle operations (ADR 0014, October 7)
+
+- **Onboard without access:** Add user, choose role None and the appropriate Auth
+  creation/invitation method. Account existence or confirmation is not authorization.
+- **Assign:** select the existing real identity, Committee Manager and its one
+  committee, then confirm. Board/Technical are explicit global roles.
+- **Replace:** on the active manager choose Replace manager; select a real Auth
+  account with no active access, inspect the old/new identities and committee,
+  and confirm. The routine records old and new states for both users with a shared
+  `replacementId`. It preserves all event authorship and prior audit rows. It
+  replaces that selected person, not every manager who may share the committee.
+- **Reassign:** changes the same person's one committee in one transaction; it
+  is not replacement by a different person.
+- **Offboard:** Revoke access. Auth and historical grant metadata remain, but
+  the effective role/scope becomes None. Existing sessions do not retain DB or
+  server authorization. New operations are denied after revocation commits;
+  writes already holding the live grant lock finish before that commit.
+- **Changed/stale selection:** `ACCESS_CHANGED` means refresh and inspect the
+  current grant. `ACCESS_ALREADY_REVOKED` means there is no live grant to remove.
+  Never retry an uncertain result without checking the live directory/history.
+
+### Session handling
+
+The current supported Admin SDK `signOut(jwt, scope)` requires the target user's
+session JWT. There is no supported user-ID-only sign-out method in the inspected
+SDK. Do not fetch/retain user tokens, mint impersonation sessions, directly delete
+Auth session tables, or use a password reset/ban as a substitute for offboarding.
+The existing Sign out action invokes the supported global user sign-out. Its
+refresh-token revocation does not invalidate already issued access tokens before
+expiry; application grants independently deny revoked users immediately. No
+`session invalidated` audit event is emitted without an actual supported success.
+
+### Exceptional Auth deletion
+
+Default outcome is a retained no-access identity. For any requested exception:
+
+1. An authorized Technical requester documents that this is a disposable identity,
+   confirms the exact Auth ID and obtains an infrastructure maintenance window.
+2. Verify no active **or historical** administrative grant, grant/revocation actor,
+   event actor (`flagged_by`, `approved_by`), audit actor, audit JSON target
+   (`userId`, `replacesUserId`, `replacedByUserId`), or other historical reference
+   exists. Inspect current foreign keys and other schemas, including Storage;
+   a UUID embedded in JSON is still attribution even without a foreign key.
+3. Any reference returns the policy outcome `USER_HAS_HISTORY`: retain the identity
+   and revoke access. Do not delete grant/audit rows, cascade data, anonymize actor
+   IDs, or rewrite old activity to a replacement account.
+4. Only for a proven unreferenced identity, quiesce competing provisioning/access
+   operations, then an authorized infrastructure maintainer may call the supported
+   server-side Auth Admin `deleteUser(id)` API. Soft deletion is also destructive
+   to identity attribution and is subject to the same review. Recheck absence and
+   record the outcome in the private maintenance incident record. Never record
+   keys/tokens or pretend this was an ordinary application audit event.
+
+The old Support test identity has four audit references and a retained revoked
+grant. It must not be deleted. Historical identities are a valid steady state.

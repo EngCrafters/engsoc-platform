@@ -2,27 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { getManagerContext } from "@/lib/auth/manager";
-import { changeAccess } from "@/lib/access/server";
+import { changeAccess, replaceManager } from "@/lib/access/server";
+import { ACCESS_ERROR_MESSAGES as MESSAGES } from "@/lib/access/messages";
 import { isUuid } from "@/lib/admin-events/types";
 
 export type AccessActionState = { message: string; success: boolean };
 
-const MESSAGES: Record<string, string> = {
-  SUCCESS: "Access updated.",
-  REASSIGN_REQUIRED:
-    "This user already manages another committee. Reassign their committee instead.",
-  FORBIDDEN: "This action is available only to the Technical Team.",
-  CONFLICT:
-    "This user already has a different active access level. Revoke it before granting a new level.",
-  ALREADY_ACTIVE: "This access is already active.",
-  NOT_FOUND: "No active access assignment was found.",
-  USER_NOT_FOUND: "Select an existing authenticated user.",
-  COMMITTEE_NOT_FOUND: "Select a valid committee.",
-  INVALID_TRANSITION: "This reassignment is not valid.",
-  LAST_TECHNICAL_ADMIN:
-    "At least one active Technical Team administrator must remain. Grant Technical access to another user before removing this account.",
-  SELF_ESCALATION: "You cannot elevate your own account through this action.",
-};
+function field(form: FormData, name: string) {
+  const values = form.getAll(name);
+  return values.length === 1 && typeof values[0] === "string"
+    ? values[0]
+    : null;
+}
 
 export async function changeAccessAction(
   _previous: AccessActionState,
@@ -32,11 +23,11 @@ export async function changeAccessAction(
   if (actor.kind !== "manager" || actor.accessLevel !== "TECHNICAL") {
     return { success: false, message: MESSAGES.FORBIDDEN };
   }
-  const userId = form.get("userId");
-  const level = form.get("level");
-  const committeeId = form.get("committeeId");
-  const operation = form.get("operation");
-  const note = form.get("note");
+  const userId = field(form, "userId");
+  const level = field(form, "level");
+  const committeeId = field(form, "committeeId");
+  const operation = field(form, "operation");
+  const note = field(form, "note");
   if (
     typeof userId !== "string" ||
     !isUuid(userId) ||
@@ -71,12 +62,70 @@ export async function changeAccessAction(
     if (result.code === "SUCCESS") revalidatePath("/admin/access");
     return {
       success: result.code === "SUCCESS",
-      message: MESSAGES[result.code] ?? "Access could not be updated.",
+      message:
+        MESSAGES[
+          operation === "revoke" && result.code === "NOT_FOUND"
+            ? "ACCESS_ALREADY_REVOKED"
+            : result.code
+        ] ?? "Access could not be updated.",
     };
   } catch {
     return {
       success: false,
       message: "Access could not be updated. Try again.",
+    };
+  }
+}
+
+export async function replaceManagerAction(
+  _previous: AccessActionState,
+  form: FormData
+): Promise<AccessActionState> {
+  const actor = await getManagerContext();
+  if (actor.kind !== "manager" || actor.accessLevel !== "TECHNICAL") {
+    return { success: false, message: MESSAGES.FORBIDDEN };
+  }
+  const oldUserId = field(form, "oldUserId");
+  const newUserId = field(form, "newUserId");
+  const committeeId = field(form, "committeeId");
+  const note = field(form, "note");
+  if (
+    !oldUserId ||
+    !isUuid(oldUserId) ||
+    !newUserId ||
+    !isUuid(newUserId) ||
+    oldUserId === newUserId ||
+    !committeeId ||
+    !isUuid(committeeId) ||
+    note === null ||
+    note.length > 200
+  ) {
+    return {
+      success: false,
+      message: "Choose the current manager, replacement and committee.",
+    };
+  }
+  try {
+    const result = await replaceManager({
+      actorId: actor.userId,
+      oldUserId,
+      newUserId,
+      committeeId,
+      note: note || null,
+    });
+    if (result.code === "SUCCESS") revalidatePath("/admin/access");
+    return {
+      success: result.code === "SUCCESS",
+      message:
+        result.code === "SUCCESS"
+          ? "Manager replaced. Previous access is revoked and history is preserved."
+          : (MESSAGES[result.code] ?? "The manager could not be replaced."),
+    };
+  } catch {
+    return {
+      success: false,
+      message:
+        "The replacement result could not be confirmed. Refresh the user list before trying again.",
     };
   }
 }

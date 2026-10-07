@@ -3,13 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   context: vi.fn(),
   change: vi.fn(),
+  replace: vi.fn(),
   revalidate: vi.fn(),
 }));
 vi.mock("../lib/auth/manager", () => ({ getManagerContext: state.context }));
-vi.mock("../lib/access/server", () => ({ changeAccess: state.change }));
+vi.mock("../lib/access/server", () => ({
+  changeAccess: state.change,
+  replaceManager: state.replace,
+}));
 vi.mock("next/cache", () => ({ revalidatePath: state.revalidate }));
 
-import { changeAccessAction } from "../app/admin/(protected)/access/actions";
+import {
+  changeAccessAction,
+  replaceManagerAction,
+} from "../app/admin/(protected)/access/actions";
 
 const actor = "11111111-1111-4111-8111-111111111111";
 const target = "22222222-2222-4222-8222-222222222222";
@@ -34,7 +41,60 @@ describe("Technical access action", () => {
       accessLevel: "TECHNICAL",
     });
     state.change.mockReset().mockResolvedValue({ code: "SUCCESS" });
+    state.replace.mockReset().mockResolvedValue({ code: "SUCCESS" });
     state.revalidate.mockReset();
+  });
+
+  it("denies revoked/no-access sessions and forged actor fields for replacement", async () => {
+    state.context.mockResolvedValue({ kind: "unassigned", userId: actor });
+    const data = form("grant", "COMMITTEE_MANAGER");
+    data.set("oldUserId", target);
+    data.set("newUserId", actor);
+    data.set("actorId", target);
+    expect((await replaceManagerAction(initial, data)).success).toBe(false);
+    expect((await changeAccessAction(initial, data)).success).toBe(false);
+    expect(state.replace).not.toHaveBeenCalled();
+    expect(state.change).not.toHaveBeenCalled();
+  });
+
+  it("validates replacement, uses the authenticated actor, and reports safe domain errors", async () => {
+    const next = "44444444-4444-4444-8444-444444444444";
+    const data = form("replace", "COMMITTEE_MANAGER");
+    data.set("oldUserId", target);
+    data.set("newUserId", next);
+    data.set("actorId", target);
+    expect((await replaceManagerAction(initial, data)).success).toBe(true);
+    expect(state.replace).toHaveBeenCalledWith({
+      actorId: actor,
+      oldUserId: target,
+      newUserId: next,
+      committeeId: committee,
+      note: "approved change",
+    });
+    state.replace.mockResolvedValue({ code: "SECOND_MANAGER_SCOPE" });
+    expect((await replaceManagerAction(initial, data)).message).toContain(
+      "Reassign their committee instead"
+    );
+    state.replace.mockRejectedValue(new Error("private SQL details"));
+    expect((await replaceManagerAction(initial, data)).message).toBe(
+      "The replacement result could not be confirmed. Refresh the user list before trying again."
+    );
+    state.replace.mockClear();
+    data.append("newUserId", actor);
+    expect((await replaceManagerAction(initial, data)).success).toBe(false);
+    expect(state.replace).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate access fields and translates already-revoked access", async () => {
+    const data = form("revoke", "COMMITTEE_MANAGER");
+    state.change.mockResolvedValue({ code: "ACCESS_ALREADY_REVOKED" });
+    expect((await changeAccessAction(initial, data)).message).toBe(
+      "This account no longer has administrative access."
+    );
+    state.change.mockClear();
+    data.append("operation", "grant");
+    expect((await changeAccessAction(initial, data)).success).toBe(false);
+    expect(state.change).not.toHaveBeenCalled();
   });
 
   it("rejects Board and Committee Manager calls before the runtime routine", async () => {

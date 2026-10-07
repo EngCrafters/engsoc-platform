@@ -24,7 +24,13 @@ import {
 } from "./user-types";
 
 export type DetailAction =
-  "assign" | "reassign" | "revoke" | "reset" | "resend" | "password";
+  | "assign"
+  | "reassign"
+  | "replace"
+  | "revoke"
+  | "reset"
+  | "resend"
+  | "password";
 
 function Row({
   label,
@@ -58,6 +64,7 @@ export function UserDetailsSheet({
   const [history, setHistory] = useState<{
     userId: string;
     items: UserHistoryItem[];
+    failed?: boolean;
   } | null>(null);
   const userId = user?.userId;
 
@@ -69,7 +76,7 @@ export function UserDetailsSheet({
         if (!cancelled) setHistory({ userId, items });
       })
       .catch(() => {
-        if (!cancelled) setHistory({ userId, items: [] });
+        if (!cancelled) setHistory({ userId, items: [], failed: true });
       });
     return () => {
       cancelled = true;
@@ -96,6 +103,7 @@ export function UserDetailsSheet({
                   Identity
                 </h3>
                 <dl className="divide-y">
+                  <Row label="Auth account">Exists</Row>
                   <Row label="Account ID">
                     <span className="font-mono text-xs">{user.userId}</span>
                   </Row>
@@ -114,8 +122,11 @@ export function UserDetailsSheet({
                   Application access
                 </h3>
                 <dl className="divide-y">
-                  <Row label="Role">{roleLabel(user.access?.level)}</Row>
+                  <Row label="Role">
+                    {roleLabel(active ? user.access?.level : null)}
+                  </Row>
                   <Row label="Committee">{scopeLabel(user)}</Row>
+                  <Row label="Admin access">{active ? "Yes" : "No"}</Row>
                   <Row label="Status">
                     <Badge variant={active ? "secondary" : "outline"}>
                       {accessStatus(user)}
@@ -184,6 +195,11 @@ export function UserDetailsSheet({
                       Passwords are write-only. Nobody, including the Technical
                       Team, can read an existing password.
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      Offboarding revokes application access and retains the
+                      Auth identity and history. Auth deletion requires a
+                      separate reference review.
+                    </p>
                   </section>
                 </>
               ) : null}
@@ -192,7 +208,15 @@ export function UserDetailsSheet({
                 <h3 id="detail-history" className="text-sm font-semibold">
                   History
                 </h3>
-                {items === null ? (
+                {history?.userId === userId && history?.failed ? (
+                  <p
+                    role="alert"
+                    className="mt-2 text-sm text-muted-foreground"
+                  >
+                    History could not be loaded. Close and reopen these details
+                    to retry.
+                  </p>
+                ) : items === null ? (
                   <div className="mt-2 flex flex-col gap-2">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />

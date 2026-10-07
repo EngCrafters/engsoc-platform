@@ -6,7 +6,7 @@ import {
 } from "@/lib/access/server";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { UserDirectory } from "./user-directory";
-import type { UserRecord } from "./user-types";
+import { auditStateLabel, type UserRecord } from "./user-types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -16,29 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-function auditState(
-  value: unknown,
-  committees: ReadonlyArray<{ id: string; name: string }>
-) {
-  if (!value || typeof value !== "object") return "None";
-  const state = value as {
-    accessLevel?: string;
-    committeeId?: string | null;
-    active?: boolean;
-  };
-  const level =
-    state.accessLevel === "TECHNICAL"
-      ? "Technical Team"
-      : state.accessLevel === "BOARD_ADMIN"
-        ? "Board Administration"
-        : "Committee Manager";
-  const committee = state.committeeId
-    ? (committees.find((item) => item.id === state.committeeId)?.name ??
-      state.committeeId)
-    : "All Committees";
-  return `${level} · ${committee} · ${state.active ? "Active" : "Revoked"}`;
-}
 
 const auditLabels: Record<string, string> = {
   "manager.assigned": "Manager assigned",
@@ -142,10 +119,10 @@ export default async function AccessPage() {
                       {emailOf(entry.target_user_id) ?? entry.target_user_id}
                     </TableCell>
                     <TableCell>
-                      {auditState(entry.previous_state, actor.committees)}
+                      {auditStateLabel(entry.previous_state, actor.committees)}
                     </TableCell>
                     <TableCell>
-                      {auditState(entry.new_state, actor.committees)}
+                      {auditStateLabel(entry.new_state, actor.committees)}
                     </TableCell>
                     <TableCell>{entry.note ?? "—"}</TableCell>
                   </TableRow>

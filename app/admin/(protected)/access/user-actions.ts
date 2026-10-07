@@ -21,6 +21,7 @@ import {
 import { validateNewPassword } from "@/lib/auth/callback";
 import { isUuid } from "@/lib/admin-events/types";
 import { USER_ERROR_MESSAGES, type UserActionState } from "./user-state";
+import { auditStateLabel } from "./user-types";
 
 function error(code: string): UserActionState {
   return {
@@ -99,7 +100,12 @@ function completed(message: string, audited: boolean): UserActionState {
     : { status: "error", message: `${message} ${AUDIT_NOTICE}` };
 }
 
-const LEVELS = ["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const;
+const LEVELS = [
+  "NONE",
+  "COMMITTEE_MANAGER",
+  "BOARD_ADMIN",
+  "TECHNICAL",
+] as const;
 type Level = (typeof LEVELS)[number];
 const METHODS = ["invite", "password", "no_email"] as const;
 type Method = (typeof METHODS)[number];
@@ -160,6 +166,16 @@ export async function createUserAction(
         ? "temporary password"
         : "no email"
   );
+
+  if (level === "NONE") {
+    revalidatePath("/admin/access");
+    return completed(
+      method === "invite"
+        ? "Invitation sent. No administrative access assigned."
+        : "Account created without administrative access.",
+      audited
+    );
+  }
 
   let granted: { code: string };
   try {
@@ -320,13 +336,20 @@ export async function getUserHistoryAction(
   ]);
   const emailOf = (id: string | null) =>
     id
-      ? (directory.find((entry) => entry.user_id === id)?.email ?? "Unknown")
+      ? (directory.find((entry) => entry.user_id === id)?.email ?? id)
       : "System migration";
   return rows.map((row) => ({
     id: row.id,
     when: new Date(row.occurred_at).toISOString(),
     actor: emailOf(row.actor_user_id),
     label: HISTORY_LABELS[row.action] ?? row.action,
-    detail: row.note ?? "",
+    detail: [
+      row.previous_state || row.new_state
+        ? `${auditStateLabel(row.previous_state, actor.committees)} → ${auditStateLabel(row.new_state, actor.committees)}`
+        : "",
+      row.note ?? "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
   }));
 }

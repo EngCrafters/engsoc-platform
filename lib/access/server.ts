@@ -75,6 +75,24 @@ export type AuthDirectoryRow = {
   invited: boolean;
 };
 
+/** One transaction swaps the selected manager and records both target histories. */
+export async function replaceManager(input: {
+  actorId: string;
+  oldUserId: string;
+  newUserId: string;
+  committeeId: string;
+  note: string | null;
+}) {
+  const rows = await db.execute<{ result: { code: string } }>(sql`
+    SELECT private.replace_committee_manager(
+      ${input.actorId}::uuid, ${input.oldUserId}::uuid,
+      ${input.newUserId}::uuid, ${input.committeeId}::uuid,
+      ${input.note}::text
+    ) AS result
+  `);
+  return rows[0]?.result ?? { code: "UNAVAILABLE" };
+}
+
 /** Identity state only: never passwords, hashes or tokens. */
 export async function listAuthDirectory(actorId: string) {
   return db.execute<AuthDirectoryRow>(

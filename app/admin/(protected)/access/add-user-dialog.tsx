@@ -17,6 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -66,7 +67,7 @@ function AddUserForm({
   committees: Committee[];
   onClose: () => void;
 }) {
-  const [level, setLevel] = useState<AccessLevel>("COMMITTEE_MANAGER");
+  const [level, setLevel] = useState<AccessLevel | "NONE">("COMMITTEE_MANAGER");
   const [committeeId, setCommitteeId] = useState("");
   const [method, setMethod] = useState<Method>("invite");
   const [state, action, pending] = useActionState(
@@ -89,8 +90,9 @@ function AddUserForm({
       <DialogHeader>
         <DialogTitle>Add user</DialogTitle>
         <DialogDescription>
-          Creates a sign-in account and gives it one role. Creating an account
-          alone never grants dashboard access.
+          Create a sign-in account, then choose its application access. Choose
+          None to prepare an identity for manager replacement without granting
+          access.
         </DialogDescription>
       </DialogHeader>
       <form action={action} className="grid gap-4" autoComplete="off">
@@ -117,7 +119,7 @@ function AddUserForm({
           <Select
             value={level}
             onValueChange={(value) => {
-              setLevel(value as AccessLevel);
+              setLevel(value as AccessLevel | "NONE");
               setCommitteeId("");
             }}
           >
@@ -125,13 +127,18 @@ function AddUserForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const).map(
-                (value) => (
+              <SelectGroup>
+                <SelectItem value="NONE">
+                  None — sign-in account only
+                </SelectItem>
+                {(
+                  ["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const
+                ).map((value) => (
                   <SelectItem key={value} value={value}>
                     {roleLabel(value)}
                   </SelectItem>
-                )
-              )}
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>

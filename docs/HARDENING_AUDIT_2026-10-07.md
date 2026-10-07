@@ -1,12 +1,12 @@
 # Pre-expansion hardening audit — October 7, 2026
 
-Status: **BLOCKED on owner recovery completion and Board/Support interactive sign-in**.
+Status: **Lifecycle validated and production migration applied; deployment and real Support pilot pending**.
 The broad repository audit is complete. The production evidence below supersedes
-the earlier unavailable-access findings. No UI appearance or business data was changed.
+the earlier unavailable-access findings. The lifecycle extension reuses the existing access UI; no broad appearance change or business data deletion is included.
 
 ## Boundary and evidence
 
-- Current access authority is ADR 0012, `ACCESS_CONTROL.md`, and the live
+- Current access authority is ADRs 0012/0014, `ACCESS_CONTROL.md`, and the live
   `administrative_access` database model. ADR 0009 and the manager-only UC-02
   sections are historical.
 - The 0022 migration repairs committee RLS to read real Supabase
@@ -78,7 +78,7 @@ credential and was not rotated unnecessarily.
 - 22 applied migration records through `0022` match repository SQL after
   comment/whitespace normalization. `0002` is intentionally staging-only.
   All 33 current private routine bodies match their latest repository definitions.
-- All 10 public business tables and `private.uc02_audit` have ENABLE/FORCE RLS.
+- All nine public business tables and `private.uc02_audit` have ENABLE/FORCE RLS.
   Anonymous grants expose only five public event columns under the visible-event
   policy, with no registration/attendee PII access or writes.
 - `app_runtime`: LOGIN, no superuser/BYPASSRLS/CREATEROLE, no inherited role
@@ -91,9 +91,10 @@ credential and was not rotated unnecessarily.
 - SECURITY DEFINER ownership is `uc02_routine_owner`, with NOLOGIN and no
   BYPASSRLS. All fixed search paths are `public, pg_temp`; no dynamic SQL or
   email-address authorization literals occur in these routines.
-- Under real production `request.jwt.claims`, Technical and Board see eight
-  committees, Support/Finance/Media each see exactly their committee, and an
-  unassigned identity sees zero. These read-only RLS probes do not substitute
+- At the initial inspection, real production `request.jwt.claims` gave Technical
+  and Board eight committees and each manager its one committee. The owner has
+  since revoked the disposable Support grant; current reconciliation supersedes
+  that earlier Support result. An unassigned identity sees zero. These read-only RLS probes do not substitute
   for the interactive account pilot.
 - Data: five Auth identities, eight active committees, one isolated legacy
   committee, five archived M8 smoke events, four test-pattern registrations,
@@ -123,8 +124,9 @@ credential and was not rotated unnecessarily.
   (message `01a114dc-ebcb-707b-aeaa-4e0cc2e1ef93`). The email link opened the
   production callback and then `/auth/reset` without a token in the visible URL.
   An older link was rejected with the expired-link message.
-- The owner must finish password mismatch, update, session-end, and new-password
-  sign-in checks. No password was requested in chat or entered by the agent.
+- **Owner-confirmed production recovery pilot: PASS.** This supersedes the earlier
+  pending password-reset completion. No password was requested in chat or entered
+  by the agent; the working recovery architecture is unchanged.
 - One obsolete email link's hash fragments appeared during inbox DOM inspection
   despite URL redaction. That older link was verified expired; fresh-link
   handling now avoids emitting link contents or fragmented token text.
@@ -139,12 +141,13 @@ credential and was not rotated unnecessarily.
 
 ### Interactive production pilot
 
-| Account         | Evidence                                                                                                                                                | State                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Technical       | Real sign-in; `/admin`, all eight committees, `/admin/access`, five-user directory, Board/Support/Finance/Media assignments, details, and audit history | Verified                                      |
-| Board           | Live production RLS: eight committees; no interactive sign-in in this closure pass yet                                                                  | Owner sign-in pending                         |
-| Support Manager | Live production RLS: Support only; identity still invited/unconfirmed                                                                                   | Owner invitation/recovery and sign-in pending |
-| Finance / Media | Live production RLS: exactly one assigned committee each; neither had signed in at inspection                                                           | Optional lighter sign-in checks pending       |
+| Account                   | Evidence                                                                                                      | State                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Technical                 | Real sign-in, eight committees, access directory/details/history                                              | Verified; final lifecycle smoke pending                                     |
+| Board                     | Owner-confirmed production pilot; global RLS and access-admin denial regressions                              | PASS                                                                        |
+| Old Support test identity | Owner revoked access; retained Auth identity, revoked grant and four audit references independently inspected | No access; retain historical identity                                       |
+| Real Support Manager      | Owner will supply the real email; no placeholder created                                                      | Assignment and interactive pilot pending                                    |
+| Finance / Media           | One identity and one scope each, no elevated roles; live RLS checked                                          | Architecture verified; interactive acceptance optional when owners activate |
 
 Last-Technical rejection, a second-Technical grant, and Board mutation denial
 were executed against the freshly restored production archive and rolled back.
@@ -235,44 +238,87 @@ below still need isolated compatibility verification; no force upgrade was run.
 | `shadcn`                    | High     | No                | Yes         | No; major downgrade suggested     | Defer tooling update             |
 | `ts-morph`                  | High     | No                | Yes         | Patch candidate, unverified       | Defer tooling update             |
 
-## Release gate
+## Focused access-lifecycle extension (ADR 0014)
 
-Complete the owner password-reset and Board/Support interactive checks before
-issuing GO. Finance/Media lighter checks may follow when those owners are
-available. The closure changes passed format, lint, typecheck, all 214 tests, db:check,
-production build, 37 Playwright tests (one intentional skip), production dependency
-audit (zero advisories), and diff hygiene. The database suite replays migrations
-from scratch; no new migration was needed. Commit/push, exact-commit GitHub CI
-and Vercel evidence are recorded as deployment completes. Landing-page migration
-has not started.
+Migration 0023 introduces a Technical-only fixed manager-replacement routine and
+serializes ordinary access changes with the existing Technical-ownership lock.
+The selected old grant is revoked, the new one assigned, and both histories are
+written atomically with a shared replacement ID. Events and earlier audit actors
+are never reassigned. The existing many-managers-per-committee policy remains;
+each person still has exactly one committee. Stale revocation scope and a second
+manager scope return explicit domain errors.
 
-### Deployment evidence and exact remaining actions
+Auth-only onboarding, effective None role/scope after revoke, details showing Auth
+existence separately from admin access, and previous/resulting audit states use
+the existing components. No session invalidation is claimed: the supported Admin
+sign-out API requires a target session JWT, not a user ID. Current database grants
+deny revoked identities independently of Auth session lifetime. Exceptional Auth
+deletion remains reviewed infrastructure maintenance; retained grants or history
+make the old Support test identity ineligible. No deletion button was added.
 
-- Application/documentation commit `f3742552c14c7312f00a721252b16ddb64fbdbaa`
-  is pushed to `main`. [GitHub CI run 37578700777](https://github.com/EngCrafters/engsoc-platform/actions/runs/37578700777)
-  completed successfully, including database and browser checks.
-- Vercel production deployment `dpl_GB1TEMC6rfVcqLkeh6DrKJxyC12N` is READY
-  on that exact SHA and assigned `engsoc-platform.vercel.app`. Post-deployment
-  public/login/recovery/reset responses and unauthenticated access redirect
-  passed, with security headers present.
-- The restore container and temporary credential-access helper were removed.
-  The sensitive logical archive was deliberately retained outside the repository.
-  Existing user-managed untracked files were not staged, modified or removed.
+Targeted tests cover replacement and concurrent competing replacements, competing
+scope/elevated assignments, an already-scoped replacement, audit-failure rollback,
+revocation concurrent with a privileged write, last-Technical protection, current
+RLS/routine denial, direct DML denial, and retained attribution. Protected-layout
+and direct Technical-page tests are component boundary tests, not a claim that a
+real revoked account completed browser sign-in. Server-action denial is separately
+tested. No active browser session for the old Support identity was available.
 
-**NOT READY FOR LANDING PAGE MIGRATION** until these owner steps have evidence:
+Staging migration 0023 (version 20261007090000) passed. Its actual restricted
+runtime connection rejects an unassigned actor and direct table reads. A fresh
+production archive was restored into isolated Supabase PostgreSQL 17.6, migration
+0023 applied, and a replacement executed successfully then rolled back. The
+private archive is at %LOCALAPPDATA%/engsoc-platform/backups/lifecycle-2026-10-07.dump
+(517,028 bytes; SHA-256
+194a965905eade5aa034845b209050de42ba95a1f0dfaad376aed27b41dbd32f).
+No live production assignment was changed in that rehearsal.
 
-1. Finish the open recovery form: mismatched confirmation rejected, matching
-   new password accepted, recovery session ended, and new-password login succeeds.
-   Then verify the consumed link is rejected. Do not share the password or link.
-2. Sign in as `engineeringsociety.squ@gmail.com`; verify global committees and
-   operational counts, allowed event/registration paths, and denial of
-   `/admin/access` and Technical controls.
-3. Accept the existing Support invitation if necessary and sign in as
-   `unknown11110000@gmail.com`; verify Support-only events/counts/registration
-   operations, no committee switcher, and denial of foreign scope and
-   `/admin/access`. Finance/Media lighter checks can follow when available.
+### Lifecycle production reconciliation
 
-No other remaining item is classified as a release blocker. Paid leaked-password
-protection, automated backup/PITR, stronger DMARC/CSP, development advisories and
-future directory pagination are explicitly documented follow-ups. Final owner
-sign-in evidence must be recorded before changing the decision to READY.
+Production migration 0023 is applied as version 20261007090000; all 23 expected
+records are present (0002 remains staging-only). Its stored SQL matches the
+repository. Both changed/new routines use the NOLOGIN routine owner and fixed
+search_path; only app_runtime has the application EXECUTE grant. Browser roles
+and app_maintenance cannot execute replacement. app_runtime retains no direct
+table privileges. All nine public tables and private audit retain FORCE RLS.
+
+Read-only reconciliation found five unique Auth users, eight catalog committees,
+one legacy committee, five preserved events, four registrations and 47 audit
+rows. No duplicate identities, invalid active scope or active legacy grants.
+Technical and Board each see eight committees under real production claims;
+Finance sees only finance, Media only media. The revoked Support identity sees
+zero committees, active grants, events or registrations. A controlled mutation
+denial probe returned NOT_FOUND, left event/audit counts unchanged, and was
+rolled back. Its four historical audit references remain. A strict read-only
+transaction cannot invoke routines using row locks; that first probe correctly
+returned PostgreSQL 25006, not an authorization result.
+
+Local final gates: format, lint, typecheck, 232 tests in 35 files, db:check,
+production build, 37 Playwright passes / one intentional skip, and diff checks.
+The tests replay migrations from zero. The earlier 235 test total included three
+identical layout assertions, consolidated before release. Secret-value scans of
+27 staged files and 41 built client chunks found no matches; public site origin
+and already-documented account email matches are not secrets.
+
+## Release gate and deployment evidence
+
+The previous hardening release is deployed at commit
+9f56ee4c3006d534ba5b376872bcee252564d342; GitHub CI 37579275465 passed and
+Vercel dpl_2Jqz55YNFRpTkYCiazvmnf8NjwrE was READY. Those results do not yet prove
+the lifecycle deployment. Local gates and the production migration are complete;
+exact lifecycle commit/deployment evidence will be recorded after the push.
+
+Owner-confirmed Recovery and Board pilots are PASS and need no repeat. The real
+Support manager's email is still required for assignment and the requested pilot;
+the old disposable account must not be reactivated as a substitute. Finance/Media
+interactive acceptance is optional once architectural integrity is verified.
+
+**NOT READY FOR LANDING PAGE MIGRATION** while the focused release is unfinished
+and the required real Support manager pilot remains pending. Exact next actions:
+finish the coherent lifecycle validation/deployment and production reconciliation;
+then the owner provides the real Support email and completes private sign-in for
+its scope/denial pilot. No passwords or recovery links should be shared.
+
+Paid leaked-password protection, automated backup/PITR, stronger DMARC/CSP,
+development advisories, future directory pagination and the documented external
+Auth/audit reconciliation boundary remain non-blocking technical debt.

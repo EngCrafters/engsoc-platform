@@ -1,35 +1,37 @@
-# Current work — handoff state
+# Current work ? handoff state
 
-**CURRENT (October 7, 2026):** The remaining readiness checks are recorded in
-`HARDENING_AUDIT_2026-10-07.md`; landing-page migration remains on hold for the
-owner's completed recovery test and real Board/Support sign-in pilot. Technical
-sign-in and screens are verified. The exposed migration credential was actually
-**production**, not staging: it has been rotated, the old password rejected,
-local/Vercel Development stores updated, and unused Preview storage removed.
-Live production migrations through 0022, RLS, grants, routine bodies, and data
-integrity have been inspected. No corrective migration or data deletion was
-needed. A fresh database archive restored successfully in isolation.
+**CURRENT (October 7, 2026):** Recovery production pilot **PASS** and Board
+production pilot **PASS**, confirmed by the owner. The disposable Support test
+identity has been revoked and retains no application access. It remains in Auth
+for historical attribution; it has a retained grant and four audit references.
+The real Support email has not been supplied. Do not reactivate the placeholder.
 
-Resend SMTP, verified sending domain/SPF/DKIM, inbox receipt, and delivery event
-are now independently verified. Auth enforces the existing 12-character password
-minimum. Leaked-password protection requires a paid plan (HTTP 402); PITR is
-disabled with no listed physical restore window. Both are documented follow-ups,
-not claimed capabilities. Vercel connector 403 is a team authorization limitation;
-the separately authenticated CLI can read production logs. Auth Admin partial
-success now reports failed audit recording and uncertain access assignment safely.
-Local validation: 214 tests, 37 Playwright passes and one intentional skip;
-format/lint/types/migration check/build/diff gates are recorded in the audit.
+The focused access-lifecycle extension in ADR 0014 preserves the existing
+Technical / Board / single-committee Manager hierarchy. Migration 0023 adds
+atomic selected-manager replacement and serializes all access mutations. It
+preserves history, rejects stale scope and competing grants, and uses the existing
+UI for Auth-only onboarding, replacement and explicit account/access status.
+Supported Admin sign-out needs the target session JWT; no unsupported user-ID
+session revocation or automatic Auth deletion is added.
 
-Commit `f374255` is pushed; GitHub CI `37578700777` is green, Vercel production
-`dpl_GB1TEMC6rfVcqLkeh6DrKJxyC12N` is READY on that SHA, and production smoke
-checks pass. The remaining hold is only the owner recovery and Board/Support
-interactive checks listed in the audit. The isolated restore container and
-temporary credential helper were cleaned up; the private backup was retained.
+Staging and an isolated restore of a fresh production archive passed the migration
+and replacement rehearsal. Migration 0023 is now applied in production; read-only
+RLS reconciliation confirms Technical/Board global, Finance/Media one scope each,
+and the old Support identity zero scope. A rolled-back Support mutation is denied.
+Local gates pass: 232 tests, 37 Playwright passes / one intentional skip, format,
+lint, types, db:check, build and diff hygiene. Deployment verification follows;
+final evidence belongs in HARDENING_AUDIT_2026-10-07.md.
+No landing-page migration or broad UI redesign has started.
 
-Current authority remains ADR 0012 and `docs/ACCESS_CONTROL.md`: Technical owns
-application access, Board has global operational access, and each Committee
-Manager has exactly one committee. The entries below are dated historical
-handoffs; their open-item statements are superseded by this note.
+The earlier exposed migration credential was production, not staging: rotation,
+old-password rejection, affected private-store updates and log review are complete.
+Resend/DNS/delivery, production RLS/grants, backup limitations and log-access 403
+cause are verified. A logical restore is proven; paid leaked-password protection,
+automated backup/PITR, stronger DMARC/CSP, development advisories, future directory
+pagination and the external Auth/audit boundary remain documented follow-ups.
+
+Current authority is ADRs 0012?0014 and ACCESS_CONTROL.md. The dated handoffs below
+are historical; their old account state and open items are superseded by this note.
 
 **AUTH + USER ADMINISTRATION (October 5, 2026):** Commit `de0a1c1` fixed
 password recovery and added the Technical-only user directory at

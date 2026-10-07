@@ -138,8 +138,9 @@ and 30 Auth emails/hour. Resend confirms `auth.essqu.com`, SPF and DKIM verified
 DNS agrees. Parent DMARC is monitoring-only (`p=none`); enforcement remains a
 follow-up after confirming all legitimate senders. A fresh recovery email at
 approximately 05:36 UTC reached the controlled inbox and Resend recorded delivery.
-Its token-hash callback reached `/auth/reset` with a clean URL. The owner password
-update/new-login portion remains pending; delivery alone does not close that gate.
+Its token-hash callback reached `/auth/reset` with a clean URL. The owner subsequently confirmed the complete production password-recovery
+pilot PASSED, including password update and new-password sign-in. This is owner
+acceptance evidence; automated recovery regressions remain part of the suite.
 
 The live Site URL is the production origin and the allowlist contains only
 `/auth/callback` and `/auth/reset` on that origin. The recovery template uses the
@@ -184,7 +185,7 @@ Committee Managers are denied by the route and by every server action.
   (Active / Revoked / No access), with search. A row's menu offers only what
   makes sense for its state. The details sheet shows identity, access, security
   actions and its history.
-- **Add user.** Email + role (+ exactly one committee for a manager) + how they
+- **Add user.** Email + role (or **None** for identity-only onboarding; exactly one committee for a manager) + how they
   get in:
   - _Send invitation email_ (preferred): the person sets their own password.
   - _Create without email_: a confirmed account with no password and no email;
@@ -194,6 +195,10 @@ Committee Managers are denied by the route and by every server action.
     the audited routine. If the grant fails, the message says the account exists
     without access. A duplicate email is reported as `EMAIL_EXISTS`; use "Assign
     role" on the existing user.
+- **Replace manager.** Prepare the real replacement with Add user / role None if
+  necessary, then select Replace manager on the current manager. Both access
+  changes and their audit records commit together; historical actions retain
+  their original actor. An already active replacement must be handled explicitly.
 - **Access.** Assign, reassign (atomic: the old committee ends as the new one
   starts) and revoke Committee Manager; grant and revoke Board Administration
   and Technical Team. An ordinary manager can never hold two committees.
@@ -206,8 +211,10 @@ Committee Managers are denied by the route and by every server action.
   ask the person to change it.
 - **No** "show password", "retrieve password", password history or token view
   exists, by design.
-- **Deleting Auth users** is intentionally not offered: it could orphan audit
-  history, events and registrations. Revoke access instead.
+- **Deleting Auth users** is intentionally not a normal UI operation. Revoke
+  access and retain history. Any grant/history reference makes an account
+  ineligible; the exceptional unreferenced-test-identity procedure is in the
+  maintenance runbook and ADR 0014.
 
 ### Technical ownership transfer
 

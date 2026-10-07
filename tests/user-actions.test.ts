@@ -94,6 +94,27 @@ describe("Technical user administration actions", () => {
     mocks.setTemporaryPassword.mockResolvedValue({ code: "SUCCESS" });
   });
 
+  it("creates a retained identity for replacement without granting any application access", async () => {
+    const result = await createUserAction(
+      initialUserActionState,
+      form({
+        email: "replacement@example.test",
+        level: "NONE",
+        committeeId: "",
+        method: "no_email",
+      })
+    );
+    expect(result).toEqual({
+      status: "success",
+      message: "Account created without administrative access.",
+    });
+    expect(mocks.createAuthUserWithoutPassword).toHaveBeenCalledOnce();
+    expect(mocks.recordAuthAdminAction).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "user.created", targetId: OTHER })
+    );
+    expect(mocks.changeAccess).not.toHaveBeenCalled();
+  });
+
   const deniedMessage = "This action is available only to the Technical Team.";
 
   it.each(["BOARD_ADMIN", "COMMITTEE_MANAGER"])(

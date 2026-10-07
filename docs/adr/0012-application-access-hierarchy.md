@@ -9,6 +9,10 @@ are committed, pushed, and verified in CI. Production emails are changeable
 rollout assignments, not authorization constants; the owner withdrew the
 placeholder Support address before the manager pilot.
 
+ADR 0014 extends this decision with identity retention, atomic manager replacement
+and shared mutation locking. The access hierarchy and committee staffing
+cardinality remain unchanged.
+
 ## Context
 
 UC-02 currently gives Auth users independent committee-manager grants, including

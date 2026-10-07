@@ -17,16 +17,21 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import type { AccessLevel } from "@/lib/auth/manager";
-import { changeAccessAction, type AccessActionState } from "./actions";
+import {
+  changeAccessAction,
+  replaceManagerAction,
+  type AccessActionState,
+} from "./actions";
 import { roleLabel, type Committee, type UserRecord } from "./user-types";
 
 export type AccessSelection = {
-  operation: "grant" | "reassign" | "revoke";
+  operation: "grant" | "reassign" | "revoke" | "replace";
   user: UserRecord;
   level: AccessLevel;
 };
@@ -35,6 +40,7 @@ const initial: AccessActionState = { success: false, message: "" };
 
 function title(selection: AccessSelection) {
   const { operation, level } = selection;
+  if (operation === "replace") return "Replace manager";
   if (operation === "reassign") return "Reassign committee";
   if (operation === "revoke") {
     return level === "TECHNICAL"
@@ -53,6 +59,9 @@ function consequence(
   committee: Committee | undefined
 ) {
   const { operation, level, user } = selection;
+  if (operation === "replace") {
+    return `Revoke ${user.email}'s access and assign the replacement to ${user.access?.committeeName}. Both changes happen together. Sign-in accounts and historical activity are retained.`;
+  }
   if (operation === "reassign") {
     return `Old access ends and new access starts together. Event ownership stays with each event's committee. ${
       user.access?.committeeName
@@ -76,10 +85,12 @@ function consequence(
 export function AccessDialog({
   selection,
   committees,
+  users,
   onClose,
 }: {
   selection: AccessSelection | null;
   committees: Committee[];
+  users: UserRecord[];
   onClose: () => void;
 }) {
   return (
@@ -92,6 +103,7 @@ export function AccessDialog({
           key={`${selection.user.userId}-${selection.operation}-${selection.level}`}
           selection={selection}
           committees={committees}
+          users={users}
           onClose={onClose}
         />
       ) : null}
@@ -102,16 +114,22 @@ export function AccessDialog({
 function AccessForm({
   selection,
   committees,
+  users,
   onClose,
 }: {
   selection: AccessSelection;
   committees: Committee[];
+  users: UserRecord[];
   onClose: () => void;
 }) {
   const { operation, user } = selection;
   const [level, setLevel] = useState<AccessLevel>(selection.level);
   const [committeeId, setCommitteeId] = useState("");
-  const [state, action, pending] = useActionState(changeAccessAction, initial);
+  const [newUserId, setNewUserId] = useState("");
+  const [state, action, pending] = useActionState(
+    operation === "replace" ? replaceManagerAction : changeAccessAction,
+    initial
+  );
 
   useEffect(() => {
     if (state.success) {
@@ -121,8 +139,16 @@ function AccessForm({
   }, [state, onClose]);
 
   const needsCommittee =
-    level === "COMMITTEE_MANAGER" && operation !== "revoke";
-  const valid = operation === "revoke" || !needsCommittee || committeeId !== "";
+    level === "COMMITTEE_MANAGER" &&
+    operation !== "revoke" &&
+    operation !== "replace";
+  const valid =
+    operation === "replace"
+      ? newUserId !== ""
+      : operation === "revoke" || !needsCommittee || committeeId !== "";
+  const replacements = users.filter(
+    (candidate) => candidate.userId !== user.userId && !candidate.access?.active
+  );
   const committee = committees.find((item) => item.id === committeeId);
   const choices =
     operation === "reassign"
@@ -140,19 +166,49 @@ function AccessForm({
       </DialogHeader>
       <form action={action} className="grid gap-4">
         <input type="hidden" name="operation" value={operation} />
-        <input type="hidden" name="userId" value={user.userId} />
+        <input
+          type="hidden"
+          name={operation === "replace" ? "oldUserId" : "userId"}
+          value={user.userId}
+        />
         <input type="hidden" name="level" value={level} />
         <input
           type="hidden"
           name="committeeId"
           value={
             level === "COMMITTEE_MANAGER"
-              ? operation === "revoke"
+              ? operation === "revoke" || operation === "replace"
                 ? (user.access?.committeeId ?? "")
                 : committeeId
               : ""
           }
         />
+        {operation === "replace" ? (
+          <div className="grid gap-1.5">
+            <Label htmlFor="replacement-user">Replacement account</Label>
+            <input type="hidden" name="newUserId" value={newUserId} />
+            <Select value={newUserId} onValueChange={setNewUserId}>
+              <SelectTrigger id="replacement-user" className="w-full">
+                <SelectValue placeholder="Select an account without active access" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {replacements.map((candidate) => (
+                    <SelectItem key={candidate.userId} value={candidate.userId}>
+                      {candidate.email}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {replacements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No eligible account. Add the real user&apos;s identity before
+                replacing this manager.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {operation === "grant" ? (
           <div className="grid gap-1.5">
             <Label htmlFor="access-role">Role</Label>
@@ -228,7 +284,9 @@ function AccessForm({
                 ? "Confirm revocation"
                 : operation === "reassign"
                   ? "Reassign manager"
-                  : "Confirm assignment"}
+                  : operation === "replace"
+                    ? "Confirm replacement"
+                    : "Confirm assignment"}
           </Button>
         </DialogFooter>
       </form>

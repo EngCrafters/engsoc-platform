@@ -75,7 +75,7 @@ export function UserDirectory({
 
   const closeAccess = useCallback(() => setAccess(null), []);
   const visible = users.filter((user) =>
-    `${user.email} ${roleLabel(user.access?.level)} ${scopeLabel(user)}`
+    `${user.email} ${roleLabel(user.access?.active ? user.access.level : null)} ${scopeLabel(user)}`
       .toLowerCase()
       .includes(query.trim().toLowerCase())
   );
@@ -163,7 +163,7 @@ export function UserDirectory({
                       <span className="text-xs text-muted-foreground">You</span>
                     ) : null}
                   </TableCell>
-                  <TableCell>{roleLabel(level)}</TableCell>
+                  <TableCell>{roleLabel(active ? level : null)}</TableCell>
                   <TableCell>{scopeLabel(user)}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{authStatus(user)}</Badge>
@@ -197,6 +197,13 @@ export function UserDirectory({
                             onSelect={() => run("assign", user)}
                           >
                             Assign role
+                          </DropdownMenuItem>
+                        ) : null}
+                        {active && level === "COMMITTEE_MANAGER" ? (
+                          <DropdownMenuItem
+                            onSelect={() => run("replace", user)}
+                          >
+                            Replace manager
                           </DropdownMenuItem>
                         ) : null}
                         {active && level === "COMMITTEE_MANAGER" ? (
@@ -275,6 +282,7 @@ export function UserDirectory({
       <AccessDialog
         selection={access}
         committees={committees}
+        users={users}
         onClose={closeAccess}
       />
       <PasswordDialog user={passwordFor} onClose={() => setPasswordFor(null)} />

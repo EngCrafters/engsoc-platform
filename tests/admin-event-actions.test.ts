@@ -55,6 +55,18 @@ describe("admin event actions", () => {
     state.revalidatePath.mockReset();
   });
 
+  it("denies a still-authenticated identity after its access is revoked", async () => {
+    state.manager.mockResolvedValue({
+      kind: "unassigned",
+      userId: manager.userId,
+      email: "retained@example.test",
+    });
+    const result = await saveEventAction(createForm());
+    expect(result.code).not.toBe("SUCCESS");
+    expect(state.writeAdminEvent).not.toHaveBeenCalled();
+    expect(state.writeLifecycleEvent).not.toHaveBeenCalled();
+  });
+
   it("creates through the fixed routine with an explicit Muscat offset", async () => {
     await expect(saveEventAction(createForm())).rejects.toThrow("redirect");
     expect(state.writeAdminEvent).toHaveBeenCalledWith("create_event", [

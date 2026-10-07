@@ -162,6 +162,13 @@
       "when": 1791093600000,
       "tag": "0022_jwt_claims_for_committee_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791356400000,
+      "tag": "0023_access_lifecycle",
+      "breakpoints": true
     }
   ]
 }

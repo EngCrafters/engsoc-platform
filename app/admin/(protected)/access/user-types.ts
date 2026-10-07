@@ -29,7 +29,7 @@ export function roleLabel(level: AccessLevel | undefined | null) {
       ? "Board Administration"
       : level === "COMMITTEE_MANAGER"
         ? "Committee Manager"
-        : "No role";
+        : "None";
 }
 
 /** What the committee column shows for an account. */
@@ -39,7 +39,37 @@ export function scopeLabel(user: UserRecord) {
   if (access.level === "COMMITTEE_MANAGER") {
     return access.committeeName ?? "Committee";
   }
-  return access.level === "TECHNICAL" ? "Technical Team" : "All Committees";
+  return "All Committees";
+}
+
+/** Only render the audited role/scope fields; never serialize arbitrary JSON. */
+export function auditStateLabel(
+  value: unknown,
+  committees: ReadonlyArray<Committee>
+) {
+  if (!value || typeof value !== "object") return "None";
+  const state = value as {
+    accessLevel?: string;
+    committeeId?: string;
+    active?: boolean;
+  };
+  if (state.active === false) return "No access";
+  if (state.active !== true) return "Unknown recorded state";
+  const level = state.accessLevel;
+  if (
+    level !== "COMMITTEE_MANAGER" &&
+    level !== "BOARD_ADMIN" &&
+    level !== "TECHNICAL"
+  )
+    return "Unknown recorded role";
+  const scope =
+    level === "COMMITTEE_MANAGER"
+      ? (committees.find((committee) => committee.id === state.committeeId)
+          ?.name ??
+        state.committeeId ??
+        "Unknown committee")
+      : "All Committees";
+  return `${roleLabel(level)} · ${scope}`;
 }
 
 export function accessStatus(user: UserRecord) {
