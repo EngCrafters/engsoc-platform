@@ -1,6 +1,6 @@
 # Pre-expansion hardening audit — October 7, 2026
 
-Status: **production closure in progress; owner recovery and remaining role pilot pending**.
+Status: **BLOCKED on owner recovery completion and Board/Support interactive sign-in**.
 The broad repository audit is complete. The production evidence below supersedes
 the earlier unavailable-access findings. No UI appearance or business data was changed.
 
@@ -245,3 +245,34 @@ audit (zero advisories), and diff hygiene. The database suite replays migrations
 from scratch; no new migration was needed. Commit/push, exact-commit GitHub CI
 and Vercel evidence are recorded as deployment completes. Landing-page migration
 has not started.
+
+### Deployment evidence and exact remaining actions
+
+- Application/documentation commit `f3742552c14c7312f00a721252b16ddb64fbdbaa`
+  is pushed to `main`. [GitHub CI run 37578700777](https://github.com/EngCrafters/engsoc-platform/actions/runs/37578700777)
+  completed successfully, including database and browser checks.
+- Vercel production deployment `dpl_GB1TEMC6rfVcqLkeh6DrKJxyC12N` is READY
+  on that exact SHA and assigned `engsoc-platform.vercel.app`. Post-deployment
+  public/login/recovery/reset responses and unauthenticated access redirect
+  passed, with security headers present.
+- The restore container and temporary credential-access helper were removed.
+  The sensitive logical archive was deliberately retained outside the repository.
+  Existing user-managed untracked files were not staged, modified or removed.
+
+**NOT READY FOR LANDING PAGE MIGRATION** until these owner steps have evidence:
+
+1. Finish the open recovery form: mismatched confirmation rejected, matching
+   new password accepted, recovery session ended, and new-password login succeeds.
+   Then verify the consumed link is rejected. Do not share the password or link.
+2. Sign in as `engineeringsociety.squ@gmail.com`; verify global committees and
+   operational counts, allowed event/registration paths, and denial of
+   `/admin/access` and Technical controls.
+3. Accept the existing Support invitation if necessary and sign in as
+   `unknown11110000@gmail.com`; verify Support-only events/counts/registration
+   operations, no committee switcher, and denial of foreign scope and
+   `/admin/access`. Finance/Media lighter checks can follow when available.
+
+No other remaining item is classified as a release blocker. Paid leaked-password
+protection, automated backup/PITR, stronger DMARC/CSP, development advisories and
+future directory pagination are explicitly documented follow-ups. Final owner
+sign-in evidence must be recorded before changing the decision to READY.

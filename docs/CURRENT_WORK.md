@@ -20,6 +20,12 @@ success now reports failed audit recording and uncertain access assignment safel
 Local validation: 214 tests, 37 Playwright passes and one intentional skip;
 format/lint/types/migration check/build/diff gates are recorded in the audit.
 
+Commit `f374255` is pushed; GitHub CI `37578700777` is green, Vercel production
+`dpl_GB1TEMC6rfVcqLkeh6DrKJxyC12N` is READY on that SHA, and production smoke
+checks pass. The remaining hold is only the owner recovery and Board/Support
+interactive checks listed in the audit. The isolated restore container and
+temporary credential helper were cleaned up; the private backup was retained.
+
 Current authority remains ADR 0012 and `docs/ACCESS_CONTROL.md`: Technical owns
 application access, Board has global operational access, and each Committee
 Manager has exactly one committee. The entries below are dated historical
