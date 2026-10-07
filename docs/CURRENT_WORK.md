@@ -19,8 +19,12 @@ and replacement rehearsal. Migration 0023 is now applied in production; read-onl
 RLS reconciliation confirms Technical/Board global, Finance/Media one scope each,
 and the old Support identity zero scope. A rolled-back Support mutation is denied.
 Local gates pass: 232 tests, 37 Playwright passes / one intentional skip, format,
-lint, types, db:check, build and diff hygiene. Deployment verification follows;
-final evidence belongs in HARDENING_AUDIT_2026-10-07.md.
+lint, types, db:check, build and diff hygiene. Lifecycle commit f2312a9 is pushed;
+GitHub CI 37648796359 passed and Vercel dpl_54CPe83riFnuzwGrDMExdS4YNwyE is READY
+on that SHA. Live Technical directory/details/history/onboarding/replacement
+controls and mobile checks pass without production account mutations.
+The sole remaining release hold is the real Support manager email, assignment
+and private sign-in pilot. Final evidence is in HARDENING_AUDIT_2026-10-07.md.
 No landing-page migration or broad UI redesign has started.
 
 The earlier exposed migration credential was production, not staging: rotation,

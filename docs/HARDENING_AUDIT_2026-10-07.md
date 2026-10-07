@@ -1,6 +1,6 @@
 # Pre-expansion hardening audit — October 7, 2026
 
-Status: **Lifecycle validated and production migration applied; deployment and real Support pilot pending**.
+Status: **Lifecycle deployed and verified; BLOCKED only on the real Support manager identity/pilot**.
 The broad repository audit is complete. The production evidence below supersedes
 the earlier unavailable-access findings. The lifecycle extension reuses the existing access UI; no broad appearance change or business data deletion is included.
 
@@ -143,7 +143,7 @@ credential and was not rotated unnecessarily.
 
 | Account                   | Evidence                                                                                                      | State                                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Technical                 | Real sign-in, eight committees, access directory/details/history                                              | Verified; final lifecycle smoke pending                                     |
+| Technical                 | Real sign-in, eight committees, access directory/details/history                                              | Verified, including deployed lifecycle controls                             |
 | Board                     | Owner-confirmed production pilot; global RLS and access-admin denial regressions                              | PASS                                                                        |
 | Old Support test identity | Owner revoked access; retained Auth identity, revoked grant and four audit references independently inspected | No access; retain historical identity                                       |
 | Real Support Manager      | Owner will supply the real email; no placeholder created                                                      | Assignment and interactive pilot pending                                    |
@@ -302,23 +302,43 @@ and already-documented account email matches are not secrets.
 
 ## Release gate and deployment evidence
 
-The previous hardening release is deployed at commit
-9f56ee4c3006d534ba5b376872bcee252564d342; GitHub CI 37579275465 passed and
-Vercel dpl_2Jqz55YNFRpTkYCiazvmnf8NjwrE was READY. Those results do not yet prove
-the lifecycle deployment. Local gates and the production migration are complete;
-exact lifecycle commit/deployment evidence will be recorded after the push.
+- Lifecycle commit f2312a9ee361c610c56535e19f287636d265465d is pushed to main.
+  [GitHub CI 37648796359](https://github.com/EngCrafters/engsoc-platform/actions/runs/37648796359)
+  passed, including database and browser checks (37 passes, one intentional skip).
+- Vercel production dpl_54CPe83riFnuzwGrDMExdS4YNwyE is READY and aliased to
+  engsoc-platform.vercel.app. GitHub Production deployment 6914651643 links that
+  deployment to the exact lifecycle SHA and reports success.
+- Live Technical browser: eight committees, five-user directory, replacement
+  confirmation (disabled before selection), identity-only onboarding option and
+  no committee requirement for None all verified without submitting a mutation.
+  Old Support details explicitly show Auth Exists, Role None, Admin access No,
+  Revoked, and four genuine chronological audit entries with actor and states.
+- Mobile width 390: no document overflow, retained-user details fit the viewport.
+  The temporary viewport override was reset. The appearance remains consistent
+  with the existing components. No production user was created/reassigned.
+- Public, login, recovery and reset smoke requests returned 200. Unauthenticated
+  /admin/access redirects to login (307). Security headers remain present.
+- Temporary SQL helper and isolated restore container were removed. The private
+  backup and token-free verification screenshot were retained outside git.
+  User-managed untracked paths were neither changed nor staged.
 
-Owner-confirmed Recovery and Board pilots are PASS and need no repeat. The real
-Support manager's email is still required for assignment and the requested pilot;
-the old disposable account must not be reactivated as a substitute. Finance/Media
-interactive acceptance is optional once architectural integrity is verified.
+### Remaining findings and classification
 
-**NOT READY FOR LANDING PAGE MIGRATION** while the focused release is unfinished
-and the required real Support manager pilot remains pending. Exact next actions:
-finish the coherent lifecycle validation/deployment and production reconciliation;
-then the owner provides the real Support email and completes private sign-in for
-its scope/denial pilot. No passwords or recovery links should be shared.
+| Item                                                                      | Severity / impact                                                                                   | Remediation                                                                                                                                     | Classification              |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Real Support manager not identified or piloted                            | Acceptance evidence missing for the intended replacement person; not an authorization defect        | Owner supplies the real email; Technical assigns Support through the app, then the owner signs in privately for own-scope/foreign-denial checks | BLOCKING                    |
+| External Auth mutation / PostgreSQL audit boundary                        | Medium; a concurrent revocation or audit outage can leave an Auth mutation requiring reconciliation | Existing safe partial-success message, secret-free log and runbook reconciliation; no distributed transaction                                   | NON-BLOCKING TECHNICAL DEBT |
+| No user-ID-only Admin session invalidation                                | Informational; Auth tokens may outlive offboarding, but live application grants deny authorization  | Retain current grant checks; reassess only if Supabase provides a supported user-ID mechanism                                                   | NON-BLOCKING TECHNICAL DEBT |
+| Paid leaked-password detection, stronger CSP/DMARC, automated backup/PITR | Defense-in-depth and recovery enhancements; configuration/limits documented above                   | Schedule provider/backup upgrades and separately test a full CSP                                                                                | NON-BLOCKING TECHNICAL DEBT |
+| Directory pagination / dev-tool advisories                                | Low at current scale; no runtime dependency advisories                                              | Add pagination before broad growth and validate compatible tooling patches separately                                                           | NON-BLOCKING TECHNICAL DEBT |
 
-Paid leaked-password protection, automated backup/PITR, stronger DMARC/CSP,
-development advisories, future directory pagination and the documented external
-Auth/audit reconciliation boundary remain non-blocking technical debt.
+No Critical/High runtime finding remains open from this focused lifecycle change.
+Finance/Media each have exactly one scope and no elevated role; their interactive
+acceptance may follow owner activation and does not independently block release.
+Recovery and Board production acceptance remain owner-confirmed PASS.
+
+**NOT READY FOR LANDING PAGE MIGRATION**: the sole remaining blocker is the real
+Support manager assignment and pilot. Next action: the owner provides the real
+Support email, then completes private sign-in after the ordinary application
+assignment. No migration/code/RLS change or placeholder account is required.
+Do not share a password or recovery link. Do not reactivate the disposable identity.
