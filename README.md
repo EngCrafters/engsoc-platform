@@ -58,12 +58,12 @@ Domain and database behavior lives in `lib/` and `db/`; do not duplicate it
 in this route group. Follow the active UC-02 specification and its open
 decisions before changing those boundaries.
 
-**Running it locally.** Ask Hisham for the staging environment's values
-(a `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
-`DATABASE_URL`) — these point at a separate staging Supabase project with
-its own fake seeded events, not the real one. You will never be given a
-service role key or a production credential; you don't need either to work
-on the public site.
+**Running it locally.** Obtain the staging `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, and restricted `APP_RUNTIME_DATABASE_URL`.
+Confirm that all three target the staging project before starting. `DATABASE_URL`
+is a separate migration/admin credential and is never a runtime fallback; do not
+infer its target from the environment filename. Public-site development does not
+require a service-role key or production credential.
 
 ```bash
 npm install

@@ -1,9 +1,8 @@
 # Pre-expansion hardening audit — October 7, 2026
 
-Status: **follow-up required before landing-page migration**. This is the
-repository audit record; production checks and outstanding operator actions
-must be read alongside `CURRENT_WORK.md`. No UI appearance or business data was
-changed.
+Status: **production closure in progress; owner recovery and remaining role pilot pending**.
+The broad repository audit is complete. The production evidence below supersedes
+the earlier unavailable-access findings. No UI appearance or business data was changed.
 
 ## Boundary and evidence
 
@@ -22,8 +21,8 @@ changed.
   Auth; direct browser table writes and attendee PII reads are denied. The
   Technical-only Auth Admin API remains server-only in `lib/auth/admin.ts`.
 - The local staging anonymous RLS test and the browser suite exercise real
-  public/unauthenticated boundaries. Production role sign-in and live database
-  drift were not freshly proven by this audit.
+  public/unauthenticated boundaries. The production closure evidence below records
+  live database inspection and distinguishes it from interactive sign-in tests.
 
 ## Changes made
 
@@ -43,53 +42,206 @@ local `.env.local` value for `APP_RUNTIME_DATABASE_URL`. The Playwright setup no
 passes its disposable restricted database URL to both the build and running app;
 it uses no production credential.
 
-## Remaining findings and operator actions
+## Production closure evidence - October 7, 2026
 
-1. **High — rotate the staging migration database credential.** During this
-   audit a PowerShell URI parse error emitted the staging `DATABASE_URL` value
-   into a tool result. It was not committed or repeated here. Rotate that
-   credential in Supabase, update the private local/CI secret stores that use
-   it, and inspect staging database login activity. Do not put its value in an
-   issue, chat, commit or audit note.
-2. **Production database state unverified.** Local database URLs identify the
-   staging project. No production SQL credential or Supabase management
-   connection was available to this audit. A production maintainer must read
-   grants, RLS, migration journal, row counts, orphan/impossible states, access
-   assignments and the isolated legacy `Events` records without writing data.
-   Preserve the legacy archive and its audit history until provenance and a
-   fresh backup are verified.
-3. **Production Auth email state unverified.** The owner reports Resend works,
-   and Vercel has the required variable names. Verify Supabase custom SMTP,
-   sender/domain SPF and DKIM, DMARC, template URLs, rate limits, Resend logs
-   and delivery to a controlled real inbox. Reuse/expiry must be verified
-   without recording links. The app's `RESEND_API_KEY` is currently unused.
-4. **Leaked-password protection and backup entitlement unknown.** Inspect
-   Supabase Auth password settings and enable leaked-password rejection if the
-   project plan supports it; otherwise record the plan decision. Confirm
-   current backup/PITR status and rehearse a fresh isolated restore before
-   destructive work. The October 4 logical archive is historical evidence.
-5. **Auth Admin API reconciliation.** A Technical grant is checked before each
-   server action, but a concurrent revocation and external Auth API call cannot
-   be atomic with PostgreSQL. Reconcile a failed audit log with live Auth state.
-   Consider a dedicated serialized workflow if user administration volume or
-   threat level grows.
-6. **Moderate-scale directory growth.** The Technical directory returns all
-   Auth identities, and each history view reads the directory again to resolve
-   actor emails. Add cursor pagination and a bounded actor lookup before
-   thousands of identities. Event and registration lists already paginate;
-   registration CSV is bounded.
-7. **Development dependency advisories.** The remaining npm advisories are in
-   tooling such as shadcn, Drizzle Kit, ESLint and their transitives. They are
-   absent from `npm audit --omit=dev` and not reachable through deployed
-   requests. Update them in isolated changes with regression checks.
-8. **Authenticated production UI pilot incomplete.** Public and signed-out
-   routes can be smoked without credentials. Re-run the Technical/Board/Manager
-   sign-in matrix and protected mobile screens with named real accounts; do
-   not infer this from hidden controls or the database test fixtures.
+### Credential incident: corrected classification and closed rotation
 
-## Operations
+**High, remediated.** The original report incorrectly called the exposed
+`DATABASE_URL` a staging credential. Inspection of the ignored file, its
+pre-incident modification time, project identity, and a real connection proved
+it was the **production postgres migration credential** for
+`rbeyqrfypowyocmnmvwu`. The staging `APP_RUNTIME_DATABASE_URL` was a different
+credential and was not rotated unnecessarily.
 
-Use `Platform_Maintenance_Runbook.md` for failure logs and isolated recovery.
-Before the landing-page migration, close the production evidence and credential
-rotation items above. The legacy `Events` row remains a cleanup candidate, not
-an authorized deletion. No production business data was deleted in this pass.
+- Rotated through Supabase's supported database-password Management API (HTTP
+  200). A new connection succeeded; the old credential failed with SQLSTATE
+  `28P01`. Values were kept out of the rotation command output and repository.
+- Updated `.env.local` and the matching Vercel Development `DATABASE_URL`.
+  Removed the unused Preview `DATABASE_URL`; production has no such variable
+  and uses its separate restricted `app_runtime` connection.
+- GitHub repository secret inventory was empty; CI uses disposable PostgreSQL
+  and public staging anon credentials. Neither supported Supabase CLI project
+  credential entry existed. A scan of 824 reachable Git blobs found no exposed
+  credential match. Other owner-managed stores outside the inspected environment
+  are not claimed to have been inventoried.
+- Reviewed production and staging logs over 2026-10-06 18:00 through the current
+  2026-10-07 inspection window. The observed production pooler authentication
+  failure matched the deliberate old-password test. Production permission
+  failures matched attempts to assume the restricted runtime role; staging
+  permission failures accompanied anonymous security tests. No suspicious
+  activity was identified in this evidence. Connection/disconnection logging
+  is off, statement logging is DDL-only, and pgAudit is disabled, so this is
+  not proof that every historical connection or read was benign.
+
+### Production database and data: verified read-only
+
+- 22 applied migration records through `0022` match repository SQL after
+  comment/whitespace normalization. `0002` is intentionally staging-only.
+  All 33 current private routine bodies match their latest repository definitions.
+- All 10 public business tables and `private.uc02_audit` have ENABLE/FORCE RLS.
+  Anonymous grants expose only five public event columns under the visible-event
+  policy, with no registration/attendee PII access or writes.
+- `app_runtime`: LOGIN, no superuser/BYPASSRLS/CREATEROLE, no inherited role
+  membership, no direct table privileges, and only intended routine EXECUTE.
+  Ordinary browser roles cannot execute private mutations.
+- `app_maintenance`: LOGIN, no elevated role flags, audited Technical recovery
+  routine, read access to grants/audit, and the intentional DELETE grant on
+  expired registration-attempt records. No direct event, registration, access,
+  or audit mutation privileges. Neither application role can CREATE in `public`.
+- SECURITY DEFINER ownership is `uc02_routine_owner`, with NOLOGIN and no
+  BYPASSRLS. All fixed search paths are `public, pg_temp`; no dynamic SQL or
+  email-address authorization literals occur in these routines.
+- Under real production `request.jwt.claims`, Technical and Board see eight
+  committees, Support/Finance/Media each see exactly their committee, and an
+  unassigned identity sees zero. These read-only RLS probes do not substitute
+  for the interactive account pilot.
+- Data: five Auth identities, eight active committees, one isolated legacy
+  committee, five archived M8 smoke events, four test-pattern registrations,
+  and 46 application audit rows at inspection. No stale legacy grant,
+  duplicate committee/assignment, orphan registration, invalid role scope,
+  excess confirmed capacity, invalid supersession, stale approval, missing
+  authenticated audit actor, or missing Auth audit target was found.
+- The legacy archive remains a non-blocking cleanup candidate. Its records and
+  audit history were preserved; no business data was deleted.
+
+### Auth and Resend: configuration and delivery verified
+
+- Supabase custom SMTP uses `smtp.resend.com:465`, sender
+  `Engineering Society <no-reply@auth.essqu.com>`, a 60-second minimum interval,
+  and 30 Auth emails/hour. It does not rely on the built-in mailer.
+- Site URL is `https://engsoc-platform.vercel.app`; the allowlist contains only
+  its `/auth/callback` and `/auth/reset` URLs. The working recovery template
+  contains the token-hash callback and no localhost link. Invitation, confirmation
+  and email-change templates retain `ConfirmationURL`; their completion has not
+  been re-proven in this pass. The existing fragment relay remains in place.
+- Resend dashboard confirms `auth.essqu.com`, DKIM, and SPF verified, with
+  sending enabled. Public DNS agrees. Parent DMARC is `v=DMARC1; p=none;`;
+  consider enforcement after reviewing legitimate sending sources. No DNS
+  changes were made.
+- Fresh recovery requested from `/admin/recovery` at approximately 05:36 UTC:
+  received in the controlled Gmail inbox, and Resend reports **delivered**
+  (message `01a114dc-ebcb-707b-aeaa-4e0cc2e1ef93`). The email link opened the
+  production callback and then `/auth/reset` without a token in the visible URL.
+  An older link was rejected with the expired-link message.
+- The owner must finish password mismatch, update, session-end, and new-password
+  sign-in checks. No password was requested in chat or entered by the agent.
+- One obsolete email link's hash fragments appeared during inbox DOM inspection
+  despite URL redaction. That older link was verified expired; fresh-link
+  handling now avoids emitting link contents or fragmented token text.
+- Provider password minimum increased from 6 to **12**, matching the existing
+  application rule. Existing identities were not reset by this setting change.
+  Email confirmation is enabled, JWT lifetime is 3600 seconds, refresh-token
+  reuse interval is 10 seconds, and session timebox/inactivity limits are unset.
+- Leaked-password protection is **disabled and plan-gated**: enabling it through
+  the supported API returned HTTP 402, requiring Pro or above. No subscription
+  was changed. This is a documented non-blocking enhancement for this release;
+  the setting has been checked, and the 12-character rule is enforced by Auth.
+
+### Interactive production pilot
+
+| Account         | Evidence                                                                                                                                                | State                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Technical       | Real sign-in; `/admin`, all eight committees, `/admin/access`, five-user directory, Board/Support/Finance/Media assignments, details, and audit history | Verified                                      |
+| Board           | Live production RLS: eight committees; no interactive sign-in in this closure pass yet                                                                  | Owner sign-in pending                         |
+| Support Manager | Live production RLS: Support only; identity still invited/unconfirmed                                                                                   | Owner invitation/recovery and sign-in pending |
+| Finance / Media | Live production RLS: exactly one assigned committee each; neither had signed in at inspection                                                           | Optional lighter sign-in checks pending       |
+
+Last-Technical rejection, a second-Technical grant, and Board mutation denial
+were executed against the freshly restored production archive and rolled back.
+The live Technical owner was never revoked or replaced.
+
+### Logs and recovery
+
+- **Vercel access limitation understood:** the connector identity is not
+  authorized for team scope `eng-crafters` (explicit 403). The CLI's separately
+  authenticated identity successfully reads production request logs with the
+  exact project/team IDs. A capped sample of 100 production request logs had no
+  error-level or token-bearing records. No platform permissions were weakened.
+- Supabase Management API reads Auth, Postgres, and pooler logs successfully.
+  The Resend owner browser session provides delivery and domain evidence; the
+  available local Resend API key is invalid and is unused by application Auth.
+- Supabase backup API reports WAL archiving enabled, PITR **disabled**, and no
+  listed physical backups or retention window. No paid recovery entitlement
+  is inferred from WAL archiving alone.
+- A fresh full logical database archive was created outside the repository at
+  `%LOCALAPPDATA%/engsoc-platform/backups/readiness-2026-10-07.dump` (517,196
+  bytes; SHA-256 `a86cb582083a0eeb1aeb7730010c0eff0df4b569db221936ae47852597087481`).
+  It restored with `pg_restore --exit-on-error` into an isolated Supabase
+  PostgreSQL 17.6 instance after creating missing role identities. Verified
+  Auth identities, row counts, all table RLS flags, routine owners, and the
+  ownership safeguards. This proves recovery of this database snapshot;
+  hosted services, external secrets, Storage objects, future backups, and a
+  timed production disaster-recovery objective are not covered.
+
+### Required code repair: partial Auth administration outcomes
+
+Auth creation/password/email actions now report when the external operation
+succeeded but its audit write failed. They tell the operator not to repeat the
+operation and to reconcile its history. Structured logs contain only actor and
+target UUIDs, action, and fixed failure codes. Raw provider/SQL errors and
+passwords are excluded. An uncertain access-grant response after account
+creation is also translated into explicit reconciliation guidance.
+
+Role grant/revoke/reassignment and their audit writes remain atomic PostgreSQL
+operations. External Auth plus PostgreSQL remains non-atomic by design. Five
+regression tests cover failed/throwing audit writes across four operation types
+and an uncertain grant after account creation. No layout or styling changed.
+
+The server-only Auth Admin module remains the sole service-role client. Its
+callers are Technical server actions; the server page exposes only a configured
+boolean. A scan of 57 built client files found no local private environment-value
+matches. A future Supabase secret-key migration should validate Auth Admin API
+compatibility in staging, rotate only the server credential, then revoke the
+legacy key after deployment evidence; it is not required for this release.
+
+## Non-blocking technical debt
+
+- **Directory:** five managed production identities today; the Technical-only
+  directory has no SQL pagination. It is not a current load bottleneck. Add
+  server-side cursor pagination and bounded actor lookup before broad account
+  growth; review at 200 identities. Do not claim an existing hard bound.
+- **CSP:** current frame/base/object restrictions provide tested defense in
+  depth but do not restrict scripts/styles. A full policy needs nonce/hydration
+  and authenticated-flow testing; no guessed policy was deployed.
+- **Auth/audit:** partial state is now visible and reconcilable. A concurrent
+  Technical revocation can still overlap an external Auth request. Reconcile
+  from Auth state/logs; do not add distributed transactions for this small workload.
+- **DMARC, paid leaked-password protection, automated backup/PITR:** understood
+  follow-ups. Manual snapshot recovery is proven; no automated recovery window
+  is promised.
+
+### Development dependency advisories
+
+All following packages are development/CI tooling, absent from the production
+request dependency audit (zero production advisories). They do not block release.
+Npm's suggested major downgrades are not safe fixes. Patch candidates marked
+below still need isolated compatibility verification; no force upgrade was run.
+
+| Package                     | Severity | Runtime reachable | CI/dev only | Safe update established           | Disposition                      |
+| --------------------------- | -------- | ----------------- | ----------- | --------------------------------- | -------------------------------- |
+| `@esbuild-kit/core-utils`   | Moderate | No                | Yes         | No; Drizzle downgrade suggested   | Defer tooling update             |
+| `@esbuild-kit/esm-loader`   | Moderate | No                | Yes         | No; Drizzle downgrade suggested   | Defer tooling update             |
+| `@modelcontextprotocol/sdk` | High     | No                | Yes         | Patch candidate, unverified       | Defer; unused shadcn OAuth path  |
+| `@next/eslint-plugin-next`  | High     | No                | Yes         | No; major downgrade suggested     | Defer glob-chain update          |
+| `@ts-morph/common`          | High     | No                | Yes         | Patch candidate, unverified       | Defer tooling update             |
+| `brace-expansion`           | High     | No                | Yes         | Patch candidate, unverified       | Defer; controlled build globs    |
+| `braces`                    | High     | No                | Yes         | No; major downgrade suggested     | Defer glob-chain update          |
+| `drizzle-kit`               | Moderate | No                | Yes         | No; major downgrade suggested     | Defer; no exposed dev server     |
+| `esbuild`                   | Moderate | No                | Yes         | No; Drizzle chain requires review | Defer; no exposed dev server     |
+| `eslint-config-next`        | High     | No                | Yes         | No; major downgrade suggested     | Defer with matching Next tooling |
+| `fast-glob`                 | High     | No                | Yes         | No; major downgrade suggested     | Defer glob-chain update          |
+| `fast-uri`                  | Moderate | No                | Yes         | Patch candidate, unverified       | Defer tooling update             |
+| `micromatch`                | High     | No                | Yes         | No; major downgrade suggested     | Defer glob-chain update          |
+| `shadcn`                    | High     | No                | Yes         | No; major downgrade suggested     | Defer tooling update             |
+| `ts-morph`                  | High     | No                | Yes         | Patch candidate, unverified       | Defer tooling update             |
+
+## Release gate
+
+Complete the owner password-reset and Board/Support interactive checks before
+issuing GO. Finance/Media lighter checks may follow when those owners are
+available. The closure changes passed format, lint, typecheck, all 214 tests, db:check,
+production build, 37 Playwright tests (one intentional skip), production dependency
+audit (zero advisories), and diff hygiene. The database suite replays migrations
+from scratch; no new migration was needed. Commit/push, exact-commit GitHub CI
+and Vercel evidence are recorded as deployment completes. Landing-page migration
+has not started.

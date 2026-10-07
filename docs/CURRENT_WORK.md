@@ -1,16 +1,29 @@
 # Current work — handoff state
 
-**CURRENT (October 7, 2026):** Authentication and access control are the
-completed milestone. The repository hardening pass is documented in
-`HARDENING_AUDIT_2026-10-07.md`. Landing-page migration remains on hold for
-production evidence: rotate the staging migration credential exposed during
-the audit, inspect live production grants/data and backup status, and verify
-Resend delivery and the real Technical/Board/Manager pilot. The October 5
-handoff and earlier M8 entries below are historical evidence. Current access
-authority is ADR 0012 and `docs/ACCESS_CONTROL.md`: Technical owns application
-access, Board has global operational access, and each Committee Manager has
-exactly one committee. Resend is the current Auth email provider per the owner;
-former Mailtrap sandbox instructions below are retained only as dated history.
+**CURRENT (October 7, 2026):** The remaining readiness checks are recorded in
+`HARDENING_AUDIT_2026-10-07.md`; landing-page migration remains on hold for the
+owner's completed recovery test and real Board/Support sign-in pilot. Technical
+sign-in and screens are verified. The exposed migration credential was actually
+**production**, not staging: it has been rotated, the old password rejected,
+local/Vercel Development stores updated, and unused Preview storage removed.
+Live production migrations through 0022, RLS, grants, routine bodies, and data
+integrity have been inspected. No corrective migration or data deletion was
+needed. A fresh database archive restored successfully in isolation.
+
+Resend SMTP, verified sending domain/SPF/DKIM, inbox receipt, and delivery event
+are now independently verified. Auth enforces the existing 12-character password
+minimum. Leaked-password protection requires a paid plan (HTTP 402); PITR is
+disabled with no listed physical restore window. Both are documented follow-ups,
+not claimed capabilities. Vercel connector 403 is a team authorization limitation;
+the separately authenticated CLI can read production logs. Auth Admin partial
+success now reports failed audit recording and uncertain access assignment safely.
+Local validation: 214 tests, 37 Playwright passes and one intentional skip;
+format/lint/types/migration check/build/diff gates are recorded in the audit.
+
+Current authority remains ADR 0012 and `docs/ACCESS_CONTROL.md`: Technical owns
+application access, Board has global operational access, and each Committee
+Manager has exactly one committee. The entries below are dated historical
+handoffs; their open-item statements are superseded by this note.
 
 **AUTH + USER ADMINISTRATION (October 5, 2026):** Commit `de0a1c1` fixed
 password recovery and added the Technical-only user directory at

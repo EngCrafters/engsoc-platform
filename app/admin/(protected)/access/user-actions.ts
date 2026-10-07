@@ -71,13 +71,32 @@ async function audit(
       detail,
     });
     if (result.code !== "SUCCESS") {
-      console.error("auth_admin_audit_failed", { action, code: result.code });
+      console.error("auth_admin_audit_failed", {
+        actorId,
+        targetId,
+        action,
+        code: "REJECTED",
+      });
     }
+    return result.code === "SUCCESS";
   } catch {
-    // The account change already happened; a missing audit label must not
-    // surface as a failure of the operation itself.
-    console.error("auth_admin_audit_failed", { action, code: "UNAVAILABLE" });
+    console.error("auth_admin_audit_failed", {
+      actorId,
+      targetId,
+      action,
+      code: "UNAVAILABLE",
+    });
+    return false;
   }
+}
+
+const AUDIT_NOTICE =
+  "The audit record could not be saved. Do not repeat the operation; ask the Technical Team to reconcile its history.";
+
+function completed(message: string, audited: boolean): UserActionState {
+  return audited
+    ? { status: "success", message }
+    : { status: "error", message: `${message} ${AUDIT_NOTICE}` };
 }
 
 const LEVELS = ["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const;
@@ -131,7 +150,7 @@ export async function createUserAction(
   if (created.code !== "SUCCESS" || !created.userId) {
     return error(created.code === "SUCCESS" ? "UNAVAILABLE" : created.code);
   }
-  await audit(
+  const audited = await audit(
     actor.userId,
     created.userId,
     method === "invite" ? "user.invited" : "user.created",
@@ -142,30 +161,45 @@ export async function createUserAction(
         : "no email"
   );
 
-  const granted = await changeAccess({
-    actorId: actor.userId,
-    userId: created.userId,
-    level,
-    committeeId: committeeId || null,
-    operation: "grant",
-    note: null,
-  });
+  let granted: { code: string };
+  try {
+    granted = await changeAccess({
+      actorId: actor.userId,
+      userId: created.userId,
+      level,
+      committeeId: committeeId || null,
+      operation: "grant",
+      note: null,
+    });
+  } catch {
+    console.error("auth_admin_access_unconfirmed", {
+      actorId: actor.userId,
+      targetId: created.userId,
+      code: "UNAVAILABLE",
+    });
+    revalidatePath("/admin/access");
+    return {
+      status: "error",
+      message:
+        "The account was created, but its access status could not be confirmed. Refresh the user list and check its role before assigning access. Do not create the account again." +
+        (audited ? "" : ` ${AUDIT_NOTICE}`),
+    };
+  }
   revalidatePath("/admin/access");
   if (granted.code !== "SUCCESS") {
     return {
       status: "error",
       message: `The account was created, but access could not be granted. ${
         USER_ERROR_MESSAGES[granted.code] ?? "Assign a role from the user list."
-      }`,
+      }${audited ? "" : ` ${AUDIT_NOTICE}`}`,
     };
   }
-  return {
-    status: "success",
-    message:
-      method === "invite"
-        ? "Invitation sent and access assigned."
-        : "Account created and access assigned.",
-  };
+  return completed(
+    method === "invite"
+      ? "Invitation sent and access assigned."
+      : "Account created and access assigned.",
+    audited
+  );
 }
 
 async function accountEmail(actorId: string, userId: string) {
@@ -183,12 +217,15 @@ export async function sendResetEmailAction(
   if (!entry) return error("USER_NOT_FOUND");
   const result = await sendPasswordResetEmail(entry.email);
   if (result.code !== "SUCCESS") return error(result.code);
-  await audit(actor.userId, entry.user_id, "user.password_reset_sent");
-  return {
-    status: "success",
-    message:
-      "Password-reset email requested. The account holder will receive it.",
-  };
+  const audited = await audit(
+    actor.userId,
+    entry.user_id,
+    "user.password_reset_sent"
+  );
+  return completed(
+    "Password-reset email requested. The account holder will receive it.",
+    audited
+  );
 }
 
 export async function resendInvitationAction(
@@ -204,8 +241,12 @@ export async function resendInvitationAction(
   if (result.code !== "SUCCESS") {
     return error(result.code === "INVALID_INPUT" ? "NOT_PENDING" : result.code);
   }
-  await audit(actor.userId, entry.user_id, "user.invitation_resent");
-  return { status: "success", message: "Invitation sent again." };
+  const audited = await audit(
+    actor.userId,
+    entry.user_id,
+    "user.invitation_resent"
+  );
+  return completed("Invitation sent again.", audited);
 }
 
 /**
@@ -231,9 +272,13 @@ export async function setTemporaryPasswordAction(
 
   const result = await setTemporaryPassword(userId, password as string);
   if (result.code !== "SUCCESS") return error(result.code);
-  await audit(actor.userId, userId, "user.password_admin_reset");
+  const audited = await audit(
+    actor.userId,
+    userId,
+    "user.password_admin_reset"
+  );
   revalidatePath("/admin/access");
-  return { status: "success", message: "The password was changed." };
+  return completed("The password was changed.", audited);
 }
 
 export type UserHistoryItem = {

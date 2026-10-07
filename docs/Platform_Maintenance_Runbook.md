@@ -116,41 +116,34 @@ Supabase organization recovery. Rotate suspected compromised database,
 Supabase, Vercel and GitHub credentials through their secret managers, then
 inspect recent access and authentication audit history.
 
-Request password recovery from the production `/admin/recovery` page. The app
-supplies `/auth/callback?next=/auth/reset` as the redirect and stores the PKCE
-verifier in the requesting browser. A recovery email initiated in the Supabase
-Dashboard can use the project's default Site URL instead and land at `/` with
-session tokens in the URL; it is not a valid test of the application's reset
-flow. Never share a full recovery URL. If one is exposed, globally sign out the
-affected Supabase session, discard that link, and remember that an issued access
-token may remain valid until expiry. Request a fresh email through the app.
+Request recovery from production `/admin/recovery`. The live recovery template
+uses a token hash sent to `/auth/callback`, so it can complete on another device.
+The alternative PKCE-code flow requires the requesting browser's verifier.
+Dashboard/default-template links may deliver a fragment; the existing relay
+removes it before completing the session. Never share a recovery URL. If exposed,
+globally sign out the affected session, discard the link, request a fresh email,
+and remember that already issued access tokens can remain valid until expiry.
 
-If recovery displays a temporary sending error, check Supabase Auth logs for
-`/recover` and its error code. `over_email_send_rate_limit` means no message was
-sent; wait for the project's email quota to clear before one new request. The
-account holder must initiate the SSR/PKCE recovery request and open its email
-link in the same browser and device, where the code verifier is stored. An
-operator must not send a recovery request from their own session on behalf of
-someone who will open the link elsewhere. Do not repeatedly retry, change
-passwords through the Auth admin API, or mark a role pilot verified merely
-because Auth recorded a login. The account holder sets their password
-privately, then verifies the appropriate admin screens.
+For a sending error, inspect Supabase Auth `/recover` and Resend delivery logs.
+`over_email_send_rate_limit` means the request did not send mail; wait before
+retrying. The current custom SMTP interval is 60 seconds and hourly quota 30.
+The account holder sets the password privately and signs in; an Auth login record
+alone is insufficient evidence of the correct admin screens.
 
 ## Production order
 
-Complete the local and staging rehearsal, production drift and backup checks,
-then apply the reviewed migration. Pilot one real Technical, one real Board
-and one real Committee Manager identity, testing positive and negative paths.
-The owner has withdrawn the earlier Support placeholder; it was revoked and
-cannot be used for the manager pilot. Wait for the real Support identity.
-The Technical Team lead assigns Support & Logistics, Finance and Media through
-`/admin/access` after the pilot, using real users they select. Forum, Evening,
-Relations and Society Affairs remain without
-ordinary managers. Do not deploy the new application code against an
-unmigrated production schema. After backup and migration safety checks, apply
-the reviewed 0020 archive migration to the confirmed M8 smoke row. It retains its archived
-records and audit relationships. Staging has non-smoke `Events` data, so 0020
-correctly leaves that staging row untouched.
+Complete local/staging rehearsal, inspect production drift and backup capability,
+then apply a reviewed migration. Pilot real Technical, Board and Manager accounts
+with positive and negative paths. Current October 7 identities are recorded in
+`CURRENT_WORK.md`: Support, Finance and Media each have one live assignment.
+Support's invitation is still unaccepted at inspection. Do not reinstate obsolete
+placeholder decisions from the dated October 4 notes.
+
+Production already has migrations through 0022. The legacy Events committee and
+its five archived M8 smoke events remain isolated and have no active manager
+grant. Do not map them to a final committee, delete their history, or rerun the
+0020 archive migration. Any future fix is a new migration; verify the exact target
+and journal before applying it.
 
 ## Failure diagnosis
 
@@ -179,3 +172,87 @@ isolated PostgreSQL instance. Apply pending migrations there, run the database
 security suite and verify row counts, key relationships, grants and audit.
 Review the rollback or forward repair for the exact migration before applying
 it to production. Never restore into the live project as a rehearsal.
+
+### Supported log access (verified October 7, 2026)
+
+- Vercel: select `eng-crafters` > `engsoc-platform` > Logs, filter Production,
+  route and incident time. The current connector identity returns 403 because
+  it lacks that team scope. The owner's separately authenticated CLI works:
+  `vercel --scope eng-crafters logs --project engsoc-platform --environment production --since 1h --limit 100 --json --no-follow`.
+  A limited result is not the whole incident window. Never print raw token-bearing
+  request URLs; reduce logs to error codes, timestamps, route paths and IDs.
+- Supabase: project > Logs Explorer, select Auth, Postgres or pooler. The current
+  CLI/Management API identity can query them. Connection/disconnection logging
+  is off, DDL-only statement logging and no pgAudit limit retrospective evidence.
+- Resend: Emails > select the message > delivery events; Domains > `auth.essqu.com`
+  for SPF/DKIM. The owner browser session works. The locally available API key is
+  invalid and is not used by the application's SMTP Auth flow.
+- To restore connector access, the owner reconnects it with an account that has
+  the existing team permission. Do not broaden production permissions for logging.
+
+### Reconcile partial Auth administration
+
+1. Stop repeating the operation. Record the timestamp, actor/target Auth IDs,
+   action and fixed failure code from `auth_admin_audit_failed` or
+   `auth_admin_access_unconfirmed`; never record a password or recovery link.
+2. A currently authorized Technical user refreshes `/admin/access` and inspects
+   identity, grant and history. Compare Supabase Auth logs and Resend delivery
+   events for the original attempt. A missing response does not establish that
+   the underlying operation failed.
+3. If an account exists without the intended grant, use **Assign role** on that
+   account after confirming the intended scope. If the grant is already present,
+   retain it. Do not create the account again. Grant/revoke and their audit writes
+   are one transaction and should not be reconstructed independently.
+4. For a proven external Auth success with missing audit history, a current
+   Technical actor may use the fixed `private.record_auth_admin_action` routine
+   through the authorized runtime path with that actor's ID, the original target,
+   the permitted action label, and fixed detail `reconciled`. Preserve the original
+   incident time/actor in the private incident record; the reconciliation row
+   honestly records its current actor and time. Check for an existing row first.
+5. If the original Auth outcome cannot be proven, record that uncertainty rather
+   than fabricate success. A new email/password action is a separate deliberate
+   operation after confirming the account holder's need.
+
+### Credential rotation and target verification
+
+Identify the project from the parsed connection host/username; never assume
+`.env.local` means staging. The October 7 exposed migration credential targeted
+production. Rotate through Supabase Database settings or the supported Management
+API database-password endpoint, keeping values in memory/private secret stores.
+Update every known consumer, verify a new connection, and verify the former
+password is rejected. Review logs and state their coverage limits. Rotation does
+not itself prove old established sessions were terminated.
+
+For this incident the updated consumers were local ignored `DATABASE_URL` and
+Vercel Development `DATABASE_URL`; unused Preview storage was removed. Production
+runtime uses its separate `APP_RUNTIME_DATABASE_URL`. GitHub had no repository
+secrets, and the supported Supabase CLI project password entries were absent.
+The new connection succeeded and the old one returned SQLSTATE `28P01`. No
+credential match occurred in the 824 reachable Git blobs scanned. Do not save
+credentials in command arguments, documentation, screenshots or logs.
+
+### Recovery evidence (October 7, 2026)
+
+The live backup API reports PITR disabled, WAL archiving enabled, and no listed
+physical backups/retention window. A paid recovery capability is not assumed.
+A full custom-format logical archive was stored outside git at
+`%LOCALAPPDATA%/engsoc-platform/backups/readiness-2026-10-07.dump`. Its checksum
+and inspection evidence are in `HARDENING_AUDIT_2026-10-07.md`.
+
+A full restore with `pg_restore --exit-on-error` succeeded in a disposable
+Supabase PostgreSQL 17.6 instance. Restore as the local `supabase_admin` role;
+create missing role identities first, preserving NOLOGIN for routine owners and
+assigning new isolated credentials to login roles. Do not copy production role
+passwords or use `--no-owner`/`--no-acl` to hide grant problems. Verify Auth users,
+business row counts, RLS/FORCE flags, routine owners and grants. This rehearsal
+also verified last-Technical rejection, second-Technical grant and Board denial
+in rolled-back transactions.
+
+This proves restoration of that database snapshot only. It does not restore
+hosted Auth settings, external secrets, Storage object files or deployment
+configuration; it does not establish a timed disaster-recovery objective. The
+local archive contains sensitive data and requires restricted access and secure
+retention. Before future schema changes, take a fresh archive and repeat the
+isolated check. On migration failure, inspect the journal and transaction outcome;
+prepare a reviewed forward correction or an isolated restore/cutover plan. Never
+rerun destructive SQL or overwrite production as a diagnostic step.

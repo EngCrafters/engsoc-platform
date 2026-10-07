@@ -61,7 +61,7 @@ recovery link, a token, or a user's password.
   Supabase Auth, discard the link, and request a fresh one. An issued access
   token can stay valid until it expires.
 
-### Verified production configuration (October 5, 2026)
+### Historical redirect probe (October 5, 2026)
 
 A probe with a throwaway account, which sent no email and was deleted
 afterwards, showed:
@@ -88,7 +88,7 @@ Supabase Dashboard, Authentication, URL Configuration:
 - Site URL: `https://engsoc-platform.vercel.app`
 - Redirect URLs: `https://engsoc-platform.vercel.app/auth/callback` and
   `https://engsoc-platform.vercel.app/auth/reset` (plus the localhost callback
-  for development only).
+  in a separate development project only).
 
 ## 3. Email templates (Supabase Dashboard, Authentication, Emails)
 
@@ -127,11 +127,34 @@ happens, request a new one.
 Supabase's built-in mailer is rate limited (about two emails per hour) and is
 not intended for production. Auth email must go through custom SMTP.
 
-**Current provider: Resend.** The owner reports that production Auth email now
-works through Resend. The former Mailtrap sandbox was a pilot and is not the
+**Current provider: Resend, independently verified October 7, 2026.** The former Mailtrap sandbox was a pilot and is not the
 current delivery path. Supabase Auth sends recovery and invitation messages
 through its custom SMTP configuration; the `RESEND_API_KEY` Vercel variable is
 separate and is not used by the current UC-02 application flows.
+
+Verified live configuration: `smtp.resend.com:465`, sender
+`Engineering Society <no-reply@auth.essqu.com>`, minimum interval 60 seconds,
+and 30 Auth emails/hour. Resend confirms `auth.essqu.com`, SPF and DKIM verified;
+DNS agrees. Parent DMARC is monitoring-only (`p=none`); enforcement remains a
+follow-up after confirming all legitimate senders. A fresh recovery email at
+approximately 05:36 UTC reached the controlled inbox and Resend recorded delivery.
+Its token-hash callback reached `/auth/reset` with a clean URL. The owner password
+update/new-login portion remains pending; delivery alone does not close that gate.
+
+The live Site URL is the production origin and the allowlist contains only
+`/auth/callback` and `/auth/reset` on that origin. The recovery template uses the
+recommended token-hash callback. Invitation, signup confirmation, and email-change
+templates still use the provider's `ConfirmationURL`, with no localhost link;
+the existing callback/fragment relay supports that route. Their actual inbox
+completion has not been re-proven in this closure pass. The examples in section 3
+are recommended templates, not a claim that every live template has been replaced.
+
+Auth now enforces 12 characters, matching application validation. Email confirmation
+is enabled; JWT lifetime is 3600 seconds, refresh reuse interval 10 seconds, and
+session inactivity/timebox limits are unset. Leaked-password protection is disabled:
+the supported enable request returned HTTP 402 (Pro plan or above required). The
+owner can enable it under Authentication > Settings > Password security after an
+approved plan upgrade. No subscription was changed.
 
 Production verification (record pass/fail and timestamps only, never credentials,
 message contents or links):
@@ -203,6 +226,16 @@ with actor, target and time. Auth administration labels are
 `user.password_reset_sent` and `user.password_admin_reset`, with at most a short
 fixed word as detail (the database rejects anything else). Password content is
 never recorded.
+
+If an external Auth operation succeeds but its audit write fails, the UI says
+what succeeded and warns **do not repeat the operation**. The structured
+`auth_admin_audit_failed` record contains actor/target IDs, action, and a fixed
+failure code. If account creation succeeds but the access response is uncertain,
+`auth_admin_access_unconfirmed` identifies the account to inspect. Refresh the
+directory, check live identity/access/history, and follow the reconciliation
+procedure in `Platform_Maintenance_Runbook.md`. Never retry account creation or
+password changes just to obtain an audit row. Role changes and their audit writes
+are atomic; external Auth API operations and PostgreSQL cannot share that transaction.
 
 ## 6. Error messages
 

@@ -223,6 +223,115 @@ describe("Technical user administration actions", () => {
     });
   });
 
+  it.each(["create", "reset", "invite", "password"])(
+    "reports completed %s operations when their audit write fails, without repeating them",
+    async (operation) => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const secret = "sensitive error and password sentinel";
+      const actions = {
+        create: () =>
+          createUserAction(
+            initialUserActionState,
+            form({
+              email: "new@example.test",
+              level: "BOARD_ADMIN",
+              committeeId: "",
+              method: "no_email",
+            })
+          ),
+        reset: () =>
+          sendResetEmailAction(initialUserActionState, form({ userId: OTHER })),
+        invite: () =>
+          resendInvitationAction(
+            initialUserActionState,
+            form({ userId: OTHER })
+          ),
+        password: () =>
+          setTemporaryPasswordAction(
+            initialUserActionState,
+            form({
+              userId: OTHER,
+              password: secret,
+              confirmPassword: secret,
+            })
+          ),
+      };
+      const messages = {
+        create: "Account created and access assigned.",
+        reset: "Password-reset email requested.",
+        invite: "Invitation sent again.",
+        password: "The password was changed.",
+      };
+      mocks.listAuthDirectory.mockResolvedValue([
+        { ...entry, invited: true, email_confirmed: false },
+      ]);
+      try {
+        for (const failure of ["rejected", "exception"]) {
+          mocks.recordAuthAdminAction.mockReset();
+          if (failure === "rejected")
+            mocks.recordAuthAdminAction.mockResolvedValue({ code: secret });
+          else mocks.recordAuthAdminAction.mockRejectedValue(new Error(secret));
+          const result = await actions[operation as keyof typeof actions]();
+          expect(result).toMatchObject({
+            status: "error",
+            message: expect.stringContaining(
+              messages[operation as keyof typeof messages]
+            ),
+          });
+          expect(result).toMatchObject({
+            message: expect.stringContaining("Do not repeat the operation"),
+          });
+          expect(mocks.recordAuthAdminAction).toHaveBeenCalledTimes(1);
+          expect(JSON.stringify(result)).not.toContain(secret);
+          expect(JSON.stringify(log.mock.calls)).not.toContain(secret);
+        }
+        const mutation =
+          operation === "create"
+            ? mocks.createAuthUserWithoutPassword
+            : operation === "reset"
+              ? mocks.sendPasswordResetEmail
+              : operation === "invite"
+                ? mocks.resendAuthInvitation
+                : mocks.setTemporaryPassword;
+        expect(mutation).toHaveBeenCalledTimes(2);
+        expect(log).toHaveBeenCalledWith(
+          "auth_admin_audit_failed",
+          expect.objectContaining({ actorId: TECH, targetId: OTHER })
+        );
+      } finally {
+        log.mockRestore();
+      }
+    }
+  );
+
+  it("reports uncertain access after account creation without leaking or retrying a DB failure", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.changeAccess.mockRejectedValue(new Error("private SQL failure"));
+    try {
+      const result = await createUserAction(
+        initialUserActionState,
+        form({
+          email: "new@example.test",
+          level: "BOARD_ADMIN",
+          committeeId: "",
+          method: "no_email",
+        })
+      );
+      expect(result).toMatchObject({
+        status: "error",
+        message: expect.stringContaining(
+          "access status could not be confirmed"
+        ),
+      });
+      expect(JSON.stringify(result)).not.toContain("private SQL");
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private SQL");
+      expect(mocks.createAuthUserWithoutPassword).toHaveBeenCalledTimes(1);
+      expect(mocks.changeAccess).toHaveBeenCalledTimes(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("validates a temporary password at creation and never audits or returns it", async () => {
     const weak = await createUserAction(
       initialUserActionState,
