@@ -404,3 +404,36 @@ zero-advisory result. The reported High image-optimizer issue requires remote
 image allowlists; this repository has no `images.remotePatterns`. Cache/Draft
 Mode and root catch-all prerequisites are also absent. Dependency remediation
 is separate from this minimal origin fix; no force upgrade was performed.
+
+### CSV fix delivery and production verification
+
+- Fix commit: `749cdc513c1153b41121ee6e9401510aaab999ab`.
+  [GitHub CI 37766411559](https://github.com/EngCrafters/engsoc-platform/actions/runs/37766411559)
+  passed. Vercel production `dpl_E5bMhvFfXRz1VTwGmnoTUXujjdYp` is READY and
+  serves `https://engsoc-platform.vercel.app` on that SHA.
+- All required local gates pass: format, lint, types, 256 unit/database tests,
+  db:check, production build, 43 Playwright passes / one intentional skip,
+  and diff hygiene. CI has 254 test passes / two existing environment-dependent
+  skips (local Docker restore and opt-in staging manager sign-in); browser totals
+  match local. Clean disposable database migration replay passed in test setup.
+- Authenticated Technical production browser: confirmed CSV downloaded with the
+  event/date filename, BOM and one confirmed row. Every exported field was
+  privately compared with its database value; no attendee data was printed.
+  Waitlist export after client-side tab navigation downloaded a header-only CSV,
+  matching the zero waitlisted count. Both export POSTs returned 200 in Vercel
+  runtime logs. Attachment/content-type/formula defenses also pass route tests.
+- Two `registrations.exported` audit entries record confirmed/1 and waitlisted/0,
+  each with the correct Technical actor, event and Evening Committee. No business
+  rows were changed. Temporary diagnostics are absent from the deployed fix.
+- Browser metadata switches to `no-referrer` on client-side navigation to the
+  event list/details and back to `same-origin` upon returning to registrations.
+  A screenshot of the empty waitlist was retained outside git without PII.
+- Production negative requests: GET 405; canonical unauthenticated POST 401;
+  foreign/missing/null Origin, foreign Vercel origin and foreign Referer 403.
+  Read-only fixed-routine checks allow Technical/Board counts and deny this
+  foreign committee to Finance/Media managers and the revoked Support identity.
+  Board/Manager positive export behavior is covered automatically, rather than
+  claiming fresh interactive production sessions for those users.
+
+This export defect is closed. The earlier real Support-manager acceptance hold
+is unchanged; this focused repair does not authorize a landing-page migration.

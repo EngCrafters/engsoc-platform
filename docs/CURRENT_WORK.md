@@ -7,8 +7,12 @@ Vercel Host/forwarded headers and request URL were correct. Registration-only
 The POST guard now uses dedicated server-only `APP_ORIGIN`, rejects missing/null
 origins and mismatched Referer, and does not trust proxy hosts. Production
 `APP_ORIGIN` is configured to the canonical site. Auth/scope/routines/CSV format
-and UI appearance are unchanged. Validation/deployment evidence follows in
-HARDENING_AUDIT_2026-10-07.md; the prior lifecycle handoff below remains applicable.
+and UI appearance are unchanged. Fix `749cdc5` passed GitHub CI 37766411559 and
+Vercel production dpl_E5bMhvFfXRz1VTwGmnoTUXujjdYp is READY. Real browser
+confirmed/waitlisted downloads passed with exact private data comparison and
+two correctly attributed export audit entries. Local: 256 tests and 43 browser
+passes / one intentional skip. Details are in HARDENING_AUDIT_2026-10-07.md;
+the prior lifecycle handoff below remains applicable.
 
 **CURRENT (October 8, 2026):** Recovery production pilot **PASS** and Board
 production pilot **PASS**, confirmed by the owner. The disposable Support test
