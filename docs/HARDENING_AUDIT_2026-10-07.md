@@ -322,6 +322,18 @@ and already-documented account email matches are not secrets.
   backup and token-free verification screenshot were retained outside git.
   User-managed untracked paths were neither changed nor staged.
 
+### October 8 continuity verification
+
+Evidence commit 730edd773f5ef66a82c75958238e07a1ae5f2a36 passed
+[GitHub CI 37649639032](https://github.com/EngCrafters/engsoc-platform/actions/runs/37649639032).
+GitHub Production deployment 6914793029 reports success for that SHA;
+Vercel dpl_CFNxAJUNmNA1TFQXyH7znDrsnRVs is READY on the production alias.
+Fresh smoke requests confirm public/login/recovery/reset 200 responses,
+unauthenticated access redirect, and security headers. The tracked working tree
+was clean when resumed; existing user-managed untracked files were retained.
+Only handoff punctuation and this verification evidence changed on resumption.
+The real Support manager identity/pilot is still the sole pending owner item.
+
 ### Remaining findings and classification
 
 | Item                                                                      | Severity / impact                                                                                   | Remediation                                                                                                                                     | Classification              |

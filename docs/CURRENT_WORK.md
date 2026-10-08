@@ -1,6 +1,6 @@
-# Current work ? handoff state
+# Current work - handoff state
 
-**CURRENT (October 7, 2026):** Recovery production pilot **PASS** and Board
+**CURRENT (October 8, 2026):** Recovery production pilot **PASS** and Board
 production pilot **PASS**, confirmed by the owner. The disposable Support test
 identity has been revoked and retains no application access. It remains in Auth
 for historical attribution; it has a retained grant and four audit references.
@@ -25,6 +25,11 @@ on that SHA. Live Technical directory/details/history/onboarding/replacement
 controls and mobile checks pass without production account mutations.
 The sole remaining release hold is the real Support manager email, assignment
 and private sign-in pilot. Final evidence is in HARDENING_AUDIT_2026-10-07.md.
+Final evidence commit 730edd7 also passed GitHub CI 37649639032 and reached
+Vercel READY at dpl_CFNxAJUNmNA1TFQXyH7znDrsnRVs. October 8 production smoke
+checks confirm public/login/recovery/reset responses and the unauthenticated
+access redirect with security headers. No application changes followed the
+validated lifecycle implementation.
 No landing-page migration or broad UI redesign has started.
 
 The earlier exposed migration credential was production, not staging: rotation,
@@ -34,7 +39,7 @@ cause are verified. A logical restore is proven; paid leaked-password protection
 automated backup/PITR, stronger DMARC/CSP, development advisories, future directory
 pagination and the external Auth/audit boundary remain documented follow-ups.
 
-Current authority is ADRs 0012?0014 and ACCESS_CONTROL.md. The dated handoffs below
+Current authority is ADRs 0012 through 0014 and ACCESS_CONTROL.md. The dated handoffs below
 are historical; their old account state and open items are superseded by this note.
 
 **AUTH + USER ADMINISTRATION (October 5, 2026):** Commit `de0a1c1` fixed
