@@ -18,6 +18,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromoteButton } from "./promote-button";
+import type { Metadata } from "next";
+
+// Native form POSTs need a non-opaque Origin. Send no Referer cross-site;
+// metadata also updates this policy when arriving through Next.js navigation.
+export const metadata: Metadata = { referrer: "same-origin" };
 
 function single(value: string | string[] | undefined) {
   return Array.isArray(value) ? undefined : value;

@@ -12,3 +12,12 @@ The export route is a same-origin POST, creates an audited event-scoped
 snapshot, emits UTF-8 BOM CSV with formula-prefix neutralization, and returns
 private/no-store content. It never exposes internal IDs, Member data, IPs, or
 attendance fields.
+
+`lib/security/request-origin.ts` validates the POST's exact Origin against
+server-only `APP_ORIGIN` (production: `https://engsoc-platform.vercel.app`).
+Missing, opaque (`null`), malformed and foreign origins fail closed; a present
+Referer must also match. Host/proxy headers and Auth redirect configuration do
+not establish trust. Unconfigured development accepts loopback origins only.
+The registration page uses `same-origin` referrer metadata so native form POSTs
+send an identifiable Origin without sending a Referer cross-site. Root metadata
+restores `no-referrer` on other pages, including client-side navigation.

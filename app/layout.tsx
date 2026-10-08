@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Engineering Society Platform",
   description: "One shared platform for the Engineering Society.",
+  referrer: "no-referrer",
   icons: {
     icon: "/brand/engineering-society-logo.png",
     apple: "/brand/engineering-society-logo.png",

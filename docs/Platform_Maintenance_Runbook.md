@@ -6,6 +6,24 @@ and operational recovery. Historical manager-grant procedures from migration
 0010 were retired by migration 0016. No password, token, connection string or
 recovery link belongs in this document, git, logs or chat.
 
+## CSV export origin configuration
+
+Set server-only Vercel Production `APP_ORIGIN` to
+`https://engsoc-platform.vercel.app` and redeploy after configuration changes.
+This is the canonical application origin, separate from `AUTH_REDIRECT_ORIGIN`.
+Do not derive it from Host, forwarded headers, a preview hostname or `VERCEL_URL`.
+Missing/invalid production configuration fails closed. Local development without
+the variable supports loopback origins only.
+
+Exports remain authenticated, committee-scoped POSTs. The registration page's
+`same-origin` referrer metadata allows native POSTs to include their real Origin;
+other pages retain `no-referrer`. Do not accept `Origin: null` to work around a
+policy regression. A supplied Referer must match the configured origin too.
+For a 403, inspect only method, pathname, Origin, Referer **origin**, Host,
+forwarded host/protocol and configured origin; never dump all request headers,
+query strings, cookies, session tokens or registration data. Verify an actual
+browser download and its `registrations.exported` audit record after repair.
+
 ## Authority
 
 | Access                             | Where managed                                                  | Scope                                              |

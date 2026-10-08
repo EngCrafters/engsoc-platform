@@ -7,25 +7,10 @@ import {
 import { parseRegistrationStatus } from "@/lib/admin-registrations/types";
 import { buildRegistrationCsv } from "@/lib/admin-registrations/csv";
 import { isUuid } from "@/lib/admin-events/types";
+import { isSameOriginPost } from "@/lib/security/request-origin";
 
 const MAX_EXPORT_ROWS = 10_000;
 const MAX_EXPORT_BYTES = 10 * 1024 * 1024;
-
-// Temporary, bounded diagnostics: never record credentials, query strings or PII.
-function diagnosticOrigin(value: string | null) {
-  if (value === null || value === "null") return value;
-  try {
-    return new URL(value).origin;
-  } catch {
-    return "invalid";
-  }
-}
-
-function diagnosticHost(value: string | null) {
-  return value === null || /^[a-zA-Z0-9.:[\]-]{1,253}$/.test(value)
-    ? value
-    : "invalid";
-}
 
 function failure(message: string, status: number) {
   return new NextResponse(message, {
@@ -38,25 +23,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) {
-    console.warn("registration_export_origin_rejected", {
-      method: request.method,
-      pathname: new URL(request.url).pathname,
-      origin: diagnosticOrigin(origin),
-      refererOrigin: diagnosticOrigin(request.headers.get("referer")),
-      host: diagnosticHost(request.headers.get("host")),
-      forwardedHost: diagnosticHost(request.headers.get("x-forwarded-host")),
-      forwardedProto: ["https", "http"].includes(
-        request.headers.get("x-forwarded-proto") ?? ""
-      )
-        ? request.headers.get("x-forwarded-proto")
-        : null,
-      requestUrlOrigin: new URL(request.url).origin,
-      configuredApplicationOrigin: diagnosticOrigin(
-        process.env.APP_ORIGIN ?? null
-      ),
-    });
+  if (!isSameOriginPost(request)) {
     return failure(
       "This export request came from another site. Return to the registration page and try again.",
       403

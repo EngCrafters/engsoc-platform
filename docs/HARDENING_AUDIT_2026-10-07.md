@@ -354,3 +354,53 @@ Support manager assignment and pilot. Next action: the owner provides the real
 Support email, then completes private sign-in after the ordinary application
 assignment. No migration/code/RLS change or placeholder account is required.
 Do not share a password or recovery link. Do not reactivate the disposable identity.
+
+## Focused production CSV export repair — October 8
+
+The authenticated Technical browser reproduced the reported export rejection.
+Temporary bounded diagnostics in commit `258450e` captured only:
+
+| Field                                               | Observed value                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| Method                                              | POST                                                                      |
+| Pathname                                            | `/admin/events/6b1489c5-763b-4dad-9b58-a673d6d99571/registrations/export` |
+| Origin                                              | literal `null`                                                            |
+| Referer origin                                      | absent                                                                    |
+| Host / x-forwarded-host                             | `engsoc-platform.vercel.app` / `engsoc-platform.vercel.app`               |
+| x-forwarded-proto                                   | `https`                                                                   |
+| Request URL origin used by the old guard            | `https://engsoc-platform.vercel.app`                                      |
+| Configured application origin used by the old guard | none                                                                      |
+
+Root cause: global `Referrer-Policy: no-referrer` makes native form POSTs use an
+opaque Origin. The old guard compared literal `null` with the request URL's
+HTTPS origin and rejected it. This behavior is specified by the
+[Fetch Standard](https://fetch.spec.whatwg.org/#append-a-request-origin-header).
+The Vercel proxy headers were not the observed mismatch.
+
+The repair sets registration-page referrer metadata to `same-origin` and root
+metadata to `no-referrer` so client-side navigation updates/resets the policy.
+No visual changes. Cross-site requests still receive no Referer. The guard now
+requires exact Origin equality with dedicated server-only `APP_ORIGIN`, also
+rejects foreign/malformed Referer, and fails closed for missing/null Origin or
+invalid production configuration. No Host/proxy-header/Auth-redirect fallback,
+wildcards or GET export were added. Production APP_ORIGIN is configured to
+`https://engsoc-platform.vercel.app`. Temporary diagnostics are removed by the fix.
+
+Regression coverage includes canonical and internal-proxy URL cases, local-only
+development fallback, foreign/preview/forged hosts, malformed/missing/null
+origins, mismatched Referer, no-access users, all three authorized roles,
+foreign committee denial, malformed IDs, attachment headers, waitlist selection
+and formula neutralization. Browser tests reproduce both native form policy
+behaviors and preserve POST-only/cross-site rejection. Existing database tests
+cover scoped exports and atomic export audit writes. No migration is required.
+
+Read-only pre-export production evidence: the selected Evening Committee event
+has one confirmed and zero waitlisted registrations, and no prior export audit
+entries. No attendee values were logged, and no business data was changed.
+
+An additional package audit now reports one High-severity Next.js package entry
+(several advisories newly indexed October 7). This supersedes the earlier dated
+zero-advisory result. The reported High image-optimizer issue requires remote
+image allowlists; this repository has no `images.remotePatterns`. Cache/Draft
+Mode and root catch-all prerequisites are also absent. Dependency remediation
+is separate from this minimal origin fix; no force upgrade was performed.

@@ -1,5 +1,15 @@
 # Current work - handoff state
 
+**FOCUSED PRODUCTION FIX (October 8, 2026):** CSV export investigation confirmed
+native form POSTs sent `Origin: null` under the global `no-referrer` policy;
+Vercel Host/forwarded headers and request URL were correct. Registration-only
+`same-origin` metadata preserves same-site Origin without cross-site Referer.
+The POST guard now uses dedicated server-only `APP_ORIGIN`, rejects missing/null
+origins and mismatched Referer, and does not trust proxy hosts. Production
+`APP_ORIGIN` is configured to the canonical site. Auth/scope/routines/CSV format
+and UI appearance are unchanged. Validation/deployment evidence follows in
+HARDENING_AUDIT_2026-10-07.md; the prior lifecycle handoff below remains applicable.
+
 **CURRENT (October 8, 2026):** Recovery production pilot **PASS** and Board
 production pilot **PASS**, confirmed by the owner. The disposable Support test
 identity has been revoked and retains no application access. It remains in Auth
