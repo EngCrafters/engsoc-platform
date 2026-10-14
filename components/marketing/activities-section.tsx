@@ -39,16 +39,25 @@ export async function ActivitiesSection() {
           {t.activities.lead}
         </p>
 
-        {(hasDemo || hasPhotosPending) && (
+        {/* Both notices can apply at once: demonstration events are shown, and one
+            programme still has no description. They are separate facts, so they are
+            stated separately rather than one hiding the other. */}
+        {hasDemo ? (
           <p className="mt-4 max-w-[var(--m-measure)] text-sm text-m-ink-2">
             <strong className="font-semibold text-m-ink">
-              {hasPhotosPending
-                ? t.activities.photosStrong
-                : t.activities.demoStrong}
+              {t.activities.demoStrong}
             </strong>{" "}
-            {hasPhotosPending ? t.activities.photosBody : t.activities.demoBody}
+            {t.activities.demoBody}
           </p>
-        )}
+        ) : null}
+        {hasPhotosPending ? (
+          <p className="mt-3 max-w-[var(--m-measure)] text-sm text-m-ink-2">
+            <strong className="font-semibold text-m-ink">
+              {t.activities.photosStrong}
+            </strong>{" "}
+            {t.activities.photosBody}
+          </p>
+        ) : null}
 
         <div className="mt-12 grid gap-10 lg:gap-14">
           {activitiesWithEvents.map((activity, index) => (
