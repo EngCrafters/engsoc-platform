@@ -17,7 +17,10 @@ export default defineConfig({
     alias: { "@": path.resolve(import.meta.dirname) },
   },
   test: {
-    exclude: ["tests/e2e/**", "node_modules/**"],
+    // tests/e2e runs under Playwright (npm run test:e2e).
+    // tests/integration runs under its own config (npm run test:integration)
+    // because it talks to a live remote project and is not hermetic.
+    exclude: ["tests/e2e/**", "tests/integration/**", "node_modules/**"],
     environment: "node",
     // The database suites share one PostgreSQL container, and some assert
     // global invariants (for example "the last active Technical owner cannot be
