@@ -80,8 +80,15 @@ change:
    (`20260913025836` … `20261007090000`), while this repository's files are
    `NNNN_`-named. `supabase migration list --linked` shows the **Local column
    entirely empty**, so a push would not apply the one intended migration.
-3. No production `DATABASE_URL` exists in this environment (`.env.local` holds
-   only `VERCEL_OIDC_TOKEN`), so direct application is not possible either.
+3. **No credential capable of applying DDL to production exists in this
+   environment, or in the Vercel project at all.** `vercel env ls production`
+   lists `APP_RUNTIME_DATABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and **no
+   `DATABASE_URL`**. `app_runtime` has no table grants and no `CREATE`
+   privilege — it cannot run `ALTER TABLE` and must not be given the right to.
+   The service-role key is a PostgREST/Auth credential, not a direct Postgres
+   one. So this is not a limitation of the session that produced the branch: the
+   migration-only credential described in `db/README.md` is simply not
+   provisioned in the project.
 4. `docs/Platform_Maintenance_Runbook.md` requires a fresh restorable logical
    backup, inspected and restored to an isolated instance, before a schema
    change. The project has no proven backup or PITR window, so that
