@@ -448,12 +448,13 @@ sequenceDiagram
   participant DB as private.register_for_event (app_runtime)
   participant T as events / registrations / registration_attempts
 
-  V->>Form: name + email, submit
-  Form->>SA: FormData (eventId, attendeeName, attendeeEmail, intent)
+  V->>Form: name + email + phone, submit
+  Form->>SA: FormData (eventId, attendeeName, attendeeEmail, attendeePhone, intent)
   SA->>SA: reject duplicate fields and unexpected domain fields
   SA->>SA: getClientIp() — x-vercel-forwarded-for only
   SA->>LR: registerForEvent({...})
-  LR->>LR: trim/lowercase; name ≤200 & no control chars;<br/>email ≤254 & shape check; eventId UUID; IP parses
+  LR->>LR: name ≤200 & no control chars; email ≤254 & shape check;<br/>phone canonical or null → invalid_phone;<br/>eventId UUID; IP parses
+  Note over LR,DB: one call, one round trip —<br/>the phone changed the signature, not the shape
   LR->>DB: SELECT private.register_for_event(...)
   DB->>T: pg_advisory_xact_lock(hashtext(ip))
   DB->>T: count attempts in last 10 min → ≥5 ⇒ RATE_LIMITED
@@ -466,8 +467,8 @@ sequenceDiagram
   else already waitlisted
     DB-->>LR: ALREADY_WAITLISTED
   else intent = register and seat available
-    DB->>T: INSERT status='confirmed'
-    DB->>T: audit 'registration.created'
+    DB->>T: INSERT status='confirmed' with canonical phone
+    DB->>T: audit 'registration.created'<br/>(action + target only, never the phone)
     DB-->>LR: SUCCESS
   else intent = register and numerically full
     DB-->>LR: EVENT_FULL
@@ -508,6 +509,10 @@ flowchart LR
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Exactly one active row per `(event_id, lower(btrim(attendee_email)))` | Partial unique index `registrations_active_event_email_idx` `WHERE status IN ('confirmed','waitlisted')` |
 | Canonical email storage                                               | `CHECK registrations_email_canonical`                                                                    |
+| Canonical phone storage                                               | `CHECK registrations_phone_canonical` — NULL, or optional `+` then 7–15 digits                           |
+| Phone required for new registrations                                  | `private.register_for_event` returns `INVALID_PHONE` and writes nothing; the domain refuses first        |
+| Historical registrations stay valid with no phone                     | Column is nullable; no backfill, no fabricated value, in the database or the CSV                         |
+| Phone is never on a public path                                       | `PublicEvent` has no phone field; only committee-scoped admin routines return it                         |
 | No oversubscription under concurrency                                 | Event row `FOR UPDATE` serialises seat allocation; verified by a real capacity-1 race test               |
 | FIFO waitlist                                                         | `ORDER BY (registered_at, id)`; routine rejects promoting any row that is not first                      |
 | Rate limit 5 per IP per 10 min                                        | Inside the routine, under a per-IP transaction advisory lock; rejected attempts count                    |

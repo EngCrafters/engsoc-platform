@@ -101,6 +101,32 @@ The export route rejects an empty or partial export when the database's row
 limit or a concurrent registration change makes its result disagree with the
 authorized registration count.
 
+`0024_registration_attendee_phone.sql` adds the attendee phone number. It is
+the first schema change since 0016, and it is deliberately small: one nullable
+`attendee_phone text` column, one CHECK (`registrations_phone_canonical`), one
+pure helper (`private.normalize_phone`), and three routines replaced.
+
+Nullable is the point. Every registration captured before this migration keeps
+its NULL phone and stays valid, and nothing is fabricated or backfilled for one.
+Every NEW registration must supply a valid number: the routine returns
+`INVALID_PHONE` and writes nothing otherwise, and the CHECK refuses a
+half-formatted value even from a direct writer. The canonical form is an
+optional leading `+` followed by 7–15 digits, produced identically by
+`private.normalize_phone` and `lib/registrations/phone.ts`. The column is text,
+never numeric, so a leading zero and a leading `+` survive. It is not unique
+and not indexed because email remains the registration identity.
+
+**Replacing a routine's argument list is not a `CREATE OR REPLACE`.** It would
+create a second, overloaded function and leave the old one executable by
+`app_runtime` as a live write path. So this migration drops
+`private.register_for_event` explicitly, and drops and recreates both
+`list_admin_registrations` and `export_admin_registrations` for the same reason
+(a `RETURNS TABLE` shape cannot be replaced either). It restores the exact
+`EXECUTE` grant to `app_runtime` and nothing else, and then asserts its own
+outcome: exactly one `register_for_event`, with the intended six-argument
+signature. If that assertion fails the migration aborts, so no half-applied
+state is possible.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.

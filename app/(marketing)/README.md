@@ -25,6 +25,15 @@ data model as the committee dashboard — not a separate site.
   `private.register_for_event` over the restricted `app_runtime` connection.
   Duplicate prevention, capacity, the FIFO waitlist, the IP rate limit and the
   audit row all live in the database routine and are not reimplemented here.
+  The form collects name, email and phone. The phone is normalized by
+  `lib/registrations/phone.ts` and again by the routine, and a registration
+  captured before migration 0024 simply has none.
+- **No public link to the administration area.** The header, mobile panel,
+  footer and join invitation render no `/admin` destination, and
+  `content/site.ts` has no `signInUrl`. The route still exists and is still
+  protected; the public site simply does not present it as a destination. This
+  is discoverability, not authorization — do not treat the missing link as a
+  control, and do not add one back.
 - **No API route.** Mutations are Server Actions. If a feature genuinely needs a
   public HTTP endpoint, that is a new conversation, not a default.
 - **No direct Supabase reads from the browser.** The public catalogue is read

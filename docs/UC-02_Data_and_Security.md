@@ -94,18 +94,19 @@ full behavior.
 
 ## 3. Registration contract
 
-| Field / PostgreSQL type               | Null/default         | Contract and reason                                                         |
-| ------------------------------------- | -------------------- | --------------------------------------------------------------------------- |
-| id / uuid PK                          | N, gen_random_uuid() | Stable internal identity for attendance/certificate use                     |
-| event_id / uuid FK events             | N                    | Immutable, never move a registration to another event                       |
-| member_id / uuid FK members           | ?                    | Existing optional future link; all UC-02 writes set null                    |
-| attendee_name / text                  | N                    | Canonical trimmed 1–200 code points, Unicode allowed, no controls           |
-| attendee_email / text                 | N                    | Canonical trimmed lowercase ASCII, max 254, practical syntax from deep dive |
-| status / registration_status          | N, confirmed         | NEW: confirmed, waitlisted, superseded                                      |
-| superseded_by / uuid FK registrations | ?, null              | NEW: preserve legacy duplicates without deletion                            |
-| attended / boolean                    | N, false             | Existing UC-03 field; UC-02 cannot modify it                                |
-| checked_in_at / timestamptz           | ?, null              | Existing UC-03 field; UC-02 cannot modify it                                |
-| registered_at / timestamptz           | N, now()             | Immutable request acceptance time; FIFO key with id                         |
+| Field / PostgreSQL type               | Null/default         | Contract and reason                                                                                                                                                                                                                                              |
+| ------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id / uuid PK                          | N, gen_random_uuid() | Stable internal identity for attendance/certificate use                                                                                                                                                                                                          |
+| event_id / uuid FK events             | N                    | Immutable, never move a registration to another event                                                                                                                                                                                                            |
+| member_id / uuid FK members           | ?                    | Existing optional future link; all UC-02 writes set null                                                                                                                                                                                                         |
+| attendee_name / text                  | N                    | Canonical trimmed 1–200 code points, Unicode allowed, no controls                                                                                                                                                                                                |
+| attendee_email / text                 | N                    | Canonical trimmed lowercase ASCII, max 254, practical syntax from deep dive                                                                                                                                                                                      |
+| attendee_phone / text                 | ?, null              | Added by migration 0024. Canonical: optional leading `+` then 7–15 digits. Required for every NEW registration; NULL only on rows captured before the column existed. Text, never numeric, so a leading zero and a leading `+` survive. Not unique, not indexed. |
+| status / registration_status          | N, confirmed         | NEW: confirmed, waitlisted, superseded                                                                                                                                                                                                                           |
+| superseded_by / uuid FK registrations | ?, null              | NEW: preserve legacy duplicates without deletion                                                                                                                                                                                                                 |
+| attended / boolean                    | N, false             | Existing UC-03 field; UC-02 cannot modify it                                                                                                                                                                                                                     |
+| checked_in_at / timestamptz           | ?, null              | Existing UC-03 field; UC-02 cannot modify it                                                                                                                                                                                                                     |
+| registered_at / timestamptz           | N, now()             | Immutable request acceptance time; FIFO key with id                                                                                                                                                                                                              |
 
 Active = status IN (confirmed, waitlisted). Superseded is migration history,
 never a public/admin create option. No cancelled state or public cancellation.
@@ -113,6 +114,25 @@ There is exactly one active row per (event_id, lower(btrim(attendee_email))):
 a partial unique expression index enforces this, independent of app checks.
 Normalize before insert; CHECK that stored email is already canonical.
 No separate normalizedEmail column; no provider-specific alias equivalence.
+
+Email is the registration identity; phone is contact detail, not identity. There
+is no uniqueness rule on phone and no index on it, because nothing searches,
+joins or deduplicates by it. Adding one would be cost without a query that
+needs it.
+
+Phone is normalized to one canonical form by `private.normalize_phone` and by
+`lib/registrations/phone.ts`, and the `registrations_phone_canonical` CHECK
+permits only that form (or NULL). Arabic-Indic and Eastern Arabic-Indic digits
+become ASCII; letters and control characters are refused rather than stripped;
+presentation separators (spaces, hyphens, brackets, dots) are dropped; at most
+one leading `+` is kept; 7–15 digits are required. The rule is deliberately not
+country-specific, because registration is open to anyone rather than only to
+Omani numbers.
+
+The column is nullable so historical registrations stay valid, and no phone
+number is ever fabricated or backfilled for one. Every new registration through
+`private.register_for_event` must supply a valid number or the routine returns
+`INVALID_PHONE` and writes nothing.
 
 CHECK status=superseded iff superseded_by IS NOT NULL; no self-reference.
 Controlled migration validates target belongs to the same event/email and is
@@ -438,7 +458,14 @@ registration data, raw capacity, count or approval metadata.
 AdminEvent adds committeeId, status, capacity, revision, archivedAt,
 reviewRequired, flaggedBy, approvedBy, approvedAt, approvedRevision,
 confirmedCount and waitlistedCount. AdminRegistration = id, attendeeName,
-attendeeEmail, status, registeredAt; Member link is not needed in this DTO.
+attendeeEmail, attendeePhone, status, registeredAt; Member link is not needed in
+this DTO, and the phone arrives on the same row as the rest — adding it did not
+add a query.
+
+`attendeePhone` is nullable in that DTO, because a registration captured before
+migration 0024 genuinely has none. The admin list renders "Not captured" for it
+and the CSV exports an empty cell; neither invents a value. The public event DTO
+has no phone field at all, and must never gain one.
 
 Validate cursors as base64url-encoded bounded JSON (max 1 KiB): v=1,
 resource kind, filter, parent event/committee where applicable, timestamp and UUID.

@@ -1,5 +1,59 @@
 # Current work - handoff state
 
+**CURRENT — REGISTRATION PHONE + ADMIN DISCOVERABILITY (branch
+`feature/registration-phone`, pull request #6):**
+
+**1. Registration now captures name, email and phone.** Migration `0024` adds one
+nullable `attendee_phone text` column, one CHECK, one pure helper
+(`private.normalize_phone`) and replaces three routines. The column is nullable
+because every registration captured earlier keeps its NULL phone and stays
+valid — nothing is fabricated or backfilled. Every NEW registration must supply
+a valid number, enforced twice: `lib/registrations/phone.ts` in the domain and
+`private.register_for_event` in the database, with
+`registrations_phone_canonical` as the last line of defence against a direct
+writer. The canonical form is an optional leading `+` then 7–15 digits, text
+never numeric, not unique and not indexed. Email remains the registration
+identity.
+
+**Replacing a routine's argument list is not a `CREATE OR REPLACE`.** It would
+create a second, overloaded function and leave the old one executable by
+`app_runtime` as a live write path accepting no phone. Migration 0024 drops
+`register_for_event` explicitly, drops and recreates both admin registration
+routines for the same reason (`RETURNS TABLE` cannot be replaced either),
+restores the `EXECUTE` grant to `app_runtime` and nothing else, and then asserts
+its own outcome — exactly one `register_for_event`, six-argument signature — so
+no half-applied state is possible. That assertion caught a real bug in its own
+first draft.
+
+**2. The administration side shows the phone.** `list_admin_registrations` and
+`export_admin_registrations` return it on the same row and the same single
+query they already used, so nothing became N+1 and registration is still one
+routine call. A registration captured before the field existed shows
+"Not captured" in the admin table and an empty cell in the CSV — never a
+placeholder word, never an invented number. The CSV value goes through the same
+formula-prefix neutralization as every other cell: an international number
+starts with `+`, which is a spreadsheet formula prefix, so it is deliberately
+not special-cased.
+
+**3. The public site no longer advertises the administration sign-in.** The
+header, mobile menu, footer and join invitation carried a link to
+`/admin/login`; they no longer do, and `content/site.ts` has no `signInUrl`.
+`/admin/login`, `/admin/recovery` and `/auth/reset` all still work, protected
+pages still redirect a signed-out visitor, and recovery links still resolve. The
+three entry pages are now `noindex`. This is **discoverability, not
+authorization** — the route's own guards are what protect it, and the e2e test
+asserts both halves.
+
+**Known coverage limitation, stated rather than papered over:** the
+authenticated admin leg is not exercised in a browser. The e2e environment runs
+with a placeholder Supabase URL, so there is no Auth server to sign a manager in
+against, and this change will not invent a production identity to work around
+that. The admin path is proven at the routine level (scope, denial, phone
+returned) and the component level (rendering, including the NULL case).
+
+The migration has **not** been applied to production yet at the time of writing;
+the branch is in review. The dated handoffs below are historical.
+
 **CURRENT — PUBLIC SITE MIGRATION (branch `migration/public-site`, pull request #5):**
 The teammate public site (ESWebsite, upstream `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0`)
 has been ported into this application as **presentation only**. Auth, authorization,

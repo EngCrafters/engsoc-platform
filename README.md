@@ -51,6 +51,10 @@ the event catalogue, event detail and anonymous registration. It is part of the
 same application and data model as the rest of the platform — not a separate
 site, and not a separate repository.
 
+Registration captures an attendee's name, email and phone; email is the
+registration identity and the phone is contact detail, private to the
+committee-scoped administration area.
+
 Events come from `lib/events` and nowhere else. `lib/marketing/adapters.ts` is
 the single translation point from the canonical `PublicEvent` DTO to
 presentation, and it never widens that DTO. Registration posts to the canonical

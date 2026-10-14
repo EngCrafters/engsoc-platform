@@ -418,48 +418,72 @@ to `db/migrations/`.
 
 ---
 
+### I-39 — A new registration always carries a canonical phone; a historical one may carry none
+
+|                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Description**    | Every registration created from migration 0024 onward records an attendee phone number in one canonical form. Registrations captured earlier keep a NULL phone and remain valid, and no number is ever fabricated or backfilled for them.                                                                                                                                                                                                                                                                                                                                                                 |
+| **Implementation** | `attendee_phone text` is nullable, with `CHECK registrations_phone_canonical` permitting only NULL or `^[+]?[0-9]{7,15}$`. `private.register_for_event` returns `INVALID_PHONE` and writes nothing when `private.normalize_phone` cannot canonicalize the value. `lib/registrations/phone.ts` applies the identical rule in the domain layer, so the visitor gets a precise message instead of a generic failure, and the Server Action does not pre-validate at all. Stored as text, never numeric, so a leading zero and a leading `+` survive. Not unique and not indexed: email remains the identity. |
+| **Test coverage**  | `tests/registration-phone.test.ts` (the normalization contract, including Arabic-Indic digits and every rejection case); `tests/db/registration-phone.test.ts` (the routine and the CHECK, a historical NULL row, leading zeros, confirmed and waitlisted storage, duplicate-email semantics unchanged, and the single-signature assertion); `tests/registration-action.test.ts` (the action forwards the raw value and never partially validates); `tests/e2e/registration-phone.spec.ts` (the browser field, its `type="tel"` attributes, and each outcome).                                            |
+| **Documentation**  | `lib/registrations/README.md`; `docs/UC-02_Data_and_Security.md`; `docs/ARCHITECTURE_MAP.md` section 7; migration 0024's own header.                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Status**         | **PROVEN** — enforced by a CHECK, by the routine and by the domain, with all three covered by tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+### I-40 — The public site does not advertise the administration sign-in
+
+|                    |                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Description**    | No public page renders a link, button or form pointing at `/admin`, `/admin/login` or any other administration entry point. The route itself continues to exist and work.                                                                                                                                                                                                               |
+| **Implementation** | `content/site.ts` has no `signInUrl`; the header, mobile panel, footer and join invitation render no administration link. `/admin/login`, `/admin/recovery` and `/auth/reset` export `robots: { index: false, follow: false }`. The protected layout still redirects a signed-out visitor to sign in, and the recovery callback still resolves.                                         |
+| **Test coverage**  | `tests/e2e/public-admin-link.spec.ts` — reads the rendered DOM, so a CSS-hidden anchor still fails, across `/`, `/about`, `/activities` and `/events`, plus the footer of each and the opened mobile menu; and asserts in the same file that `/admin/login` returns 200 with `noindex`, that `/admin/access` still redirects, and that recovery and reset stay reachable and unindexed. |
+| **Documentation**  | `content/site.ts` carries the reasoning inline; `app/(marketing)/README.md`.                                                                                                                                                                                                                                                                                                            |
+| **Status**         | **PROVEN** — and framed explicitly as discoverability, not authorization. I-08, I-14 and I-32 are what actually protect the route.                                                                                                                                                                                                                                                      |
+
+---
+
 ## F. Summary matrix
 
-| ID   | Invariant                                                       | Status                                                 |
-| ---- | --------------------------------------------------------------- | ------------------------------------------------------ |
-| I-01 | Manager has exactly one committee                               | PROVEN                                                 |
-| I-02 | Board has global scope, no access management                    | PROVEN                                                 |
-| I-03 | Technical owns access control; authority from access level only | PROVEN                                                 |
-| I-04 | Last Technical cannot be removed                                | PROVEN                                                 |
-| I-05 | Self-escalation impossible                                      | PROVEN                                                 |
-| I-06 | Revocation immediate; identity and history retained             | PROVEN                                                 |
-| I-07 | Revoked identities ineligible for deletion while referenced     | **ENFORCED-UNTESTED**                                  |
-| I-08 | Authentication is not authorization                             | PROVEN                                                 |
-| I-09 | app_runtime has no direct DML                                   | PROVEN                                                 |
-| I-10 | RLS enabled and forced everywhere exposed                       | PROVEN (see F-02 caveat)                               |
-| I-11 | SECURITY DEFINER is a narrow capability boundary                | PROVEN                                                 |
-| I-12 | EXECUTE granted only as designed                                | PROVEN                                                 |
-| I-13 | Attendee PII is never public                                    | PROVEN                                                 |
-| I-14 | Cross-committee access denied                                   | PROVEN                                                 |
-| I-15 | Malformed identifiers are safe                                  | PROVEN                                                 |
-| I-16 | Audit is append-only with full context                          | PROVEN (GAP for non-routine paths)                     |
-| I-17 | Audit never contains secrets                                    | PROVEN                                                 |
-| I-18 | Raw IPs confined to rate-limit bookkeeping                      | **ENFORCED-UNTESTED** + retention GAP                  |
-| I-19 | Capacity cannot be oversubscribed                               | PROVEN                                                 |
-| I-20 | One active registration per event and email                     | PROVEN                                                 |
-| I-21 | Waitlist is FIFO; only first is promoted                        | PROVEN                                                 |
-| I-22 | Registration closes at event start                              | PROVEN                                                 |
-| I-23 | Revision locking; no silent overwrite                           | PROVEN (APP-ONLY caveat)                               |
-| I-24 | Self-approval denied                                            | PROVEN                                                 |
-| I-25 | Published events have a description                             | PROVEN                                                 |
-| I-26 | Archive is non-destructive and reversible                       | PROVEN                                                 |
-| I-27 | Exports are scoped, complete, formula-safe, audited             | PROVEN                                                 |
-| I-28 | Anonymous registration is the only public write                 | PROVEN                                                 |
-| I-29 | Public surfaces never receive raw internal state                | PROVEN                                                 |
-| I-30 | Secrets remain server-side                                      | PROVEN                                                 |
-| I-31 | Recovery exposes no tokens and grants no access                 | PROVEN                                                 |
-| I-32 | No open redirect                                                | PROVEN                                                 |
-| I-33 | Auth email uses a configured provider, no fallback              | **ENFORCED-UNTESTED** (E2E delivery)                   |
-| I-34 | Revocation beats a live session                                 | PROVEN (session termination documented as unavailable) |
-| I-35 | Application cannot migrate production                           | PROVEN for app + test harness (script GAP)             |
-| I-36 | Deployment path is push-to-main only                            | PROVEN                                                 |
-| I-37 | Conventional commits enforced                                   | PROVEN                                                 |
-| I-38 | One grant per user; multiple managers per committee allowed     | PROVEN (intentional)                                   |
+| ID   | Invariant                                                                 | Status                                                 |
+| ---- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| I-01 | Manager has exactly one committee                                         | PROVEN                                                 |
+| I-02 | Board has global scope, no access management                              | PROVEN                                                 |
+| I-03 | Technical owns access control; authority from access level only           | PROVEN                                                 |
+| I-04 | Last Technical cannot be removed                                          | PROVEN                                                 |
+| I-05 | Self-escalation impossible                                                | PROVEN                                                 |
+| I-06 | Revocation immediate; identity and history retained                       | PROVEN                                                 |
+| I-07 | Revoked identities ineligible for deletion while referenced               | **ENFORCED-UNTESTED**                                  |
+| I-08 | Authentication is not authorization                                       | PROVEN                                                 |
+| I-09 | app_runtime has no direct DML                                             | PROVEN                                                 |
+| I-10 | RLS enabled and forced everywhere exposed                                 | PROVEN (see F-02 caveat)                               |
+| I-11 | SECURITY DEFINER is a narrow capability boundary                          | PROVEN                                                 |
+| I-12 | EXECUTE granted only as designed                                          | PROVEN                                                 |
+| I-13 | Attendee PII is never public                                              | PROVEN                                                 |
+| I-14 | Cross-committee access denied                                             | PROVEN                                                 |
+| I-15 | Malformed identifiers are safe                                            | PROVEN                                                 |
+| I-16 | Audit is append-only with full context                                    | PROVEN (GAP for non-routine paths)                     |
+| I-17 | Audit never contains secrets                                              | PROVEN                                                 |
+| I-18 | Raw IPs confined to rate-limit bookkeeping                                | **ENFORCED-UNTESTED** + retention GAP                  |
+| I-19 | Capacity cannot be oversubscribed                                         | PROVEN                                                 |
+| I-20 | One active registration per event and email                               | PROVEN                                                 |
+| I-21 | Waitlist is FIFO; only first is promoted                                  | PROVEN                                                 |
+| I-22 | Registration closes at event start                                        | PROVEN                                                 |
+| I-23 | Revision locking; no silent overwrite                                     | PROVEN (APP-ONLY caveat)                               |
+| I-24 | Self-approval denied                                                      | PROVEN                                                 |
+| I-25 | Published events have a description                                       | PROVEN                                                 |
+| I-26 | Archive is non-destructive and reversible                                 | PROVEN                                                 |
+| I-27 | Exports are scoped, complete, formula-safe, audited                       | PROVEN                                                 |
+| I-28 | Anonymous registration is the only public write                           | PROVEN                                                 |
+| I-29 | Public surfaces never receive raw internal state                          | PROVEN                                                 |
+| I-30 | Secrets remain server-side                                                | PROVEN                                                 |
+| I-31 | Recovery exposes no tokens and grants no access                           | PROVEN                                                 |
+| I-32 | No open redirect                                                          | PROVEN                                                 |
+| I-33 | Auth email uses a configured provider, no fallback                        | **ENFORCED-UNTESTED** (E2E delivery)                   |
+| I-34 | Revocation beats a live session                                           | PROVEN (session termination documented as unavailable) |
+| I-35 | Application cannot migrate production                                     | PROVEN for app + test harness (script GAP)             |
+| I-36 | Deployment path is push-to-main only                                      | PROVEN                                                 |
+| I-37 | Conventional commits enforced                                             | PROVEN                                                 |
+| I-38 | One grant per user; multiple managers per committee allowed               | PROVEN (intentional)                                   |
+| I-39 | New registrations carry a canonical phone; historical ones may carry none | PROVEN                                                 |
+| I-40 | The public site does not advertise the administration sign-in             | PROVEN                                                 |
 
 ### Invariants missing at least one of {implementation, test, documentation}
 
