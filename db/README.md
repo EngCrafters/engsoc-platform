@@ -127,6 +127,39 @@ outcome: exactly one `register_for_event`, with the intended six-argument
 signature. If that assertion fails the migration aborts, so no half-applied
 state is possible.
 
+## Before you run any Supabase CLI migration command
+
+Run `npm run db:target` first. It is a fail-closed preflight, and it exists
+because this checkout has a specific and dangerous shape:
+
+- `supabase/.temp/project-ref` holds the **production** ref, so any CLI command
+  that resolves its target implicitly acts on the live database. This is risk
+  **R-01** in `docs/MIGRATION_READINESS.md`.
+- There is **no `supabase/migrations` directory and no `supabase/config.toml`.**
+  The CLI therefore has no local migration set at all:
+  `supabase migration list --linked` lists every remote version and leaves the
+  Local column empty.
+
+Those two facts together mean `supabase db push --linked` is not "apply my one
+new migration here". It is an operation with no defined scope, aimed at
+production. The preflight refuses it:
+
+```
+$ npm run db:target -- db push
+supabase link        : rbeyqrfypowyocmnmvwu [PRODUCTION]
+CLI local migrations : absent
+REFUSED: Refusing to run a migration-mutating Supabase CLI command against the production project.
+```
+
+`db push --dry-run`, `migration list`, and `db dump` are deliberately allowed
+through, with the production warning printed: inspecting scope is the step to
+take first, and blocking it would push people away from the safe action.
+
+The guard is unit tested in `tests/script-safety.test.ts`, including every
+refusal path. Its sibling `scripts/lib/supabase-target.mjs` guards Node operator
+scripts that connect with an explicit connection string; this one covers the CLI,
+which `supabase-target.mjs` cannot reach.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.

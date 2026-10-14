@@ -16,7 +16,8 @@
     "test:e2e": "playwright test",
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "format:check": "node scripts/check-format.mjs",
-    "db:check": "drizzle-kit check"
+    "db:check": "drizzle-kit check",
+    "db:target": "node scripts/check-supabase-target.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
