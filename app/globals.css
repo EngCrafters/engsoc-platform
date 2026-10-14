@@ -50,6 +50,25 @@
   --color-surface-foreground: var(--surface-foreground);
   --color-surface-raised: var(--surface-raised);
 
+  /* Marketing surface palette. Namespaced `m-*` so the admin shell keeps its
+     own monochrome tokens untouched; the values live in
+     app/(marketing)/marketing.css under `.marketing-surface`. */
+  --color-m-ivory: var(--m-ivory);
+  --color-m-surface: var(--m-surface);
+  --color-m-surface-soft: var(--m-surface-soft);
+  --color-m-ink: var(--m-ink);
+  --color-m-ink-2: var(--m-ink-2);
+  --color-m-brand: var(--m-brand);
+  --color-m-brand-hover: var(--m-brand-hover);
+  --color-m-brand-soft: var(--m-brand-soft);
+  --color-m-gold: var(--m-gold);
+  --color-m-navy: var(--m-navy);
+  --color-m-border: var(--m-border);
+  --color-m-border-strong: var(--m-border-strong);
+  --radius-m-card: var(--m-radius-card);
+  --radius-m-plate: var(--m-radius-plate);
+  --radius-m-button: var(--m-radius-button);
+
   /* Glass surface — auth/floating panels only. See docs/DESIGN_SYSTEM.md. */
 
   /* Status/semantic tokens — carry meaning, not decoration. See
