@@ -1,29 +1,55 @@
-# app/(marketing)
+# Public site (`app/(marketing)/`)
 
-The current inline list/form is a partial implementation. The target
-list/detail/waitlist UX and specification gate are in
-`docs/UC-02_Deep_Dive.md` and its companion contracts.
+The visitor-facing surface: the landing page, the event catalogue, event detail
+and anonymous registration. It is part of the same application and the same
+data model as the committee dashboard — not a separate site.
 
-The public marketing site — UC-02's landing page and registration flow.
-A route group, so `(marketing)` doesn't appear in the URL: `page.tsx` here
-is the site's `/`.
+## What lives here
 
-- `layout.tsx` — public-facing chrome only (a plain header, no internal
-  nav). Nests inside the root `app/layout.tsx`. Kept separate so a future
-  internal/admin layout (see CLAUDE.md's admin dashboard scope) never
-  shares this one.
-- `page.tsx` — the landing page. A Server Component that imports
-  `getPublishedEvents` from `lib/events` directly and renders the list.
-  No `fetch()`, no API route — that's the reason this lives in the same
-  repo as the rest of the app instead of a separate one.
-- `registration-form.tsx` — client component, posts straight to the
-  Server Action below.
-- `actions.ts` — the registration Server Action. Thin on purpose: it reads
-  the request's IP from headers and adapts `FormData` into the shape
-  `lib/registrations`' `registerForEvent` expects. The actual rules
-  (validation, rate limiting, event-status checks) live in that module,
-  not here — see `lib/registrations/README.md`.
+| Route          | Purpose                                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| `/`            | Landing: hero, society figures, overview, upcoming events, programmes, projects, disciplines, leadership, join. |
+| `/events`      | The full catalogue, upcoming or past, cursor-paginated.                                                         |
+| `/events/[id]` | One event and its registration form.                                                                            |
+| `/about`       | The society, its figures and its structure.                                                                     |
+| `/activities`  | The archive of previous editions.                                                                               |
 
-There is no API route in this folder and none should be added here. If a
-feature genuinely needs a public HTTP endpoint, that's a new conversation,
-not a default.
+## Rules this route group follows
+
+- **Events come from the database.** `lib/events` (`getPublicEventPage`,
+  `getPublicEvent`) is the only source. There is no sample event data in this
+  repository. `lib/marketing/adapters.ts` is the single translation point from
+  the canonical `PublicEvent` DTO to presentation, and it never widens the DTO.
+- **Registration uses the canonical Server Action.** `actions.ts` adapts a form
+  submission into `lib/registrations`, which calls
+  `private.register_for_event` over the restricted `app_runtime` connection.
+  Duplicate prevention, capacity, the FIFO waitlist, the IP rate limit and the
+  audit row all live in the database routine and are not reimplemented here.
+- **No API route.** Mutations are Server Actions. If a feature genuinely needs a
+  public HTTP endpoint, that is a new conversation, not a default.
+- **No direct Supabase reads from the browser.** The public catalogue is read
+  server-side through the restricted runtime role, exactly like the admin area.
+- **Presentation only is themed.** `marketing.css` scopes its tokens to
+  `.marketing-surface`, so the public identity cannot leak into authenticated
+  screens.
+
+## Presentation content
+
+`content/` holds presentation content with no database backing yet: the society
+overview, its six programmes, the project-archive preview, the discipline list,
+the structure, and the figures strip. Every unverified value carries a
+machine-readable flag (`demo`, `sample`, `descriptionStatus`) that renders a
+visible label, so a reader can always tell what is confirmed.
+
+Events are deliberately **not** in `content/`: they are canonical database rows.
+
+## Language
+
+English and Arabic, resolved on the server from the `es-locale` cookie, so a
+returning Arabic visitor receives Arabic, right-to-left HTML with no flash.
+Interface copy lives in `lib/i18n/dictionaries`; content carries its own
+`{ en, ar }` fields. The Arabic dictionary is typed against the English one, so
+an untranslated string fails the build.
+
+Direction is applied to this subtree rather than to `<html>`, because the admin
+area is English-only and must not inherit a visitor's public language choice.

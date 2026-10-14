@@ -1,11 +1,30 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPublicEvent } from "@/lib/events";
-import { formatEventDate } from "@/lib/events/format";
+import { formatEventDate } from "@/lib/marketing/adapters";
+import { getI18n } from "@/lib/i18n/server";
+import { IconCalendar, IconPin } from "@/components/marketing/icons";
 import { RegistrationForm } from "../../registration-form";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: PageProps<"/events/[id]">): Promise<Metadata> {
+  const { id } = await params;
+  const event = await getPublicEvent(id);
+  if (!event) return {};
+  return { title: event.title, description: event.description };
+}
+
+/**
+ * One public event and its registration form.
+ *
+ * A draft, archived or nonexistent event, and a malformed id, all resolve to
+ * the same 404 — the canonical public domain module decides that before any
+ * data reaches this page.
+ */
 export default async function PublicEventPage({
   params,
 }: PageProps<"/events/[id]">) {
@@ -13,67 +32,61 @@ export default async function PublicEventPage({
   const event = await getPublicEvent(id);
   if (!event) notFound();
 
-  const closed = event.availability === "closed";
-  const waitlist = event.availability === "waitlist";
+  const { t, intl } = await getI18n();
+
   return (
-    <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+    <article className="mx-auto max-w-[var(--m-content-max)] px-5 pt-[calc(var(--m-nav-height)+var(--m-nav-offset)+2.5rem)] pb-20 sm:px-8 sm:pb-24">
       <Link
-        href="/"
-        className="text-sm font-medium underline underline-offset-4 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+        href="/events"
+        className="inline-flex min-h-11 items-center text-sm font-medium text-m-ink-2 underline underline-offset-4 hover:text-m-brand"
       >
-        All events
+        {t.events.backToEvents}
       </Link>
-      <header className="mt-7 border-b border-border pb-8">
-        <p className="text-sm font-medium text-muted-foreground">
-          {formatEventDate(event.eventDate, true)}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-          {event.title}
-        </h1>
-        <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="font-medium text-foreground">Location</dt>
-            <dd className="mt-1 text-foreground/80">
-              {event.location ?? "Location to be confirmed"}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">
-              Organizing committee
-            </dt>
-            <dd className="mt-1 text-foreground/80">{event.committeeName}</dd>
-          </div>
-        </dl>
-      </header>
-      <section className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
-        <h2>About this event</h2>
-        <p className="whitespace-pre-wrap">{event.description}</p>
-      </section>
-      <section
-        aria-labelledby="registration-heading"
-        className="mt-10 rounded-lg border p-5 sm:p-6"
-      >
-        <h2 id="registration-heading" className="text-xl font-semibold">
-          {closed
-            ? "Registration closed"
-            : waitlist
-              ? "Join the waitlist"
-              : "Register for this event"}
-        </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {closed
-            ? "This event has already started. New registrations and waitlist entries are closed."
-            : waitlist
-              ? "Places are full or being allocated. Joining the waitlist does not confirm a place."
-              : "No account is needed. Your name and email are used only for event administration."}
-        </p>
-        <div className="mt-5">
-          <RegistrationForm
-            eventId={event.id}
-            availability={event.availability}
-          />
+
+      <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-14">
+        <div>
+          <header className="border-b border-m-border pb-8">
+            <p className="flex items-center gap-2 text-sm font-medium text-m-brand">
+              <IconCalendar className="size-4" />
+              <time dateTime={event.eventDate.toISOString()}>
+                {formatEventDate(event.eventDate, intl, true)}
+              </time>
+            </p>
+            <h1 className="mt-4 text-[clamp(2rem,1.5rem+2vw,3.25rem)] font-semibold">
+              {event.title}
+            </h1>
+            <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="font-medium">{t.events.location}</dt>
+                <dd className="mt-1 flex items-center gap-1.5 text-m-ink-2">
+                  <IconPin className="size-4" />
+                  {event.location ?? t.events.locationTbc}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium">{t.events.organisedBy}</dt>
+                <dd className="mt-1 text-m-ink-2">{event.committeeName}</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section aria-labelledby="about-event" className="mt-8">
+            <h2 id="about-event" className="text-xl font-semibold">
+              {t.events.aboutEvent}
+            </h2>
+            <p className="mt-4 max-w-[var(--m-measure)] whitespace-pre-wrap text-m-ink-2">
+              {event.description}
+            </p>
+          </section>
         </div>
-      </section>
+
+        <aside className="lg:sticky lg:top-[calc(var(--m-nav-height)+var(--m-nav-offset)+1.5rem)] lg:self-start">
+          <RegistrationForm
+            availability={event.availability}
+            eventId={event.id}
+          />
+        </aside>
+      </div>
     </article>
   );
 }

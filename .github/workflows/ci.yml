@@ -48,14 +48,36 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Test (staging RLS — see docs/adr/0006)
+      # Hermetic: unit tests plus the database suites, which replay every
+      # migration into the service container above. No network, no credential.
+      - name: Test (unit and database suites)
         run: npm run test
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/uc02_test
-          # Public by design (the anon key, protected by RLS, not secrecy)
-          # — same reasoning as the NEXT_PUBLIC_* values below.
-          STAGING_SUPABASE_URL: https://wnrdgnmmcdedmilnzzsl.supabase.co
-          STAGING_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InducmRnbm1tY2RlZG1pbG56enNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMTMzMDksImV4cCI6MjEwNDg4OTMwOX0.RShOwe-amyW6vsR-clcgBmhhYChXpsx_qJZw80UOZJ8
+
+      # The live staging RLS proof (docs/adr/0006) is an explicit integration
+      # gate, not part of the hermetic suite. It needs a real network and a real
+      # staging project, so it is separated and its configuration is asserted
+      # rather than silently skipped.
+      - name: Verify staging integration configuration
+        run: |
+          if [ -z "${{ vars.STAGING_SUPABASE_URL }}" ]; then
+            echo "::error::Repository variable STAGING_SUPABASE_URL is not set. Integration coverage would silently disappear."
+            exit 1
+          fi
+          if [ -z "${{ vars.STAGING_SUPABASE_ANON_KEY }}" ]; then
+            echo "::error::Repository variable STAGING_SUPABASE_ANON_KEY is not set. Integration coverage would silently disappear."
+            exit 1
+          fi
+
+      - name: Integration tests (live staging RLS — see docs/adr/0006)
+        run: npm run test:integration
+        env:
+          # Repository variables, not literals in workflow source. The anon key
+          # is public by design — RLS protects the data, not the key — but a
+          # decade-long token should not be coupled to this file.
+          STAGING_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_ANON_KEY: ${{ vars.STAGING_SUPABASE_ANON_KEY }}
 
       - name: Build
         run: npm run build
@@ -65,7 +87,6 @@ jobs:
           # this project.
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
-          APP_RUNTIME_DATABASE_URL: postgres://app_runtime:placeholder@127.0.0.1:5432/uc02_test
 
       - name: Install browser
         run: npx playwright install --with-deps chromium

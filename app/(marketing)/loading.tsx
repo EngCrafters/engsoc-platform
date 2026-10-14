@@ -1,18 +1,21 @@
-import { Skeleton } from "@/components/ui/skeleton";
-
 export default function MarketingLoading() {
   return (
     <div
       aria-busy="true"
-      className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14"
+      className="mx-auto max-w-[var(--m-content-max)] px-5 py-24 sm:px-8"
     >
-      <p className="sr-only">Loading events…</p>
-      <Skeleton className="h-4 w-40" />
-      <Skeleton className="mt-3 h-9 w-72 max-w-full" />
-      <Skeleton className="mt-3 h-5 w-96 max-w-full" />
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-48 rounded-xl" />
+      <p className="sr-only">Loading…</p>
+      <div className="grid gap-4">
+        <div className="h-5 w-40 animate-pulse rounded-full bg-m-surface-soft" />
+        <div className="h-12 w-80 max-w-full animate-pulse rounded-m-card bg-m-surface-soft" />
+        <div className="h-6 w-96 max-w-full animate-pulse rounded-full bg-m-surface-soft" />
+      </div>
+      <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-40 animate-pulse rounded-m-card bg-m-surface-soft"
+          />
         ))}
       </div>
     </div>

@@ -1,15 +1,15 @@
 import postgres from "postgres";
+import {
+  PRODUCTION_PROJECT_REF,
+  assertProductionProjectTarget,
+} from "./lib/supabase-target.mjs";
 
 const connectionString = process.env.APP_RUNTIME_DATABASE_URL;
 if (!connectionString) throw new Error("APP_RUNTIME_DATABASE_URL is required");
-const target = new URL(connectionString);
-const directMain = target.hostname === "db.rbeyqrfypowyocmnmvwu.supabase.co";
-const pooledMain =
-  target.hostname.endsWith(".pooler.supabase.com") &&
-  target.username.endsWith(".rbeyqrfypowyocmnmvwu");
-if (!directMain && !pooledMain) {
-  throw new Error("This role check is restricted to the original main project");
-}
+
+// READ-ONLY production verification. Targeting is asserted explicitly so a
+// misconfigured environment cannot produce a meaningless pass against staging.
+assertProductionProjectTarget(connectionString, PRODUCTION_PROJECT_REF);
 
 const sql = postgres(connectionString, {
   max: 1,
@@ -43,6 +43,7 @@ try {
   if (!directTableDenied) throw new Error("Direct table read was not denied");
   console.log(
     JSON.stringify({
+      project: PRODUCTION_PROJECT_REF,
       role: identity.role,
       managerCount: manager.total_count,
       unknownActorCount: unknown.total_count,

@@ -4,7 +4,8 @@ import { E2E_EVENTS } from "./fixtures";
 test("catalog separates upcoming/past events and paginates", async ({
   page,
 }) => {
-  await page.goto("/");
+  // The catalogue has its own route now; "/" is the landing page.
+  await page.goto("/events");
   await expect(
     page.getByRole("heading", { name: "Upcoming events" })
   ).toBeVisible();
@@ -49,7 +50,10 @@ test("public detail has safe metadata and appropriate admission controls", async
 // the page content) for accessibility route-change announcements. Scoping
 // to the registration region avoids ambiguously matching it.
 function registrationRegion(page: import("@playwright/test").Page) {
-  return page.getByRole("region");
+  // Scoped by the section's own labelled heading rather than by role="region":
+  // once the toaster hydrates there are several live regions on the page, and an
+  // unscoped role query becomes ambiguous.
+  return page.locator('section[aria-labelledby="registration-heading"]');
 }
 
 test("anonymous registration validates, focuses errors, succeeds, and retries safely", async ({

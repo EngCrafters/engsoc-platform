@@ -46,8 +46,22 @@ specifies its forward reconciliation. A schema file is not itself a migration.
 
 ## Working on the public site (`app/(marketing)/`)
 
-This is the public event-discovery and registration surface. It is part of
-the same application and data model as the rest of the platform.
+This is the public event-discovery and registration surface: the landing page,
+the event catalogue, event detail and anonymous registration. It is part of the
+same application and data model as the rest of the platform — not a separate
+site, and not a separate repository.
+
+Events come from `lib/events` and nowhere else. `lib/marketing/adapters.ts` is
+the single translation point from the canonical `PublicEvent` DTO to
+presentation, and it never widens that DTO. Registration posts to the canonical
+Server Action, which calls `private.register_for_event`; duplicate prevention,
+capacity, the FIFO waitlist, the IP rate limit and the audit row all remain the
+database's job.
+
+The public palette is scoped to a `.marketing-surface` class and the public
+language direction is applied to that subtree rather than to `<html>`, so the
+committee dashboard keeps its own monochrome tokens, its Geist faces and its
+left-to-right English. `app/(marketing)/README.md` has the full rules.
 
 **What `app/(marketing)/` is.** It's the landing page and event
 registration flow: everything a visitor sees without logging in. It lives
@@ -87,7 +101,13 @@ app/                    Next.js App Router pages and routes
 app/(marketing)/        The public site — see "Working on the public site" below
 db/schema.ts            Implemented schema; UC-02 target ER addendum is in docs/
 db/index.ts             Drizzle client, server-only
-lib/events/             Domain module: reading/publishing events
+lib/events/             Domain module: reading published events (public DTO)
+lib/marketing/          Typed adapter from the canonical PublicEvent DTO to presentation
+lib/i18n/               English/Arabic dictionaries and the server-resolved locale
+content/                Presentation content with no database backing (a programme
+                        catalogue, the society overview, figures, structure). Every
+                        unverified value carries a flag that renders a visible label.
+components/marketing/   The public site's components
 lib/registrations/      Domain module: registering for an event
 lib/auth/server.ts      Caller-scoped Supabase Auth client
 lib/auth/admin.ts       Technical-only server Auth administration
@@ -102,8 +122,9 @@ drizzle.config.ts       Database migration config
 looking at right now.
 
 **Phase 1 (Registration):** UC-02's authentication and access-control milestone
-is complete. A repository and production hardening pass precedes the landing-page
-migration. UC-01 (member profiles) is deliberately deferred, not cancelled. See
+is complete. The public site — previously maintained as a separate prototype
+repository by a teammate — has been migrated into `app/(marketing)/` as
+presentation over the canonical event and registration domains. UC-01 (member profiles) is deliberately deferred, not cancelled. See
 `docs/CURRENT_WORK.md` for current evidence and outstanding verification.
 
 ## How we work

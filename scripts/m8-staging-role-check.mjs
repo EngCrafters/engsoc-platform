@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs";
 import postgres from "postgres";
+import {
+  STAGING_PROJECT_REF,
+  assertOperatorScriptTarget,
+} from "./lib/supabase-target.mjs";
 
 const line = readFileSync(".env.local", "utf8")
   .split(/\r?\n/)
@@ -11,14 +15,11 @@ const connectionString = line
   .slice("APP_RUNTIME_DATABASE_URL=".length)
   .trim()
   .replace(/^"|"$/g, "");
-const target = new URL(connectionString);
-const directStaging = target.hostname === "db.wnrdgnmmcdedmilnzzsl.supabase.co";
-const pooledStaging =
-  target.hostname.endsWith(".pooler.supabase.com") &&
-  target.username.endsWith(".wnrdgnmmcdedmilnzzsl");
-if (!directStaging && !pooledStaging) {
-  throw new Error("This role check is restricted to the UC-02 staging project");
-}
+
+// Fail closed: the connection must actually be the staging project. This is
+// derived from the connection identity, never from the .env.local filename or
+// from operator memory.
+assertOperatorScriptTarget(connectionString, STAGING_PROJECT_REF);
 
 const sql = postgres(connectionString, {
   max: 1,
@@ -45,6 +46,7 @@ try {
   if (!directTableDenied) throw new Error("Direct table read was not denied");
   console.log(
     JSON.stringify({
+      project: STAGING_PROJECT_REF,
       role: identity.role,
       unknownActorCount: counts.total_count,
       directTableDenied,
