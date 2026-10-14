@@ -94,11 +94,24 @@ change:
    change. The project has no proven backup or PITR window, so that
    precondition cannot currently be met.
 
+5. **Taking the backup the runbook requires is itself an owner decision.**
+   `docs/Platform_Maintenance_Runbook.md` gates a schema change behind a fresh
+   restorable logical backup, inspected and restored to an isolated instance.
+   Producing one means copying the society's registrations — real attendee
+   names, emails and now phone numbers — to an unmanaged local file outside any
+   retention or access control. That is a data-handling decision, not an
+   engineering shortcut, and it is not mine to take.
+
 Also note `supabase/.temp/project-ref` points at **production**
 (`rbeyqrfypowyocmnmvwu`) — risk **R-01** in `docs/MIGRATION_READINESS.md`. Any
 Supabase CLI command that resolves its target implicitly will hit production.
 Do not run `db push`, `db reset`, or `migration repair` against the linked
-project.
+project. `npm run db:target` is now a fail-closed preflight for exactly this:
+it reports the linked project, refuses any migration-mutating CLI command that
+would resolve to production or whose target cannot be determined, and refuses a
+push outright because this checkout has no local migration set for the CLI to
+scope it by. `db push --dry-run`, `migration list` and `db dump` still pass, so
+inspecting scope stays the easy path. See `db/README.md`.
 
 **To finish the release**, in this order:
 
