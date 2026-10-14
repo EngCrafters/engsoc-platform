@@ -68,6 +68,7 @@ test("anonymous registration validates, focuses errors, succeeds, and retries sa
   await expect(registrationRegion(page).getByRole("alert")).toBeFocused();
   await page.getByLabel("Name").fill("E2E visitor");
   await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Phone number").fill("+15550100011");
   await page.getByRole("button", { name: "Register" }).click();
   await expect(registrationRegion(page).getByRole("status")).toContainText(
     "place is confirmed"
@@ -75,6 +76,7 @@ test("anonymous registration validates, focuses errors, succeeds, and retries sa
   await page.goto(`/events/${E2E_EVENTS.open}`);
   await page.getByLabel("Name").fill("E2E visitor");
   await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Phone number").fill("+15550100011");
   await page.getByRole("button", { name: "Register" }).click();
   await expect(registrationRegion(page).getByRole("alert")).toContainText(
     "already registered"
@@ -91,6 +93,7 @@ test("numerically full event offers waitlist and confirms a waitlisted place", a
   ).toBeVisible();
   await page.getByLabel("Name").fill("Waitlisted visitor");
   await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Phone number").fill("+15550100012");
   await page.getByRole("button", { name: "Join waitlist" }).click();
   await expect(registrationRegion(page).getByRole("status")).toContainText(
     "on the waitlist"

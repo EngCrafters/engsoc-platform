@@ -53,7 +53,6 @@ export const en = {
     language: "Language",
     switchTo: "Switch to English",
     /** The platform's real sign-in: the committee administration area. */
-    signIn: "Committee sign in",
   },
 
   hero: {
@@ -159,6 +158,8 @@ export const en = {
       "This event has already started. New registrations and waitlist entries are closed.",
     name: "Name",
     email: "Email address",
+    phone: "Phone number",
+    phoneHint: "Include your country code if you are outside Oman.",
     register: "Register",
     joinWaitlist: "Join waitlist",
     submitting: "Submitting…",
@@ -169,6 +170,8 @@ export const en = {
     errors: {
       invalid_name: "Enter your name.",
       invalid_email: "Enter a valid email address.",
+      invalid_phone:
+        "Enter a contact number, for example +968 9123 4567. Spaces, brackets and dashes are fine.",
       invalid_event: "This event is unavailable.",
       event_not_found: "This event is unavailable.",
       event_not_published: "This event is unavailable.",

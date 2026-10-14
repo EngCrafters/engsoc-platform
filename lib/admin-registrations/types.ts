@@ -8,6 +8,13 @@ export type AdminRegistration = {
   id: string;
   attendeeName: string;
   attendeeEmail: string;
+  /**
+   * Canonical contact number, or `null` for a registration captured before the
+   * field existed. Null is a real, expected value here — never substitute text
+   * for it. Private attendee PII: this shape only ever leaves the server on an
+   * authorized committee-scoped admin path, never on a public one.
+   */
+  attendeePhone: string | null;
   status: AdminRegistrationStatus;
   registeredAt: string;
 };

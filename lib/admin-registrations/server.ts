@@ -12,14 +12,19 @@ type Row = {
   id: string;
   attendee_name: string;
   attendee_email: string;
+  attendee_phone: string | null;
   status: AdminRegistrationStatus;
   registered_at: string;
 };
 function map(row: Row): AdminRegistration {
+  // The phone arrives on the same row as everything else. Both admin routines
+  // return it in one query — there is no per-registration lookup here, and
+  // adding the field did not add a round trip.
   return {
     id: row.id,
     attendeeName: row.attendee_name,
     attendeeEmail: row.attendee_email,
+    attendeePhone: row.attendee_phone,
     status: row.status,
     registeredAt: row.registered_at,
   };

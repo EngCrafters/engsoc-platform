@@ -278,6 +278,17 @@ export const registrations = pgTable(
       .references(() => events.id),
     attendeeName: text("attendee_name").notNull(),
     attendeeEmail: text("attendee_email").notNull(),
+    // Attendee contact number. Nullable on purpose: registrations captured
+    // before this field existed must stay valid, and no phone number is ever
+    // fabricated for them. Every NEW registration supplies one —
+    // private.register_for_event normalizes it and refuses a missing or
+    // malformed value — and the CHECK below permits only the canonical form.
+    //
+    // Stored as text, never a numeric type: a phone number is an identifier,
+    // so leading zeros and a leading "+" have to survive. Deliberately not
+    // unique and deliberately not indexed: nothing searches or deduplicates
+    // by phone, and email remains the registration identity.
+    attendeePhone: text("attendee_phone"),
     status: registrationStatus("status").notNull().default("confirmed"), // NEW (M2)
     supersededBy: uuid("superseded_by").references(
       (): AnyPgColumn => registrations.id
@@ -313,6 +324,14 @@ export const registrations = pgTable(
     check(
       "registrations_name_bounds",
       sql`char_length(btrim(${table.attendeeName})) BETWEEN 1 AND 200`
+    ),
+    // NULL is the historical row; anything else must already be canonical,
+    // so a direct writer cannot store "+968 9123 4567" or a 3-digit value.
+    // The same shape private.normalize_phone produces and the domain helper
+    // in lib/registrations/phone.ts produces.
+    check(
+      "registrations_phone_canonical",
+      sql`${table.attendeePhone} IS NULL OR ${table.attendeePhone} ~ '^[+]?[0-9]{7,15}$'`
     ),
   ]
 );

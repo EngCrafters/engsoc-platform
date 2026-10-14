@@ -9,6 +9,12 @@ export type RegisterForEventInput = {
   eventId: string;
   attendeeName: string;
   attendeeEmail: string;
+  /**
+   * Raw as typed. Normalized here rather than by the caller, so there is one
+   * definition of a valid number (lib/registrations/phone.ts) and the UI cannot
+   * disagree with the database about what was accepted.
+   */
+  attendeePhone: string;
   intent?: "register" | "join_waitlist";
   ipAddress: string;
 };
@@ -19,9 +25,11 @@ export type RegisterForEventInput = {
  *   flows ("Approval required" and "Event full").
  * - "rate_limited" is docs/adr/0005's abuse protection, not in the use
  *   case doc itself.
- * - "invalid_name" / "invalid_email" / "invalid_event" are basic input
- *   validation, not a use-case flow, just the minimum needed before
- *   trusting the input enough to write it.
+ * - "invalid_name" / "invalid_email" / "invalid_phone" / "invalid_event" are
+ *   basic input validation, not a use-case flow, just the minimum needed
+ *   before trusting the input enough to write it. Phone is its own code
+ *   rather than folded into invalid_input so the form can point at that
+ *   field instead of saying "check the form".
  * - "already_registered" surfaces the partial unique index added in M2
  *   (docs/UC-02_Data_and_Security.md section 3) — a genuine concurrent
  *   duplicate insert, not something this code decides on its own.
@@ -29,6 +37,7 @@ export type RegisterForEventInput = {
 export type RegisterForEventError =
   | "invalid_name"
   | "invalid_email"
+  | "invalid_phone"
   | "invalid_event"
   | "event_not_found"
   | "event_not_published"

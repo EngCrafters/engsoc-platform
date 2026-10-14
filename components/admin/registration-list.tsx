@@ -47,6 +47,7 @@ export function RegistrationList({
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead>Attendee</TableHead>
+            <TableHead className="hidden md:table-cell">Phone</TableHead>
             <TableHead className="hidden md:table-cell">Registered</TableHead>
             <TableHead className="text-right">
               {status === "waitlisted" ? "Action" : "Status"}
@@ -72,9 +73,25 @@ export function RegistrationList({
                   <p className="truncate text-xs text-muted-foreground">
                     {registration.attendeeEmail}
                   </p>
+                  {/* Below md the phone lives under the attendee rather than in
+                      its own column, so a narrow screen does not have to scroll
+                      sideways to read it. */}
+                  <p className="text-xs text-muted-foreground md:hidden">
+                    {registration.attendeePhone ?? "Phone not captured"}
+                  </p>
                   <p className="text-xs text-muted-foreground md:hidden">
                     Registered {registered}
                   </p>
+                </TableCell>
+                <TableCell
+                  className={`${cell} hidden whitespace-nowrap text-muted-foreground md:table-cell`}
+                >
+                  {registration.attendeePhone ?? (
+                    // A registration captured before the phone field existed.
+                    // Saying so is the honest answer; a blank cell would read as
+                    // a rendering bug and a dash as missing data.
+                    <span className="italic">Not captured</span>
+                  )}
                 </TableCell>
                 <TableCell
                   className={`${cell} hidden text-muted-foreground md:table-cell`}

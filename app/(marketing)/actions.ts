@@ -41,6 +41,7 @@ function hasUnexpectedDomainFields(formData: FormData) {
     "eventId",
     "attendeeName",
     "attendeeEmail",
+    "attendeePhone",
     "intent",
   ]);
   return [...formData.keys()].some(
@@ -55,11 +56,17 @@ export async function registerForEventAction(
   const eventId = getSingleTextField(formData, "eventId");
   const attendeeName = getSingleTextField(formData, "attendeeName");
   const attendeeEmail = getSingleTextField(formData, "attendeeEmail");
+  const attendeePhone = getSingleTextField(formData, "attendeePhone");
   const intentValue = getSingleTextField(formData, "intent");
+  // The phone is only required to be *present* here. A missing or duplicated
+  // field is a malformed submission, but an empty one is a visitor who did not
+  // fill it in — that is passed to the domain so it comes back as
+  // invalid_phone and the form can point at that field.
   if (
     !eventId ||
     !attendeeName ||
     !attendeeEmail ||
+    attendeePhone === undefined ||
     !intentValue ||
     hasUnexpectedDomainFields(formData)
   ) {
@@ -72,6 +79,7 @@ export async function registerForEventAction(
     eventId,
     attendeeName,
     attendeeEmail,
+    attendeePhone,
     intent,
     ipAddress,
   });

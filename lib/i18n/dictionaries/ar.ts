@@ -49,7 +49,6 @@ export const ar: Dictionary = {
     language: "اللغة",
     switchTo: "التبديل إلى العربية",
     /** دخول منصة الإدارة للجان. */
-    signIn: "دخول اللجان",
   },
 
   hero: {
@@ -147,6 +146,8 @@ export const ar: Dictionary = {
       "بدأت الفعالية بالفعل، لذا أُغلق التسجيل والانضمام إلى قائمة الانتظار.",
     name: "الاسم",
     email: "البريد الإلكتروني",
+    phone: "رقم الهاتف",
+    phoneHint: "أضف رمز الدولة إذا كنت خارج عُمان.",
     register: "تسجيل",
     joinWaitlist: "انضم إلى قائمة الانتظار",
     submitting: "جارٍ الإرسال…",
@@ -157,6 +158,8 @@ export const ar: Dictionary = {
     errors: {
       invalid_name: "أدخل اسمك.",
       invalid_email: "أدخل بريدًا إلكترونيًا صحيحًا.",
+      invalid_phone:
+        "أدخل رقم هاتف صالحًا، مثل 4567 9123 968+. المسافات والأقواس والشرطات مقبولة.",
       invalid_event: "هذه الفعالية غير متاحة.",
       event_not_found: "هذه الفعالية غير متاحة.",
       event_not_published: "هذه الفعالية غير متاحة.",

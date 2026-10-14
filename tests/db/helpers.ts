@@ -115,17 +115,26 @@ export async function callRoutine(
   return rows[0].result as RoutineResult;
 }
 
+/**
+ * A synthetic attendee number in the range E.164 reserves for fiction
+ * (+1 555 0100 to +1 555 0199), so a fixture can never collide with a real
+ * person. Test IPs use the reserved 198.51.100.0/24 block for the same reason.
+ */
+export const TEST_PHONE = "+15550100001";
+
 export async function registration(
   sql: Sql | TransactionSql,
   eventId: string,
   email: string,
   intent: "register" | "join_waitlist" = "register",
-  ip = "198.51.100.10"
+  ip = "198.51.100.10",
+  phone: string | null = TEST_PHONE
 ) {
   return callRoutine(sql, "register_for_event", [
     eventId,
     "Test Attendee",
     email,
+    phone,
     intent,
     ip,
   ]);

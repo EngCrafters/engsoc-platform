@@ -8,9 +8,18 @@ export function csvCell(value: string) {
 export function buildRegistrationCsv(rows: AdminRegistration[]) {
   return (
     [
-      "Attendee name,Attendee email,Registration status,Registered at",
+      "Attendee name,Attendee email,Attendee phone,Registration status,Registered at",
       ...rows.map((row) =>
-        [row.attendeeName, row.attendeeEmail, row.status, row.registeredAt]
+        [
+          row.attendeeName,
+          row.attendeeEmail,
+          // A registration captured before the phone field existed exports as an
+          // empty cell. Never "N/A" or a placeholder: an empty cell is what a
+          // spreadsheet expects for "not captured", and it stays honest.
+          row.attendeePhone ?? "",
+          row.status,
+          row.registeredAt,
+        ]
           .map(csvCell)
           .join(",")
       ),

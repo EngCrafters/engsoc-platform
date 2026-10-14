@@ -65,7 +65,7 @@ describe("app_runtime database boundary", () => {
     const fixture = await createFixture(admin, { status: "published" });
     const result = await runtime<
       [{ result: { code: string } }]
-    >`SELECT private.register_for_event(${fixture.eventId}, 'Runtime attendee', 'runtime@example.test', 'register', '198.51.100.91'::inet) AS result`;
+    >`SELECT private.register_for_event(${fixture.eventId}, 'Runtime attendee', 'runtime@example.test', '+15550100091', 'register', '198.51.100.91'::inet) AS result`;
     expect(result[0].result.code).toBe("SUCCESS");
 
     await expect(

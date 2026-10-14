@@ -4,6 +4,7 @@ export * from "./types";
 
 import { isIP } from "node:net";
 import { registerThroughRoutine } from "./db";
+import { canonicalizePhone } from "./phone";
 import type { RegisterForEventInput, RegisterForEventResult } from "./types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,6 +17,11 @@ export async function registerForEvent(
 ): Promise<RegisterForEventResult> {
   const attendeeName = input.attendeeName.trim();
   const attendeeEmail = input.attendeeEmail.trim().toLowerCase();
+  // Canonical or nothing. The same rule runs again inside
+  // private.register_for_event, so a caller that skips this layer still cannot
+  // store a malformed number — this layer exists to give the visitor a precise,
+  // translated message instead of a generic failure.
+  const attendeePhone = canonicalizePhone(input.attendeePhone);
   const intent = input.intent ?? "register";
 
   if (
@@ -32,6 +38,9 @@ export async function registerForEvent(
   ) {
     return { ok: false, error: "invalid_email" };
   }
+  if (attendeePhone === null) {
+    return { ok: false, error: "invalid_phone" };
+  }
   if (!UUID_PATTERN.test(input.eventId)) {
     return { ok: false, error: "invalid_event" };
   }
@@ -47,6 +56,7 @@ export async function registerForEvent(
       eventId: input.eventId,
       attendeeName,
       attendeeEmail,
+      attendeePhone,
       intent,
       ipAddress: input.ipAddress,
     });
@@ -69,6 +79,8 @@ export async function registerForEvent(
         return { ok: false, error: "registration_available" };
       case "RATE_LIMITED":
         return { ok: false, error: "rate_limited" };
+      case "INVALID_PHONE":
+        return { ok: false, error: "invalid_phone" };
       case "VALIDATION_ERROR":
         return { ok: false, error: "invalid_input" };
       default:

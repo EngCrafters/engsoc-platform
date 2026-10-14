@@ -18,6 +18,8 @@ function form() {
   data.set("eventId", eventId);
   data.set("attendeeName", "Test Attendee");
   data.set("attendeeEmail", "test@example.test");
+  // A synthetic number from the range E.164 reserves for fiction.
+  data.set("attendeePhone", "+15550100001");
   data.set("intent", "register");
   return data;
 }
@@ -37,21 +39,62 @@ describe("registration Server Action boundary", () => {
       registerForEventAction(initialRegisterActionState, form())
     ).resolves.toEqual({ status: "success", waitlisted: false });
     expect(state.register).toHaveBeenCalledWith(
-      expect.objectContaining({ eventId, ipAddress: "203.0.113.10" })
+      expect.objectContaining({
+        eventId,
+        ipAddress: "203.0.113.10",
+        attendeePhone: "+15550100001",
+      })
     );
   });
 
-  it.each(["eventId", "attendeeName", "attendeeEmail", "intent"])(
-    "rejects duplicate %s",
-    async (name) => {
-      const data = form();
-      data.append(name, "duplicate");
-      await expect(
-        registerForEventAction(initialRegisterActionState, data)
-      ).resolves.toEqual({ status: "error", error: "invalid_input" });
-      expect(state.register).not.toHaveBeenCalled();
-    }
-  );
+  it("passes the phone through untouched so the domain owns normalization", async () => {
+    // The action must not trim, reformat or partially validate the number: one
+    // module decides what a valid number is, and it is not this one.
+    const data = form();
+    data.set("attendeePhone", "  +968 9123 4567  ");
+    await registerForEventAction(initialRegisterActionState, data);
+    expect(state.register).toHaveBeenCalledWith(
+      expect.objectContaining({ attendeePhone: "  +968 9123 4567  " })
+    );
+  });
+
+  it("rejects a submission with no phone field at all", async () => {
+    const data = form();
+    data.delete("attendeePhone");
+    await expect(
+      registerForEventAction(initialRegisterActionState, data)
+    ).resolves.toEqual({ status: "error", error: "invalid_input" });
+    expect(state.register).not.toHaveBeenCalled();
+  });
+
+  it("lets an empty phone reach the domain so it can report invalid_phone", async () => {
+    const data = form();
+    data.set("attendeePhone", "");
+    state.register.mockResolvedValue({ ok: false, error: "invalid_phone" });
+    await expect(
+      registerForEventAction(initialRegisterActionState, data)
+    ).resolves.toEqual({ status: "error", error: "invalid_phone" });
+    // The field is present but blank, so the submission is well formed and the
+    // domain gets to say what is wrong with the value itself.
+    expect(state.register).toHaveBeenCalledWith(
+      expect.objectContaining({ attendeePhone: "" })
+    );
+  });
+
+  it.each([
+    "eventId",
+    "attendeeName",
+    "attendeeEmail",
+    "attendeePhone",
+    "intent",
+  ])("rejects duplicate %s", async (name) => {
+    const data = form();
+    data.append(name, "duplicate");
+    await expect(
+      registerForEventAction(initialRegisterActionState, data)
+    ).resolves.toEqual({ status: "error", error: "invalid_input" });
+    expect(state.register).not.toHaveBeenCalled();
+  });
 
   it("rejects unrelated fields without calling the domain layer", async () => {
     const data = form();

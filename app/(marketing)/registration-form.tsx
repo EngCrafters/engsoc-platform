@@ -15,8 +15,8 @@ import { useI18n } from "@/components/marketing/i18n-provider";
  * rate limit and the audit row are all exactly what they were before this
  * migration. Nothing about that contract is reimplemented here.
  *
- * The only fields ever sent are eventId, attendeeName, attendeeEmail and
- * intent; the action rejects anything else.
+ * The only fields ever sent are eventId, attendeeName, attendeeEmail,
+ * attendeePhone and intent; the action rejects anything else.
  */
 export function RegistrationForm({
   eventId,
@@ -126,6 +126,34 @@ export function RegistrationForm({
                 aria-invalid={error === "invalid_email"}
                 className="min-h-12 rounded-m-button border border-m-border bg-m-surface px-4 text-base"
               />
+            </div>
+
+            <div className="grid gap-2">
+              <label htmlFor="attendeePhone" className="text-sm font-medium">
+                {t.registration.phone}
+              </label>
+              {/*
+                type="tel", never type="number": a phone number is an identifier,
+                not a quantity. A number input would strip a leading zero, refuse
+                a leading "+", and show a spinner on desktop.
+                inputMode="tel" gives phones the dial pad; autocomplete="tel" lets
+                the browser offer the saved number.
+              */}
+              <input
+                id="attendeePhone"
+                name="attendeePhone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                required
+                maxLength={64}
+                aria-invalid={error === "invalid_phone"}
+                aria-describedby="attendeePhone-hint"
+                className="min-h-12 rounded-m-button border border-m-border bg-m-surface px-4 text-base"
+              />
+              <p id="attendeePhone-hint" className="text-xs text-m-ink-2">
+                {t.registration.phoneHint}
+              </p>
             </div>
 
             <button

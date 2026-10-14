@@ -9,7 +9,16 @@ describe("public event read routines", () => {
   afterAll(async () => close(admin, runtime));
 
   it("returns only a safe derived DTO and keeps unpublished events unavailable", async () => {
-    const visible = await createFixture(admin, { status: "published" });
+    // A near-future date rather than the +1 day default. list_public_events
+    // orders by (event_date, id) and returns at most 20 rows, and the disposable
+    // database is shared across this suite, so by the time this file runs there
+    // are usually more than 20 upcoming events already. The closest one is
+    // deterministically on the first page; an equal-dated one is not, because
+    // ties break on a random id.
+    const visible = await createFixture(admin, {
+      status: "published",
+      eventDate: new Date(Date.now() + 60_000),
+    });
     const hidden = await createFixture(admin, { status: "draft" });
 
     const rows = await runtime<PublicRow[]>`
