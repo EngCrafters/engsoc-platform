@@ -51,8 +51,65 @@ against, and this change will not invent a production identity to work around
 that. The admin path is proven at the routine level (scope, denial, phone
 returned) and the component level (rendering, including the NULL case).
 
-The migration has **not** been applied to production yet at the time of writing;
-the branch is in review. The dated handoffs below are historical.
+### Release state — read this before merging
+
+**Branch `feature/registration-phone` (PR #6) is complete and verified, but
+MUST NOT be merged to `main` until migration 0024 is applied to production.**
+
+That ordering is a hard dependency, not a preference. Migration 0024 **drops**
+the five-argument `private.register_for_event` and replaces it with a
+six-argument one. Production still has only the five-argument form. The new
+application code calls the six-argument form, so deploying before migrating
+makes **every registration fail** with `SERVER_ERROR`
+(`function private.register_for_event(...) does not exist`). The upgrade
+rehearsal recorded exactly this starting state: before 0024, the only routine
+present is `private.register_for_event(uuid,text,text,text,inet)`.
+
+Correct order: **apply 0024 → verify → merge → Vercel deploys.**
+
+**Why the migration was not applied in this session.** It is written, reviewed,
+and rehearsed twice (zero-to-head, and production-state 0023 → 0024 with a real
+historical row), and it is purely additive. The blocker is the route, not the
+change:
+
+1. This repository's documented path for a production migration is the Supabase
+   MCP `apply_migration` tool (`db/README.md`). That tool is not available in
+   the session that produced this branch.
+2. `supabase db push` is **not** a safe substitute here. Production's history in
+   `supabase_migrations.schema_migrations` is timestamp-versioned
+   (`20260913025836` … `20261007090000`), while this repository's files are
+   `NNNN_`-named. `supabase migration list --linked` shows the **Local column
+   entirely empty**, so a push would not apply the one intended migration.
+3. No production `DATABASE_URL` exists in this environment (`.env.local` holds
+   only `VERCEL_OIDC_TOKEN`), so direct application is not possible either.
+4. `docs/Platform_Maintenance_Runbook.md` requires a fresh restorable logical
+   backup, inspected and restored to an isolated instance, before a schema
+   change. The project has no proven backup or PITR window, so that
+   precondition cannot currently be met.
+
+Also note `supabase/.temp/project-ref` points at **production**
+(`rbeyqrfypowyocmnmvwu`) — risk **R-01** in `docs/MIGRATION_READINESS.md`. Any
+Supabase CLI command that resolves its target implicitly will hit production.
+Do not run `db push`, `db reset`, or `migration repair` against the linked
+project.
+
+**To finish the release**, in this order:
+
+1. Apply `db/migrations/0024_registration_attendee_phone.sql` to the production
+   project through the documented `apply_migration` route.
+2. Verify read-only: the `attendee_phone` column exists and is nullable, the
+   `registrations_phone_canonical` CHECK is present, exactly one
+   `register_for_event` exists with signature
+   `uuid, text, text, text, text, inet`, the five-argument form is gone,
+   `EXECUTE` is granted to `app_runtime` only, and `app_runtime` still has no
+   direct table privilege on `public.registrations`.
+3. Merge PR #6. Vercel deploys production from `main` automatically.
+4. Verify read-only on production: `/events` still lists events, an event page
+   renders the phone field with `type="tel"`, no public page contains an
+   `/admin` anchor, `/admin/login` still returns 200, and
+   `/dev/design-system` is still 404.
+
+The dated handoffs below are historical.
 
 **CURRENT — PUBLIC SITE MIGRATION (branch `migration/public-site`, pull request #5):**
 The teammate public site (ESWebsite, upstream `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0`)
