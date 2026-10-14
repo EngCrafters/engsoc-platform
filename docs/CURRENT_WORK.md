@@ -89,18 +89,45 @@ change:
    one. So this is not a limitation of the session that produced the branch: the
    migration-only credential described in `db/README.md` is simply not
    provisioned in the project.
-4. `docs/Platform_Maintenance_Runbook.md` requires a fresh restorable logical
-   backup, inspected and restored to an isolated instance, before a schema
-   change. The project has no proven backup or PITR window, so that
-   precondition cannot currently be met.
+4. **The production data plane is not reachable from this environment.** This
+   is the finding that closes the remaining routes, and it was measured rather
+   than assumed. `supabase db query --linked -f`, `supabase db query --linked`
+   with inline SQL, and `supabase db dump --linked` all fail the same way: the
+   CLI creates a temporary `cli_login_postgres.<ref>` role through the
+   Management API and then opens a **direct Postgres connection**, which fails
+   with `Connection terminated unexpectedly` / `Connection timed out`. A direct
+   connection attempt with the `postgres` client reproduces it exactly:
 
-5. **Taking the backup the runbook requires is itself an owner decision.**
+   ```
+   host=aws-0-ap-northeast-1.pooler.supabase.com port=5432 user=postgres.rbeyqrfypowyocmnmvwu hasPassword=false
+   no-password    : CONNECT_TIMEOUT write ... :5432
+   dummy-password : CONNECT_TIMEOUT write ... :5432
+   ```
+
+   TCP to 5432 and 6543 both succeed (`Test-NetConnection` reports
+   `TcpTestSucceeded=True` for each) and the Management API over HTTPS works —
+   which is why `supabase projects list` and `supabase migration list --linked`
+   both succeed. But the Postgres session never completes, and it fails
+   identically **with and without a password**, so this is not an authentication
+   problem: a password alone would not unblock it. One inline `select 1` did
+   succeed and then never did again, so the channel is intermittent at best,
+   which is not a foundation for production DDL.
+
+5. **No credential capable of applying DDL to production exists here anyway.**
+   `vercel env ls production` lists `APP_RUNTIME_DATABASE_URL` and
+   `SUPABASE_SERVICE_ROLE_KEY` and **no `DATABASE_URL`**. `~/.supabase/` holds
+   only `cli-latest` and `telemetry.json` — no stored password and no profiles —
+   and `supabase/.temp/pooler-url` carries no password either. `app_runtime`
+   cannot run `ALTER TABLE` and must not be given the right to; the service-role
+   key is a PostgREST/Auth credential, not a direct Postgres one.
+
+6. **The backup the runbook requires cannot be taken through this channel
+   either**, and taking it is an owner decision regardless.
    `docs/Platform_Maintenance_Runbook.md` gates a schema change behind a fresh
-   restorable logical backup, inspected and restored to an isolated instance.
-   Producing one means copying the society's registrations — real attendee
-   names, emails and now phone numbers — to an unmanaged local file outside any
-   retention or access control. That is a data-handling decision, not an
-   engineering shortcut, and it is not mine to take.
+   restorable logical backup; `supabase db dump --linked` fails for the same
+   connectivity reason, and producing one by another route means copying real
+   attendee names, emails and phone numbers to an unmanaged local file outside
+   any retention or access control.
 
 Also note `supabase/.temp/project-ref` points at **production**
 (`rbeyqrfypowyocmnmvwu`) — risk **R-01** in `docs/MIGRATION_READINESS.md`. Any
@@ -112,6 +139,22 @@ would resolve to production or whose target cannot be determined, and refuses a
 push outright because this checkout has no local migration set for the CLI to
 scope it by. `db push --dry-run`, `migration list` and `db dump` still pass, so
 inspecting scope stays the easy path. See `db/README.md`.
+
+**What would unblock it.** Any one of these, in rough order of least effort:
+
+- Run the migration from the **Supabase Dashboard SQL Editor** (it has
+  server-side access, needs no local connection) by pasting
+  `db/migrations/0024_registration_attendee_phone.sql`. The file is
+  self-verifying: its final block raises and rolls the whole thing back if it
+  did not produce exactly one six-argument `register_for_event`.
+- Or run it through the **Supabase MCP `apply_migration`** tool from a session
+  that has it.
+- Or apply it from a **host that can complete a Postgres session** to the
+  production pooler — a GitHub Actions runner with `SUPABASE_DB_PASSWORD` as a
+  repository secret would work, since runners have normal egress.
+
+Read-only verification afterwards needs the same access. Once either is
+available, tell me and I will finish verification, merge, and verify production.
 
 **To finish the release**, in this order:
 
