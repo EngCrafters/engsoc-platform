@@ -174,11 +174,13 @@ trusting its "Ready" status**:
 
 ## 13. Test totals
 
-|                            | Before                                                          | After                                                                      |
-| -------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Unit + database (hermetic) | 247 passed, 1 skipped, **1 file failed to load**                | **261 passed, 0 skipped, 35 files**                                        |
-| Live staging integration   | ran inside `npm test`, required credentials, threw without them | explicit `npm run test:integration`; CI gates it                           |
-| Browser (Playwright)       | 43 passes / 1 skip                                              | 48 passed / 1 skip, plus 5 new specs covering the migrated public surfaces |
+|                            | Before                                                                                            | After                                                                                                                                                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Suite                      | Before                                                                                            | After                                                                                                                                                                                                                       |
+| ---                        | ---                                                                                               | ---                                                                                                                                                                                                                         |
+| Unit + database (hermetic) | 247 passed, 1 skipped, **1 file failed to load**                                                  | **261 passed, 0 skipped, 35 files** locally; CI reports **260 passed, 1 skipped**, because `tests/db/backup-restore.test.ts` skips whenever the harness is given an external database instead of starting its own container |
+| Live staging integration   | ran inside `npm test`, needed credentials, and threw at import without them                       | explicit config and an explicit CI step, gated on its variables being set. CI: **8 passed, 1 skipped** — the anon-denial coverage is preserved and exercised                                                                |
+| Browser (Playwright)       | first run on the branch: **48 passed, 5 failed, 1 skipped** — the five failures were real defects | **53 passed, 1 skipped** on the green run, including 5 new specs for the migrated public surfaces                                                                                                                           |
 
 The one pre-existing failure was the defect being fixed. New tests added:
 `tests/script-safety.test.ts` (guard refusal paths) and
