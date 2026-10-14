@@ -30,13 +30,13 @@ export function RegistrationForm({
     registerForEventAction,
     initialRegisterActionState
   );
-  const feedbackRef = useRef<HTMLDivElement>(null);
+  const alertRef = useRef<HTMLParagraphElement>(null);
   const error = state.status === "error" ? state.error : null;
 
   // Move focus to the message so a keyboard or screen-reader user is told what
   // happened without hunting for it.
   useEffect(() => {
-    if (state.status === "error") feedbackRef.current?.focus();
+    if (state.status === "error") alertRef.current?.focus();
   }, [state]);
 
   const closed = availability === "closed";
@@ -84,16 +84,19 @@ export function RegistrationForm({
           <form action={formAction} className="grid gap-4" noValidate>
             <input type="hidden" name="eventId" value={eventId} />
 
-            <div ref={feedbackRef} tabIndex={-1} className="outline-none">
-              {error ? (
-                <p
-                  role="alert"
-                  className="rounded-m-button border border-m-logo-red/40 bg-m-surface-soft p-3 text-sm text-m-ink"
-                >
-                  {t.registration.errors[error]}
-                </p>
-              ) : null}
-            </div>
+            {/* The alert is the focus target. Moving focus to a wrapper around it
+                would leave the announcement unfocused for anyone navigating by
+                keyboard or screen reader. */}
+            {error ? (
+              <p
+                ref={alertRef}
+                tabIndex={-1}
+                role="alert"
+                className="rounded-m-button border border-m-logo-red/40 bg-m-surface-soft p-3 text-sm text-m-ink outline-none"
+              >
+                {t.registration.errors[error]}
+              </p>
+            ) : null}
 
             <div className="grid gap-2">
               <label htmlFor="attendeeName" className="text-sm font-medium">

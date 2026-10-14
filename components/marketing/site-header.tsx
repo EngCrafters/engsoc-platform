@@ -134,9 +134,9 @@ export function SiteHeader() {
         </nav>
 
         <div className="ms-auto flex items-center gap-1 lg:ms-2">
-          <div className="hidden sm:block">
-            <LanguageSwitch />
-          </div>
+          {/* Always reachable. This is the only way a visitor can change the
+              language, and hiding it below a breakpoint strands phone users. */}
+          <LanguageSwitch />
 
           {SITE.signInUrl ? (
             <Link

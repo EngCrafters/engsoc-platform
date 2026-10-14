@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { getPublicEventPage } from "@/lib/events";
-import { toMarketingEventCard } from "@/lib/marketing/adapters";
+import {
+  toMarketingEventCard,
+  type MarketingEventCardModel,
+} from "@/lib/marketing/adapters";
 import { getI18n } from "@/lib/i18n/server";
 import { EventCard } from "./event-card";
 import { IconArrowRight } from "./icons";
@@ -11,13 +14,28 @@ import { IconArrowRight } from "./icons";
  * Reads live published events through the canonical public domain module. There
  * is no sample data here: if the database has no published events, the section
  * says so plainly rather than showing placeholders.
+ *
+ * If the read itself fails, the section degrades on its own rather than taking
+ * the whole page down with it. Eight of this page's nine sections are static
+ * content that has nothing to do with the event table; a database problem
+ * should not hide the society's overview, programmes and structure. The failure
+ * is logged and reported honestly, so it degrades without ever implying that
+ * there are simply no events.
  */
 export async function EventsSection() {
   const { t, intl } = await getI18n();
-  const { events } = await getPublicEventPage({ period: "upcoming" });
-  const preview = events
-    .slice(0, 3)
-    .map((event) => toMarketingEventCard(event, t, intl));
+
+  let preview: MarketingEventCardModel[] = [];
+  let unavailable = false;
+  try {
+    const { events } = await getPublicEventPage({ period: "upcoming" });
+    preview = events
+      .slice(0, 3)
+      .map((event) => toMarketingEventCard(event, t, intl));
+  } catch {
+    unavailable = true;
+    console.error("public_events_unavailable", { surface: "landing" });
+  }
 
   return (
     <section
@@ -41,7 +59,15 @@ export async function EventsSection() {
         </Link>
       </div>
 
-      {preview.length === 0 ? (
+      {unavailable ? (
+        <div
+          role="status"
+          className="mt-10 rounded-m-card border border-dashed border-m-border-strong bg-m-surface p-8"
+        >
+          <p className="font-semibold">{t.events.unavailable}</p>
+          <p className="mt-2 text-m-ink-2">{t.events.unavailableBody}</p>
+        </div>
+      ) : preview.length === 0 ? (
         <div className="mt-10 rounded-m-card border border-dashed border-m-border-strong bg-m-surface p-8">
           <p className="font-semibold">{t.events.noUpcoming}</p>
           <p className="mt-2 text-m-ink-2">{t.events.noUpcomingBody}</p>

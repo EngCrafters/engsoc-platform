@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getPublicEventPage } from "@/lib/events";
-import { toMarketingEventCard } from "@/lib/marketing/adapters";
+import {
+  toMarketingEventCard,
+  type MarketingEventCardModel,
+} from "@/lib/marketing/adapters";
 import { getI18n } from "@/lib/i18n/server";
 import { EventCard } from "@/components/marketing/event-card";
 
@@ -18,6 +21,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * Reads through the canonical public domain module exactly as the landing page
  * does: cursor-paginated, display-only DTO, availability derived in the
  * database. A malformed or mismatched cursor is treated as no cursor.
+ *
+ * A failed read is reported as a failure, never as an empty catalogue — those
+ * mean different things to a visitor, and conflating them would hide an outage.
  */
 export default async function EventsPage({
   searchParams,
@@ -25,11 +31,21 @@ export default async function EventsPage({
   const query = await searchParams;
   const { t, intl } = await getI18n();
   const period = query.period === "past" ? "past" : "upcoming";
-  const { events, nextCursor } = await getPublicEventPage({
-    period,
-    cursor: typeof query.cursor === "string" ? query.cursor : undefined,
-  });
-  const cards = events.map((event) => toMarketingEventCard(event, t, intl));
+
+  let cards: MarketingEventCardModel[] = [];
+  let nextCursor: string | null = null;
+  let unavailable = false;
+  try {
+    const page = await getPublicEventPage({
+      period,
+      cursor: typeof query.cursor === "string" ? query.cursor : undefined,
+    });
+    cards = page.events.map((event) => toMarketingEventCard(event, t, intl));
+    nextCursor = page.nextCursor;
+  } catch {
+    unavailable = true;
+    console.error("public_events_unavailable", { surface: "catalogue" });
+  }
 
   return (
     <div className="mx-auto max-w-[var(--m-content-max)] px-5 pt-[calc(var(--m-nav-height)+var(--m-nav-offset)+3rem)] pb-20 sm:px-8 sm:pb-24">
@@ -45,7 +61,15 @@ export default async function EventsPage({
         </Link>
       </div>
 
-      {cards.length === 0 ? (
+      {unavailable ? (
+        <div
+          role="status"
+          className="mt-10 rounded-m-card border border-dashed border-m-border-strong bg-m-surface p-8"
+        >
+          <p className="font-semibold">{t.events.unavailable}</p>
+          <p className="mt-2 text-m-ink-2">{t.events.unavailableBody}</p>
+        </div>
+      ) : cards.length === 0 ? (
         <div className="mt-10 rounded-m-card border border-dashed border-m-border-strong bg-m-surface p-8">
           <p className="font-semibold">
             {period === "past" ? t.events.noPast : t.events.noUpcoming}
@@ -64,7 +88,7 @@ export default async function EventsPage({
         </ul>
       )}
 
-      {nextCursor ? (
+      {!unavailable && nextCursor ? (
         <div className="mt-10">
           <Link
             href={`/events?period=${period}&cursor=${encodeURIComponent(nextCursor)}`}

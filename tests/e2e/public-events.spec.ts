@@ -50,7 +50,10 @@ test("public detail has safe metadata and appropriate admission controls", async
 // the page content) for accessibility route-change announcements. Scoping
 // to the registration region avoids ambiguously matching it.
 function registrationRegion(page: import("@playwright/test").Page) {
-  return page.getByRole("region");
+  // Scoped by the section's own labelled heading rather than by role="region":
+  // once the toaster hydrates there are several live regions on the page, and an
+  // unscoped role query becomes ambiguous.
+  return page.locator('section[aria-labelledby="registration-heading"]');
 }
 
 test("anonymous registration validates, focuses errors, succeeds, and retries safely", async ({

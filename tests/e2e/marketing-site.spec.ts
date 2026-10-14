@@ -96,7 +96,9 @@ test("registration panel exposes the canonical admission states", async ({
   await page.goto("/events");
   const firstEvent = page.getByRole("link", { name: /E2E event/ }).first();
   await firstEvent.click();
-  await expect(page.getByRole("region")).toBeVisible();
+  await expect(
+    page.locator('section[aria-labelledby="registration-heading"]')
+  ).toBeVisible();
   await expect(page.getByLabel("Name")).toBeVisible();
   await expect(page.getByLabel("Email address")).toBeVisible();
 });

@@ -124,6 +124,9 @@ export const en = {
     organisedBy: "Organised by",
     aboutEvent: "About this event",
     locationTbc: "Location to be confirmed",
+    unavailable: "Events are temporarily unavailable.",
+    unavailableBody:
+      "The event list could not be loaded. Everything else on this page is unaffected. Please try again shortly.",
     noUpcoming: "No events are scheduled right now.",
     noUpcomingBody:
       "New workshops and talks appear here as committees publish them.",
