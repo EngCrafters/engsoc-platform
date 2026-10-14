@@ -110,8 +110,10 @@ change:
    both succeed. But the Postgres session never completes, and it fails
    identically **with and without a password**, so this is not an authentication
    problem: a password alone would not unblock it. One inline `select 1` did
-   succeed and then never did again, so the channel is intermittent at best,
-   which is not a foundation for production DDL.
+   succeed early on and then never did again; four consecutive retries of that
+   same trivial statement all failed with the temp-role connection error
+   (attempts 1-4: `CONNECTION_FAIL`), so the channel is down rather than merely
+   flaky, and it is not a foundation for production DDL either way.
 
 5. **No credential capable of applying DDL to production exists here anyway.**
    `vercel env ls production` lists `APP_RUNTIME_DATABASE_URL` and
