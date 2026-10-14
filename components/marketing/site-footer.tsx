@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FOOTER_SOCIAL_ACCOUNTS } from "@/content/social";
-import { SITE } from "@/content/site";
 import { getI18n } from "@/lib/i18n/server";
 import { SocialIcon } from "./SocialIcon";
 
@@ -112,16 +111,6 @@ export async function SiteFooter() {
                 {t.nav.links.about}
               </Link>
             </li>
-            {SITE.signInUrl ? (
-              <li>
-                <Link
-                  href={SITE.signInUrl}
-                  className="inline-flex min-h-11 items-center text-white/85 hover:text-white"
-                >
-                  {t.nav.signIn}
-                </Link>
-              </li>
-            ) : null}
           </ul>
         </nav>
       </div>

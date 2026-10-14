@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SITE } from "@/content/site";
 import { getI18n } from "@/lib/i18n/server";
 import { IconArrowRight } from "./icons";
 
@@ -40,14 +39,6 @@ export async function JoinSection() {
             {t.join.exploreEvents}
             <IconArrowRight className="size-4" />
           </Link>
-          {SITE.signInUrl ? (
-            <Link
-              href={SITE.signInUrl}
-              className="inline-flex min-h-12 items-center rounded-m-button border border-white/30 px-6 font-semibold transition-colors hover:border-white/70"
-            >
-              {t.nav.signIn}
-            </Link>
-          ) : null}
         </div>
 
         <ol className="mt-12 grid gap-4 sm:grid-cols-3">

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck, TimerOff } from "lucide-react";
 import {
@@ -11,6 +12,13 @@ import { RECOVERY_EXPIRED_MESSAGE } from "@/lib/auth/callback";
 import { ResetForm } from "./reset-form";
 
 export const dynamic = "force-dynamic";
+
+// Reached from a recovery email, never from a search result.
+// This is discoverability, not authorization: the route's own guards are what
+// protect it. Search engines simply have no reason to index a sign-in page.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /** True only when the visitor holds a live session (from a verified email link). */
 async function hasRecoverySession() {

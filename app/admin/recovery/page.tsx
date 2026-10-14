@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { AuthShell, authLinkClass } from "@/components/auth/auth-shell";
@@ -5,6 +6,12 @@ import { AuthMessage } from "@/components/auth/auth-shell";
 import { RECOVERY_EXPIRED_MESSAGE } from "@/lib/auth/callback";
 import { RecoveryForm } from "./recovery-form";
 
+// Not a public destination.
+// This is discoverability, not authorization: the route's own guards are what
+// protect it. Search engines simply have no reason to index a sign-in page.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 export default async function AdminRecoveryPage({
   searchParams,
 }: PageProps<"/admin/recovery">) {

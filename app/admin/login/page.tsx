@@ -1,9 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 import { AuthMessage, AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "./login-form";
 import { safeAdminReturnPath } from "@/lib/auth/paths";
 
+// The administration sign-in is reachable directly by an administrator, and by
+// redirect from any protected page, but it is not a public destination and the
+// public site no longer links to it.
+// Kept out of search results.
+// This is discoverability, not authorization: the route's own guards are what
+// protect it. Search engines simply have no reason to index a sign-in page.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 export default async function AdminLoginPage({
   searchParams,
 }: PageProps<"/admin/login">) {

@@ -32,11 +32,18 @@ export const SITE = {
    */
   membershipUrl: null as string | null,
 
-  /**
-   * The platform's real sign-in. This is the committee administration area that
-   * engsoc-platform already owns — not a member account, which UC-01 will add.
-   */
-  signInUrl: "/admin/login" as string | null,
+  // There is deliberately no admin sign-in entry here.
+  //
+  // The committee administration area still exists at /admin/login and is still
+  // protected by the platform's Auth architecture — nothing about that changed.
+  // What changed is that the public site no longer advertises it: an
+  // administration entry point is not a public destination, and a public link
+  // to it invites exactly the traffic the sign-in page then has to refuse.
+  // Administrators reach it by navigating directly, and a redirect sends any
+  // signed-out visitor who lands on a protected page there.
+  //
+  // This is discoverability, not authorization. Removing the link protects
+  // nothing on its own; the route's own guards do that.
 
   /**
    * Draft 1 used an invented email address. Only add entries here once the society

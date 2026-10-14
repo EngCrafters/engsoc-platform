@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { SITE } from "@/content/site";
 import { useI18n } from "./i18n-provider";
 import { LanguageSwitch } from "./language-switch";
 import { IconArrowRight, IconClose } from "./icons";
@@ -138,15 +137,6 @@ export function SiteHeader() {
               language, and hiding it below a breakpoint strands phone users. */}
           <LanguageSwitch />
 
-          {SITE.signInUrl ? (
-            <Link
-              href={SITE.signInUrl}
-              className="hidden min-h-11 items-center rounded-full px-3 text-[0.9375rem] font-medium text-m-ink-2 transition-colors hover:bg-m-brand-soft hover:text-m-brand xl:inline-flex"
-            >
-              {t.nav.signIn}
-            </Link>
-          ) : null}
-
           <Link
             href="/#join"
             className="hidden min-h-11 items-center gap-2 rounded-full bg-m-brand px-4 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-m-brand-hover sm:inline-flex"
@@ -204,15 +194,6 @@ export function SiteHeader() {
             >
               {t.nav.join}
             </Link>
-            {SITE.signInUrl ? (
-              <Link
-                href={SITE.signInUrl}
-                onClick={() => close()}
-                className="flex min-h-12 items-center justify-center rounded-m-button border border-m-border px-4 font-medium text-m-ink"
-              >
-                {t.nav.signIn}
-              </Link>
-            ) : null}
             <div className="flex justify-center pt-1 sm:hidden">
               <LanguageSwitch variant="panel" />
             </div>
