@@ -52,6 +52,24 @@ REVOKE ALL ON TABLE private.api_clients FROM anon;
 REVOKE ALL ON TABLE private.api_clients FROM authenticated;
 REVOKE ALL ON TABLE private.api_clients FROM service_role;
 
+-- FORCE ROW LEVEL SECURITY applies RLS even to the table owner, and with no
+-- policy at all that means default-deny for everyone — including the SECURITY
+-- DEFINER routine, which runs as uc02_routine_owner. Without this policy the
+-- registry is unreadable and every verification returns zero rows, so the whole
+-- authentication path silently fails closed forever.
+--
+-- This is exactly the failure the production-equivalent rehearsal caught: the
+-- migration applied cleanly, all the grant assertions passed, and the routine
+-- returned nothing for a valid client.
+--
+-- The policy grants SELECT and nothing else: verification is a read. No role
+-- other than the routine owner can reach this table, because the table GRANTs
+-- above are revoked from everyone else.
+CREATE POLICY api_clients_owner_read ON private.api_clients
+  FOR SELECT
+  TO uc02_routine_owner
+  USING (true);
+
 -- Verification is a single narrow read. Everything that can invalidate a client
 -- is checked here rather than in application code, so a caller cannot skip it.
 CREATE OR REPLACE FUNCTION private.verify_api_client(
