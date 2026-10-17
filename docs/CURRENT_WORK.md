@@ -1,65 +1,6 @@
 # Current work - handoff state
 
-**CURRENT — PUBLIC SITE MIGRATION (branch `migration/public-site`, pull request #5):**
-The teammate public site (ESWebsite, upstream `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0`)
-has been ported into this application as **presentation only**. Auth, authorization,
-the schema, RLS, the private routines, registration, the audit trail and the admin
-area are unchanged.
-
-What a visitor gets: `/` is the society's public experience (hero, figures, overview,
-upcoming events, programmes, projects, disciplines, leadership, join invitation);
-`/events` is a real route serving live published events; `/events/[id]` keeps the
-canonical detail page and registration form; `/about` and `/activities` are new; and
-English/Arabic render with correct right-to-left direction from a server-resolved
-cookie, so the language never flashes.
-
-Events come from `lib/events` and nowhere else. The upstream sample event list and
-its "registration is not open" preview dialog are **not** carried over, because this
-platform really does register people. Registration still posts to the canonical
-Server Action and `private.register_for_event`.
-
-The admin area is untouched: its own tokens, its own Geist faces, its own English
-direction. The public palette is scoped to `.marketing-surface`, and the public
-`dir` is applied to that subtree rather than to `<html>`.
-
-Deliberately **not** introduced: GSAP, React Three Fiber and drei. ADR 0011 removed
-GSAP from this repository on purpose, and the hero's prepared stills already carry
-the identity at first paint. The live WebGL sculpture is recorded as DEFER with a
-re-entry path, not dropped. CSS Modules were re-expressed in the existing Tailwind
-and shadcn system so the application does not end up with two styling systems.
-
-Hardening delivered in the same branch, from the audit:
-
-- `scripts/m7-staging-browser-smoke.ts` is **removed**. It could issue
-  `DELETE FROM private.uc02_audit` against whichever project
-  `supabase/.temp/project-ref` names — production in a normal checkout.
-- `scripts/lib/supabase-target.mjs` derives the project ref from the connection
-  identity and fails closed unless a non-production ref is named explicitly.
-  Both remaining role-check scripts use it, with tests.
-- **`npm test` is hermetic.** The live staging RLS proof moved to
-  `tests/integration/` behind its own config; CI still runs it as an explicit gate
-  that fails if its variables are unset.
-- The committed staging anon key is gone from workflow source; it is a repository
-  variable now.
-- The production build no longer requires a runtime credential; the fail-fast
-  check moved to server startup, where it reports rather than taking the server
-  down.
-- `.gitattributes` added, so the format gate is meaningful on Windows too.
-- The unused `resend` dependency is removed.
-
-**Open item for the owner (Vercel, not code):** the **Preview** environment has no
-`APP_RUNTIME_DATABASE_URL`. That previously failed the preview build loudly; now it
-is reported at runtime, and the preview correctly renders the marketing shell with
-an honest "events are temporarily unavailable" state instead of a 500. Giving
-previews a database credential is a data-exposure decision and is left to the owner.
-
-**Sole remaining UC-02 release hold is unchanged:** the real Support manager email,
-assignment and private sign-in pilot.
-
-The dated handoffs below are historical. Their account state and open items are
-superseded by this note.
-
-**HISTORICAL (October 8, 2026):** **FOCUSED PRODUCTION FIX (October 8, 2026):** CSV export investigation confirmed
+**FOCUSED PRODUCTION FIX (October 8, 2026):** CSV export investigation confirmed
 native form POSTs sent `Origin: null` under the global `no-referrer` policy;
 Vercel Host/forwarded headers and request URL were correct. Registration-only
 `same-origin` metadata preserves same-site Origin without cross-site Referer.
@@ -103,9 +44,7 @@ Vercel READY at dpl_CFNxAJUNmNA1TFQXyH7znDrsnRVs. October 8 production smoke
 checks confirm public/login/recovery/reset responses and the unauthenticated
 access redirect with security headers. No application changes followed the
 validated lifecycle implementation.
-~~No landing-page migration or broad UI redesign has started.~~ **Superseded:**
-the public site migration is in progress on `migration/public-site` — see the note
-at the top of this file. The admin area still has had no broad UI redesign.
+No landing-page migration or broad UI redesign has started.
 
 The earlier exposed migration credential was production, not staging: rotation,
 old-password rejection, affected private-store updates and log review are complete.

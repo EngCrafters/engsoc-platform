@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // Pin the tracing root to this repository. Without it Next.js walks up the
-  // filesystem looking for a lockfile and can adopt a parent directory that
-  // happens to contain one, which changes what gets traced into the build.
-  outputFileTracingRoot: process.cwd(),
   async headers() {
     return [
       {

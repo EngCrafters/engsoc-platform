@@ -3,21 +3,39 @@
 import { useActionState, useEffect, useRef } from "react";
 import { registerForEventAction } from "./actions";
 import { initialRegisterActionState } from "./action-state";
+import type { RegisterForEventError } from "@/lib/registrations";
 import type { PublicEventAvailability } from "@/lib/events";
-import { useI18n } from "@/components/marketing/i18n-provider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { MessageBanner } from "@/components/ui/message-banner";
+import { FormActions, FormField } from "@/components/ui/form-field";
 
-/**
- * The public registration form.
- *
- * Presentation only. The submission goes to the canonical Server Action, which
- * validates and then calls private.register_for_event through the restricted
- * runtime role — so duplicate prevention, capacity, the FIFO waitlist, the IP
- * rate limit and the audit row are all exactly what they were before this
- * migration. Nothing about that contract is reimplemented here.
- *
- * The only fields ever sent are eventId, attendeeName, attendeeEmail and
- * intent; the action rejects anything else.
- */
+const ERROR_MESSAGES: Record<RegisterForEventError, string> = {
+  invalid_name: "Enter your name.",
+  invalid_email: "Enter a valid email address.",
+  invalid_event: "This event is unavailable.",
+  event_not_found: "This event is unavailable.",
+  event_not_published: "This event is unavailable.",
+  event_full:
+    "Registration is full or places are being allocated to the waitlist.",
+  rate_limited:
+    "Too many attempts from this connection. Try again after 10 minutes.",
+  already_registered:
+    "This email is already registered for this event. No second registration was created.",
+  already_waitlisted:
+    "This email is already on the waitlist. No second entry was created.",
+  registration_closed:
+    "Registration has closed because this event has started.",
+  invalid_intent: "Choose a valid registration option.",
+  invalid_ip: "We couldn't verify this request. Try again.",
+  invalid_input: "Check the form and try again.",
+  server_error:
+    "We couldn't confirm the result. Try again; retrying won't create another entry.",
+  registration_available:
+    "Registration is open again. Choose Register to confirm your place.",
+};
+
 export function RegistrationForm({
   eventId,
   availability,
@@ -25,129 +43,99 @@ export function RegistrationForm({
   eventId: string;
   availability: PublicEventAvailability;
 }) {
-  const { t } = useI18n();
   const [state, formAction, isPending] = useActionState(
     registerForEventAction,
     initialRegisterActionState
   );
-  const alertRef = useRef<HTMLParagraphElement>(null);
-  const error = state.status === "error" ? state.error : null;
-
-  // Move focus to the message so a keyboard or screen-reader user is told what
-  // happened without hunting for it.
+  const errorSummary = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (state.status === "error") alertRef.current?.focus();
+    if (state.status === "error") errorSummary.current?.focus();
   }, [state]);
 
-  const closed = availability === "closed";
+  if (state.status === "success")
+    return (
+      <MessageBanner tone="success">
+        {state.waitlisted
+          ? "You're on the waitlist, not yet registered for a place. The committee will contact you if a place can be offered."
+          : "You're registered. Your place is confirmed."}
+      </MessageBanner>
+    );
+  if (availability === "closed")
+    return (
+      <Button type="button" disabled className="h-10">
+        Registration closed
+      </Button>
+    );
+
+  const error = state.status === "error" ? state.error : null;
   const showWaitlist = availability === "waitlist" || error === "event_full";
-
   return (
-    <section
-      aria-labelledby="registration-heading"
-      className="rounded-m-card border border-m-border bg-m-surface p-6 sm:p-7"
-    >
-      <h2 id="registration-heading" className="text-xl font-semibold">
-        {closed
-          ? t.registration.headingClosed
-          : showWaitlist
-            ? t.registration.headingWaitlist
-            : t.registration.heading}
-      </h2>
-      <p className="mt-2 text-sm text-m-ink-2">
-        {closed
-          ? t.registration.introClosed
-          : showWaitlist
-            ? t.registration.introWaitlist
-            : t.registration.intro}
+    <form action={formAction} className="grid gap-4" noValidate>
+      <input type="hidden" name="eventId" value={eventId} />
+      {state.status === "error" ? (
+        <MessageBanner ref={errorSummary} tabIndex={-1} tone="error">
+          {ERROR_MESSAGES[state.error]}
+        </MessageBanner>
+      ) : null}
+      <FormField
+        htmlFor="attendeeName"
+        label="Name"
+        error={
+          error === "invalid_name" ? ERROR_MESSAGES.invalid_name : undefined
+        }
+      >
+        <Input
+          id="attendeeName"
+          name="attendeeName"
+          autoComplete="name"
+          required
+          maxLength={200}
+          aria-invalid={error === "invalid_name"}
+          aria-describedby={
+            error === "invalid_name" ? "attendeeName-error" : undefined
+          }
+          className="h-10"
+        />
+      </FormField>
+      <FormField
+        htmlFor="attendeeEmail"
+        label="Email address"
+        error={
+          error === "invalid_email" ? ERROR_MESSAGES.invalid_email : undefined
+        }
+      >
+        <Input
+          id="attendeeEmail"
+          name="attendeeEmail"
+          type="email"
+          autoComplete="email"
+          required
+          aria-invalid={error === "invalid_email"}
+          aria-describedby={
+            error === "invalid_email" ? "attendeeEmail-error" : undefined
+          }
+          className="h-10"
+        />
+      </FormField>
+      <FormActions>
+        <Button
+          type="submit"
+          name="intent"
+          value={showWaitlist ? "join_waitlist" : "register"}
+          disabled={isPending}
+          className="h-10 w-fit"
+        >
+          {isPending ? <Spinner data-icon="inline-start" /> : null}
+          {isPending
+            ? "Submitting…"
+            : showWaitlist
+              ? "Join waitlist"
+              : "Register"}
+        </Button>
+      </FormActions>
+      <p aria-live="polite" className="sr-only">
+        {isPending ? "Submitting registration" : ""}
       </p>
-
-      <div className="mt-5">
-        {state.status === "success" ? (
-          <p
-            role="status"
-            className="rounded-m-button border border-m-border bg-m-brand-soft p-4 text-sm text-m-ink"
-          >
-            {state.waitlisted
-              ? t.registration.successWaitlisted
-              : t.registration.successConfirmed}
-          </p>
-        ) : closed ? (
-          <button
-            type="button"
-            disabled
-            className="min-h-12 w-full rounded-m-button border border-m-border bg-m-surface-soft px-5 font-semibold text-m-ink-2"
-          >
-            {t.registration.headingClosed}
-          </button>
-        ) : (
-          <form action={formAction} className="grid gap-4" noValidate>
-            <input type="hidden" name="eventId" value={eventId} />
-
-            {/* The alert is the focus target. Moving focus to a wrapper around it
-                would leave the announcement unfocused for anyone navigating by
-                keyboard or screen reader. */}
-            {error ? (
-              <p
-                ref={alertRef}
-                tabIndex={-1}
-                role="alert"
-                className="rounded-m-button border border-m-logo-red/40 bg-m-surface-soft p-3 text-sm text-m-ink outline-none"
-              >
-                {t.registration.errors[error]}
-              </p>
-            ) : null}
-
-            <div className="grid gap-2">
-              <label htmlFor="attendeeName" className="text-sm font-medium">
-                {t.registration.name}
-              </label>
-              <input
-                id="attendeeName"
-                name="attendeeName"
-                autoComplete="name"
-                required
-                maxLength={200}
-                aria-invalid={error === "invalid_name"}
-                className="min-h-12 rounded-m-button border border-m-border bg-m-surface px-4 text-base"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <label htmlFor="attendeeEmail" className="text-sm font-medium">
-                {t.registration.email}
-              </label>
-              <input
-                id="attendeeEmail"
-                name="attendeeEmail"
-                type="email"
-                autoComplete="email"
-                required
-                aria-invalid={error === "invalid_email"}
-                className="min-h-12 rounded-m-button border border-m-border bg-m-surface px-4 text-base"
-              />
-            </div>
-
-            <button
-              type="submit"
-              name="intent"
-              value={showWaitlist ? "join_waitlist" : "register"}
-              disabled={isPending}
-              className="min-h-12 rounded-m-button bg-m-brand px-5 font-semibold text-white transition-colors hover:bg-m-brand-hover disabled:opacity-60"
-            >
-              {isPending
-                ? t.registration.submitting
-                : showWaitlist
-                  ? t.registration.joinWaitlist
-                  : t.registration.register}
-            </button>
-
-            <p aria-live="polite" className="sr-only">
-              {isPending ? t.registration.submittingSr : ""}
-            </p>
-          </form>
-        )}
-      </div>
-    </section>
+    </form>
   );
 }
