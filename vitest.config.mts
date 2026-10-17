@@ -14,10 +14,21 @@ export default defineConfig({
   // jsx:"preserve" for Next, so tell the test transform to compile it.
   oxc: { jsx: { runtime: "automatic" } },
   resolve: {
-    alias: { "@": path.resolve(import.meta.dirname) },
+    alias: {
+      "@": path.resolve(import.meta.dirname),
+      // The `server-only` marker is a build-time guard provided by the
+      // framework; importing it under Node throws by design. See the stub.
+      "server-only": path.resolve(
+        import.meta.dirname,
+        "tests/stubs/server-only.ts"
+      ),
+    },
   },
   test: {
-    exclude: ["tests/e2e/**", "node_modules/**"],
+    // Hermetic by design: no network, no third-party credentials. The live
+    // staging suite lives in tests/integration and is opt-in through
+    // `npm run test:integration` (vitest.integration.config.mts).
+    exclude: ["tests/e2e/**", "tests/integration/**", "node_modules/**"],
     environment: "node",
     // The database suites share one PostgreSQL container, and some assert
     // global invariants (for example "the last active Technical owner cannot be

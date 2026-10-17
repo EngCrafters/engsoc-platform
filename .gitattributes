@@ -1,0 +1,25 @@
+# Normalize line endings so a Windows checkout and CI agree.
+#
+# Without this, a Windows developer with core.autocrlf=true produces CRLF files
+# that every formatter and linter disagrees about, and `npm run format:check`
+# fails on files nobody edited. The repository stores LF; PowerShell scripts run
+# by Windows are the one exception and keep CRLF.
+* text=auto eol=lf
+
+# Scripts Windows actually executes.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets: never normalize, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary
+*.zip binary
