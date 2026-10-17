@@ -1,0 +1,323 @@
+openapi: 3.1.0
+info:
+  title: ESSQU Core Public API
+  version: "1.0.0"
+  summary: Versioned read and registration contract for the Engineering Society platform.
+  description: |
+    This document is the authoritative external contract for the Core API.
+    The landing site is expected to build against it without reading Core source.
+
+    Versioning is in the path (`/v1`). Within v1 no field is removed, no type
+    changes, no error code changes meaning, and no required field becomes
+    optional. A breaking change means `/v2`.
+servers:
+  - url: https://api.essqu.com/v1
+    description: Production
+  - url: http://127.0.0.1:3000/v1
+    description: Local development
+tags:
+  - name: Events
+  - name: Registration
+paths:
+  /events:
+    get:
+      tags: [Events]
+      summary: List published events
+      description: |
+        Requires a bearer API client credential with the `events:read` scope.
+        Server-to-server only; this key must never reach a browser.
+      security:
+        - clientKey: []
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, past]
+            default: upcoming
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque cursor from `meta.nextCursor`. Never construct one.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A page of events
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+            Cache-Control:
+              description: Public, short-lived. Safe to cache by a shared cache.
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /events/{eventId}:
+    get:
+      tags: [Events]
+      summary: Get one published event
+      description: |
+        A draft, archived or nonexistent event all return the same 404. The API
+        never confirms that a non-public event exists.
+      security:
+        - clientKey: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The event
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Event"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /events/{eventId}/registrations:
+    post:
+      tags: [Registration]
+      summary: Register for an event
+      description: |
+        Public endpoint. No API key, no cookie, no credentials of any kind.
+
+        The browser posts directly from the landing site to this origin; CORS is
+        restricted to exact allowed origins. The canonical registration rules —
+        capacity, waitlist ordering, duplicate prevention, registration-open
+        state and the per-IP rate limit — are enforced by Core, not by the
+        caller.
+
+        Send no more than one request per submission. Do not retry
+        automatically: a duplicate is a conflict, not an idempotent no-op.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [attendeeName, attendeeEmail]
+              properties:
+                attendeeName:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                attendeeEmail:
+                  type: string
+                  format: email
+                  maxLength: 254
+                intent:
+                  type: string
+                  enum: [register, join_waitlist]
+                  default: register
+      responses:
+        "201":
+          description: Registration accepted
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+            Cache-Control:
+              description: Always `no-store`.
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status]
+                    properties:
+                      status:
+                        type: string
+                        enum: [confirmed, waitlisted]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: |
+            A conflicting state: already registered, already waitlisted, event
+            full, registration closed, or a waitlist is unexpectedly available.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "413":
+          description: Body exceeded 16 KiB.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "415":
+          description: Content-Type was not application/json.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "422":
+          description: A field was missing, mistyped, or an unexpected field was sent.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Registration]
+      summary: CORS preflight
+      description: |
+        Returns 204. An allowed origin receives the access-control headers; any
+        other origin receives only `Vary: Origin`, which makes the browser block
+        the real request.
+      responses:
+        "204":
+          description: Preflight response
+components:
+  securitySchemes:
+    clientKey:
+      type: http
+      scheme: bearer
+      description: |
+        A scoped API client token, provisioned by Core. Never expose it in
+        browser JavaScript, a public environment variable, or client-side
+        rendering. If a token may have leaked, revoke it and rotate.
+  headers:
+    RequestId:
+      description: Correlation id, echoed from a valid caller value or generated.
+      schema: { type: string }
+  schemas:
+    Event:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          title,
+          description,
+          eventDate,
+          location,
+          committeeName,
+          availability,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        eventDate:
+          type: string
+          format: date-time
+          description: ISO 8601 with offset.
+        location:
+          type: [string, "null"]
+        committeeName: { type: string }
+        availability:
+          type: string
+          enum: [open, waitlist, closed]
+          description: Derived by Core. Do not infer from anything else.
+    EventList:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Event" }
+        meta:
+          type: object
+          required: [nextCursor]
+          properties:
+            nextCursor:
+              type: [string, "null"]
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, code, requestId]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          description: Stable public error code. Never derived from an internal one.
+          enum:
+            - bad-request
+            - unsupported-media-type
+            - payload-too-large
+            - invalid-fields
+            - unauthorized
+            - forbidden
+            - not-found
+            - conflict
+            - rate-limited
+            - service-unavailable
+        requestId: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code]
+            properties:
+              field: { type: string }
+              code: { type: string }
+  responses:
+    BadRequest:
+      description: The request was malformed.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthorized:
+      description: Missing, malformed, unknown, revoked or expired credential.
+      headers:
+        WWW-Authenticate:
+          schema: { type: string }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Forbidden:
+      description: The origin is not allowed, or the credential lacks the scope.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: No such public resource.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    RateLimited:
+      description: The per-IP registration limiter refused the request.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unavailable:
+      description: Core could not complete the request. Safe to retry later.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
