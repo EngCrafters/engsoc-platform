@@ -11,19 +11,17 @@
 // directly from the client component's <form action={...}>.
 
 import { headers } from "next/headers";
-import { isIP } from "node:net";
+import { resolveClientIp } from "@/lib/client-ip/server";
 import { registerForEvent } from "@/lib/registrations";
 import type { RegisterActionState } from "./action-state";
 
-// Vercel (and most proxies) set x-forwarded-for to "client, proxy1, proxy2"
-// — the first entry is the original client. Falls back to a fixed address
-// in local dev, where nothing sets this header; every local request then
-// shares one rate-limit bucket, which is fine, this only matters once
-// there's a real proxy in front of the app.
+// The client address is a security input: it keys the database rate limiter.
+// It is resolved in exactly one place (lib/client-ip/server.ts) so this Server
+// Action and the public API cannot drift apart. Anything unrecognised fails
+// closed rather than being passed through as a made-up address.
 async function getClientIp(headersList: Headers): Promise<string> {
-  const forwardedFor = headersList.get("x-vercel-forwarded-for")?.trim();
-  if (forwardedFor && isIP(forwardedFor) !== 0) return forwardedFor;
-  return process.env.NODE_ENV === "development" ? "127.0.0.1" : "invalid";
+  const resolved = resolveClientIp(headersList);
+  return resolved.ok ? resolved.ip : "invalid";
 }
 
 function getSingleTextField(

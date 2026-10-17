@@ -48,14 +48,29 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Test (staging RLS — see docs/adr/0006)
+      # Hermetic: no network, no third-party credentials. The live staging
+      # suite is a separate, explicit command (see the next step).
+      - name: Test (hermetic unit + disposable database suites)
         run: npm run test
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/uc02_test
-          # Public by design (the anon key, protected by RLS, not secrecy)
-          # — same reasoning as the NEXT_PUBLIC_* values below.
-          STAGING_SUPABASE_URL: https://wnrdgnmmcdedmilnzzsl.supabase.co
-          STAGING_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InducmRnbm1tY2RlZG1pbG56enNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMTMzMDksImV4cCI6MjEwNDg4OTMwOX0.RShOwe-amyW6vsR-clcgBmhhYChXpsx_qJZw80UOZJ8
+
+      # F-03: the staging anon configuration lives in repository variables, not
+      # in workflow source. Anon keys are public by design (RLS protects the
+      # data, not the key), but environment-specific values do not belong in a
+      # file that is reviewed as code and forked by anyone.
+      - name: Verify staging integration configuration
+        run: |
+          if [ -z "${{ vars.STAGING_SUPABASE_URL }}" ] || [ -z "${{ vars.STAGING_SUPABASE_ANON_KEY }}" ]; then
+            echo "::error::STAGING_SUPABASE_URL and STAGING_SUPABASE_ANON_KEY must be set as repository variables (Settings > Secrets and variables > Actions > Variables) before the staging integration suite can run."
+            exit 1
+          fi
+
+      - name: Integration tests (live staging RLS — see docs/adr/0006)
+        run: npm run test:integration
+        env:
+          STAGING_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_ANON_KEY: ${{ vars.STAGING_SUPABASE_ANON_KEY }}
 
       - name: Build
         run: npm run build

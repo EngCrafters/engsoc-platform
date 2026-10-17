@@ -27,16 +27,26 @@
 import { describe, it, expect } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
-const url = process.env.STAGING_SUPABASE_URL;
-const anonKey = process.env.STAGING_SUPABASE_ANON_KEY;
+import {
+  hasStagingCredentials,
+  skipReason,
+  stagingAnonKey,
+  stagingUrl,
+} from "./guard";
 
-if (!url || !anonKey) {
-  throw new Error(
-    "STAGING_SUPABASE_URL and STAGING_SUPABASE_ANON_KEY must be set to run this suite — see .env.example."
-  );
+// The client is constructed unconditionally so every `it` keeps a non-null
+// handle and the file's types stay honest. When the suite is not configured the
+// placeholders below are never sent anywhere: every block is skipped by
+// `describe.skipIf`, and `guard.ts` refuses a production target outright.
+const anon = createClient(
+  stagingUrl ?? "https://unconfigured.supabase.co",
+  stagingAnonKey ?? "unconfigured",
+  { auth: { persistSession: false, autoRefreshToken: false } }
+);
+
+if (!hasStagingCredentials) {
+  console.info(`\n[integration] Skipping staging RLS suite: ${skipReason}\n`);
 }
-
-const anon = createClient(url, anonKey);
 
 // Fixed ids from the staging project's seed data — see docs/adr/0006 and
 // the seeding notes in db/migrations/. If staging ever gets re-seeded,
@@ -44,7 +54,7 @@ const anon = createClient(url, anonKey);
 const PUBLISHED_EVENT_ID = "086c89c9-7cb4-4dac-9b6e-d6e43fc304bb"; // Intro to Robotics Workshop
 const DRAFT_EVENT_ID = "f8a57444-79a2-4ac6-baf3-20a065ea39e3"; // Committee Planning Retreat (Draft)
 
-describe("staging RLS: events", () => {
+describe.skipIf(!hasStagingCredentials)("staging RLS: events", () => {
   it("anon can read a published event's public columns", async () => {
     const { data, error } = await anon
       .from("events")
@@ -79,56 +89,62 @@ describe("staging RLS: events", () => {
   });
 });
 
-describe("staging RLS: members (M2 — no grant at all, not just no policy)", () => {
-  it("anon reading members is denied outright: no GRANT exists, so this is a permission error, not an empty RLS-filtered result", async () => {
-    const { data, error } = await anon.from("members").select("id, email");
+describe.skipIf(!hasStagingCredentials)(
+  "staging RLS: members (M2 — no grant at all, not just no policy)",
+  () => {
+    it("anon reading members is denied outright: no GRANT exists, so this is a permission error, not an empty RLS-filtered result", async () => {
+      const { data, error } = await anon.from("members").select("id, email");
 
-    expect(data).toBeNull();
-    expect(error).not.toBeNull();
-    expect(error?.code).toBe("42501");
-  });
-});
+      expect(data).toBeNull();
+      expect(error).not.toBeNull();
+      expect(error?.code).toBe("42501");
+    });
+  }
+);
 
-describe("staging RLS: registrations (M2 — anon direct write retired, D07)", () => {
-  it("anon cannot INSERT a registration directly anymore, even for a published event", async () => {
-    const { error } = await anon.from("registrations").insert({
-      event_id: PUBLISHED_EVENT_ID,
-      attendee_name: "Should Be Rejected",
-      attendee_email: "vitest-rls-reject-direct@example.com",
+describe.skipIf(!hasStagingCredentials)(
+  "staging RLS: registrations (M2 — anon direct write retired, D07)",
+  () => {
+    it("anon cannot INSERT a registration directly anymore, even for a published event", async () => {
+      const { error } = await anon.from("registrations").insert({
+        event_id: PUBLISHED_EVENT_ID,
+        attendee_name: "Should Be Rejected",
+        attendee_email: "vitest-rls-reject-direct@example.com",
+      });
+
+      expect(error).not.toBeNull();
+      expect(error?.code).toBe("42501"); // insufficient_privilege — no grant at all now
     });
 
-    expect(error).not.toBeNull();
-    expect(error?.code).toBe("42501"); // insufficient_privilege — no grant at all now
-  });
+    it("anon cannot register for a draft event either", async () => {
+      const { error } = await anon.from("registrations").insert({
+        event_id: DRAFT_EVENT_ID,
+        attendee_name: "Should Be Rejected",
+        attendee_email: "vitest-rls-reject@example.com",
+      });
 
-  it("anon cannot register for a draft event either", async () => {
-    const { error } = await anon.from("registrations").insert({
-      event_id: DRAFT_EVENT_ID,
-      attendee_name: "Should Be Rejected",
-      attendee_email: "vitest-rls-reject@example.com",
+      expect(error).not.toBeNull();
+      expect(error?.code).toBe("42501");
     });
 
-    expect(error).not.toBeNull();
-    expect(error?.code).toBe("42501");
-  });
+    it("anon cannot register with a non-null memberId either", async () => {
+      const { error } = await anon.from("registrations").insert({
+        event_id: PUBLISHED_EVENT_ID,
+        attendee_name: "Should Also Be Rejected",
+        attendee_email: "vitest-rls-reject-2@example.com",
+        member_id: "00000000-0000-0000-0000-000000000000",
+      });
 
-  it("anon cannot register with a non-null memberId either", async () => {
-    const { error } = await anon.from("registrations").insert({
-      event_id: PUBLISHED_EVENT_ID,
-      attendee_name: "Should Also Be Rejected",
-      attendee_email: "vitest-rls-reject-2@example.com",
-      member_id: "00000000-0000-0000-0000-000000000000",
+      expect(error).not.toBeNull();
+      expect(error?.code).toBe("42501");
     });
 
-    expect(error).not.toBeNull();
-    expect(error?.code).toBe("42501");
-  });
+    it("anon cannot read registrations at all — no grant, not just no policy", async () => {
+      const { data, error } = await anon.from("registrations").select("id");
 
-  it("anon cannot read registrations at all — no grant, not just no policy", async () => {
-    const { data, error } = await anon.from("registrations").select("id");
-
-    expect(data).toBeNull();
-    expect(error).not.toBeNull();
-    expect(error?.code).toBe("42501");
-  });
-});
+      expect(data).toBeNull();
+      expect(error).not.toBeNull();
+      expect(error?.code).toBe("42501");
+    });
+  }
+);

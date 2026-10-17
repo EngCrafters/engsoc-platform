@@ -1,12 +1,17 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
+import { hasStagingCredentials, stagingAnonKey, stagingUrl } from "./guard";
+
 const enabled = process.env.RUN_STAGING_MANAGER_AUTH_TESTS === "true";
-const url = process.env.STAGING_SUPABASE_URL;
-const anonKey = process.env.STAGING_SUPABASE_ANON_KEY;
+const url = stagingUrl;
+const anonKey = stagingAnonKey;
 const email = process.env.STAGING_M5_MANAGER_EMAIL;
 const password = process.env.STAGING_M5_MANAGER_PASSWORD;
-const configured = Boolean(url && anonKey && email && password);
+// `hasStagingCredentials` also refuses a production target, so this suite
+// cannot authenticate against the live project by accident.
+const configured =
+  hasStagingCredentials && Boolean(url && anonKey && email && password);
 
 const client = configured
   ? createClient(url!, anonKey!, {
