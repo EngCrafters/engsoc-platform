@@ -102,13 +102,17 @@ drizzle.config.ts       Database migration config
 **Phase 0 (Foundation):** done, except this repo, which is what you're
 looking at right now.
 
-**Pre-domain release preparation (October 18, 2026):** Core production remains
-at `https://engsoc-platform.vercel.app`. Staging has migration 0024; production
-does not. The owner waived managed-backup readiness only for unchanged additive
-0024 after successful live staging and concurrency checks; no backup is claimed. Landing
-provisioning and staging integration verification are in progress; custom domains,
+**Pre-domain release preparation (October 19, 2026, Dubai):** Core production remains
+at `https://engsoc-platform.vercel.app`. Full live staging and Landing-browser
+verification passed; migration 0024 is applied to staging and production with
+postflight invariants and existing data preserved. The owner waived managed-backup
+readiness only for this unchanged additive migration; no backup or PII export is
+claimed. Production API reads pass and Landing is Ready at `https://essqu-web.vercel.app`;
+final actual-secret browser verification passed. Custom domains,
 DNS, Auth origins and host enforcement remain unchanged. UC-01 remains deferred.
-See [current work](docs/CURRENT_WORK.md), the
+Pre-domain functionality is verified. Fresh authenticated Auth pilot flows, the
+existing leaked-password warning and development-tool advisories remain deferred
+nonrelease follow-ups. See [current work](docs/CURRENT_WORK.md), the
 [API handoff](docs/api/LANDING_HANDOFF_V1.md), and the
 [custom-domain cutover checklist](docs/api/CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md).
 

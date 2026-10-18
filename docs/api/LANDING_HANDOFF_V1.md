@@ -5,29 +5,36 @@ Planned API: https://api.essqu.com
 Planned admin: https://admin.essqu.com
 API version: **v1**
 
-**Pre-domain status (October 18, 2026):** These hostnames have not been attached
+**Pre-domain status (October 19, 2026, Dubai):** These hostnames have not been attached
 or cut over. Core currently serves at `https://engsoc-platform.vercel.app`.
 The private `EngCrafters/essqu-web` repository preserves source
 `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0` and is Git-connected to the separate
 Vercel `essqu-web` project. `EngCrafters` is a GitHub User namespace.
-Staging has migration 0024; staging provisioning and live integration checks
-remain pending. Production has no migration 0024 or production read credential;
-production 0024 awaits live staging and concurrency verification under the owner's
-specific backup-risk waiver; no backup has been established. Consult
+Staging full live HTTP/browser integration and cleanup passed. Production migration
+0024 is applied as version `20261018200028`, with all postflight checks passed
+and seven existing registrations preserved. Production `events:read` client installation and live API reads passed; Landing
+is Ready at `https://essqu-web.vercel.app`. Final production browser integration and actual-secret checks passed. The owner
+waived backup readiness for exact additive 0024 only; no backup or PII export
+has been established. Consult
 [current work](../CURRENT_WORK.md) and the
 [custom-domain checklist](CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md) before configuring
 a consumer. Do not point Landing at an unverified API or copy a production key
 into staging.
+
+Pre-domain functionality is verified. Existing fresh authenticated Auth pilots,
+leaked-password protection and development-tool advisory follow-ups remain
+deferred; see the release report for exact limitations.
 
 The contract is `docs/api/openapi.v1.yaml`. This page is the practical
 companion: how to call it, and what you must not do.
 
 ## Environment variables the landing site needs
 
-| Variable              | Scope           | Purpose                         |
-| --------------------- | --------------- | ------------------------------- |
-| `CORE_API_BASE_URL`   | server          | e.g. `https://api.essqu.com/v1` |
-| `CORE_EVENTS_API_KEY` | **server only** | bearer token for `events:read`  |
+| Variable                        | Scope           | Purpose                                                             |
+| ------------------------------- | --------------- | ------------------------------------------------------------------- |
+| `CORE_API_BASE_URL`             | server          | e.g. `https://api.essqu.com/v1`                                     |
+| `CORE_EVENTS_API_KEY`           | **server only** | bearer token for `events:read`                                      |
+| `NEXT_PUBLIC_CORE_API_BASE_URL` | browser         | Registration URL; switch with server base URL during domain cutover |
 
 That is the complete list. The landing site must **never** need
 `DATABASE_URL`, `APP_RUNTIME_DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, or any

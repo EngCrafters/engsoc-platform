@@ -1,32 +1,53 @@
 # ESSQU Core — production cutover runbook
 
-Status (October 18, 2026): **production 0024 awaits live staging/concurrency**.
-The owner explicitly waived managed-backup readiness only for the unchanged
-additive migration 0024 after those checks pass. No backup is claimed; the waiver
-does not cover other DDL, existing-row DML, a local dump or PII export, subscription
-upgrades, custom domains, DNS or Auth changes. Core continues serving
-at `https://engsoc-platform.vercel.app`; custom domains, DNS, Auth origins and
-host enforcement remain unchanged. Core changes through `4ca9f82` are pushed to
-main and staging; production database activation remains separate. The checklist
-below describes future operations; it is
-not evidence that an operation has run.
+Status (October 19, 2026, Dubai): **0024 applied; API active; Landing Ready; final browser verification passed**.
+Full staging run `7e31d8dd-bea1-4c25-9edc-6d83b93fc046` passed reads, precise
+pagination, CORS/validation, all five conflict reasons, capacity-one race 201/409,
+real 429/Retry-After 600 and an actual credential-free Landing confirmed registration.
+Audits reconciled and cleanup left zero fixtures with five existing staging registrations retained.
 
-Staging `wnrdgnmmcdedmilnzzsl` has migration 0024 applied through Supabase MCP.
-Forced RLS, the routine-owner SELECT policy, restricted execution and zero
-runtime table grants passed; five existing registrations were retained.
-Production `rbeyqrfypowyocmnmvwu` lacks 0024 and retains seven registrations.
-All ten application tables have forced RLS and runtime table grants remain zero.
-Staging clients and deployments are provisioned; complete live verification is
-in progress. See the
-[custom-domain runbook](CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md) for the release gates.
+Production `rbeyqrfypowyocmnmvwu` migration `0024_api_clients` version
+`20261018200028` was applied through MCP after all seven prechecks, with explicit
+`BEGIN;` plus the exact reviewed SQL plus `COMMIT;`. Postflight passed: eleven
+forced-RLS tables, correct registry owner/policy, verifier owner/SECURITY DEFINER/
+search path, runtime execution true, anon/authenticated/PUBLIC false, zero direct
+and effective runtime table privileges and NOBYPASSRLS. Seven registrations
+retained fingerprint `d6768a9e715e9e9fb4a43f63b5616214`; `register_for_event`
+retained fingerprint `54ffeccd2ed187f21f420be46e95c17f`. Bogus-key reads changed from 503 to 401.
+
+The owner waived managed-backup readiness only for exact additive 0024 after live
+staging/concurrency passed. No backup, local PII export or subscription change is
+claimed. No other DDL/existing-row mutation is covered. Custom domains, DNS, Auth
+origins and host enforcement remain unchanged. Core serves at
+`https://engsoc-platform.vercel.app`, deployment alias
+`https://engsoc-platform-59x8jkk42-eng-crafters.vercel.app` on main `6e71995`
+(GitHub CI `39160613952` passed).
+
+Production client `ESSQU Landing Production` is active, production environment,
+`events:read` only; its key is installed as a Landing Production Secret. Landing
+has no privileged database/admin variables. Live no-key/bogus-key 401, wrong-scope 403,
+valid list 200 (one upcoming), and public detail 200 passed. Canary revocation
+immediately returned 401 without a deployment. Exact temporary production Landing
+origin `https://essqu-web.vercel.app` receives preflight 204 with matching
+allow-origin; foreign origin 204 has no allow-origin. One representative valid GET
+was 1125 ms, an observation rather than a benchmark. Landing PR 1 merged as
+`8f5c0bffb0cf431c98777bc3d6111f014dd3db7b`; normal Git production deployment `essqu-obivj77wp-eng-crafters.vercel.app`
+is Ready at `https://essqu-web.vercel.app`, with main CI `39161420446` passed.
+Final actual-secret browser verification passed for English/Arabic on desktop/mobile.
+
+Pre-domain functional verification is complete. Real production registration
+writes were deliberately not attempted; staging proves the confirmed-201 browser
+flow. Fresh real-credential Auth sign-in/sign-out and emailed reset, the existing
+leaked-password protection warning and development-tool advisories remain
+deferred nonrelease follow-ups. No backup is claimed beyond the narrow waiver.
 
 Ordering follows the program's release order and is not negotiable: Core
 compatible first, landing switches last.
 
 | #   | Gate                    | State                                                                     |
 | --- | ----------------------- | ------------------------------------------------------------------------- |
-| A   | Production DB migration | **not applied**                                                           |
-| B   | Production API client   | **not created**                                                           |
+| A   | Production DB migration | **applied 20261018200028; all postflight passed**                         |
+| B   | Production API client   | **active; Secret installed; live API reads passed**                       |
 | C   | DNS / domain cutover    | **not started**                                                           |
 | D   | Auth redirect cutover   | **not started**                                                           |
 | E   | Managed recovery path   | **not verified; owner waiver limited to exact 0024 after staging passes** |
@@ -89,7 +110,8 @@ for `uc02_routine_owner`. Do not "tidy" that policy away.
 record the owner's exact waiver and the preflight below, then use the privileged
 Supabase MCP `apply_migration` route against explicit production ref
 `rbeyqrfypowyocmnmvwu` with the transaction envelope above. MCP already applied
-the same migration to staging. Production DDL remains unperformed as of this note.
+the same migration to staging. This exact production operation is now complete;
+do not reapply it or include additional migrations.
 
 **Preflight, read-only:**
 
@@ -151,7 +173,9 @@ recovery command after client provisioning.
 
 ## B. Production API client
 
-**This is a security-authority action.** No production key has been generated.
+**Completed:** `ESSQU Landing Production`, production environment, `events:read`,
+active; key installed only as a Landing Production Secret. The following is the
+reference procedure, not a request to generate another key.
 
 - Client name: `ESSQU Landing Production`
 - Scope: `events:read`
@@ -273,24 +297,24 @@ successful live staging and concurrency checks. That narrow waiver supersedes
 the backup gate for this one migration; it does not establish a backup, waive
 future migration gates or authorize local dumps/PII export or a paid plan change.
 Record the pre/post checklist in section A and retain the migration digest and
-transaction envelope in the application evidence. Until live checks pass, leave
-production unchanged. No new production attendee export or backup has been taken.
+transaction envelope in the application evidence. Those live checks passed before
+the exact 0024 application. No production attendee export or backup has been taken.
 
 ---
 
-## Release order
+## Future custom-domain release order
 
 `@
 
 1. Core hardening deployed DONE
 2. Core API code merged DONE
-3. Production additive DB migration applied GATE A
-4. Production API client created GATE B
+3. Production additive DB migration applied DONE (20261018200028)
+4. Production API client created/installed DONE
 5. api.essqu.com attached and verified GATE C
 6. API verified independently (401 -> 200) after C
 7. admin.essqu.com attached and verified GATE C
 8. Auth redirect origins updated and verified GATE D
-9. Landing production receives base URL + key after B and C
+9. Switch both Landing server/browser API URL variables to custom API after C
 10. essqu.com landing deploys API integration Landing team
 11. Cross-project smoke test after 10
 12. Observe logs and errors ongoing

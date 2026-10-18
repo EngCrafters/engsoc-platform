@@ -11,50 +11,77 @@ export async function submitStagingRegistration({
   attendeeEmail,
   landingOidcToken,
 }) {
-  assert.match(eventId, /^[a-f0-9-]{36}$/);
-  assert.ok(landingOidcToken, "Landing preview identity required");
-  const browser = await chromium.launch({ headless: true });
+  if (
+    typeof eventId !== "string" ||
+    !/^[a-f0-9-]{36}$/.test(eventId) ||
+    typeof landingOidcToken !== "string" ||
+    !/^\S+$/.test(landingOidcToken)
+  ) {
+    throw new Error(
+      "Valid staging event and Landing preview identity required"
+    );
+  }
+  let browser;
   try {
+    browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
       viewport: { width: 1280, height: 850 },
     });
     const writes = [];
+    let corePostAttempts = 0;
+    let routeValidationFailed = false;
     await context.route("**/*", async (route) => {
-      const request = route.request();
-      const url = new URL(request.url());
-      if (url.origin === LANDING) {
-        await route.continue({
-          headers: {
-            ...request.headers(),
-            "x-vercel-trusted-oidc-idp-token": landingOidcToken,
-          },
-        });
-      } else {
+      // Route callbacks reject independently of the caller's awaited response.
+      // Contain every failure here: abort before network and retain only a flag.
+      try {
+        const request = route.request();
+        const url = new URL(request.url());
         if (request.method() === "POST" && url.origin === CORE) {
-          assert.equal(url.pathname, `/v1/events/${eventId}/registrations`);
+          corePostAttempts++;
+          if (
+            corePostAttempts !== 1 ||
+            url.pathname !== `/v1/events/${eventId}/registrations` ||
+            url.search
+          ) {
+            throw new Error("Unexpected staging browser submission");
+          }
           const headers = await request.allHeaders();
           for (const key of [
             "authorization",
             "cookie",
             "x-vercel-trusted-oidc-idp-token",
             "x-vercel-protection-bypass",
-          ])
-            assert.equal(
-              headers[key],
-              undefined,
-              "Browser registration contains credentials"
-            );
+          ]) {
+            if (headers[key] !== undefined) {
+              throw new Error("Browser registration contains credentials");
+            }
+          }
           const body = request.postDataJSON();
-          assert.deepEqual(
-            Object.keys(body).sort(),
-            ["attendeeName", "attendeeEmail", "intent"].sort()
-          );
-          assert.equal(body.attendeeName, attendeeName);
-          assert.equal(body.attendeeEmail, attendeeEmail);
-          assert.equal(body.intent, "register");
+          const keys = Object.keys(body).sort();
+          if (
+            JSON.stringify(keys) !==
+              JSON.stringify(["attendeeEmail", "attendeeName", "intent"]) ||
+            body.attendeeName !== attendeeName ||
+            body.attendeeEmail !== attendeeEmail ||
+            body.intent !== "register"
+          ) {
+            throw new Error("Unexpected browser registration payload");
+          }
           writes.push(request);
         }
-        await route.continue();
+        if (url.origin === LANDING) {
+          await route.continue({
+            headers: {
+              ...request.headers(),
+              "x-vercel-trusted-oidc-idp-token": landingOidcToken,
+            },
+          });
+        } else {
+          await route.continue();
+        }
+      } catch {
+        routeValidationFailed = true;
+        await route.abort().catch(() => {});
       }
     });
     const page = await context.newPage();
@@ -71,16 +98,24 @@ export async function submitStagingRegistration({
     );
     await page.getByLabel("Full name").fill(attendeeName);
     await page.getByLabel("Email address").fill(attendeeEmail);
-    const pending = page.waitForResponse(
-      (r) =>
-        r.url() === `${CORE}/v1/events/${eventId}/registrations` &&
-        r.request().method() === "POST",
-      { timeout: 30000 }
-    );
+    const pending = page
+      .waitForResponse(
+        (r) =>
+          r.url() === `${CORE}/v1/events/${eventId}/registrations` &&
+          r.request().method() === "POST",
+        { timeout: 30000 }
+      )
+      .catch(() => null);
     await page.getByRole("button", { name: "Register", exact: true }).click();
     const response = await pending;
+    if (!response) throw new Error("Staging browser response unavailable");
     const text = await response.text();
     const headers = new Headers(await response.allHeaders());
+    assert.equal(
+      routeValidationFailed,
+      false,
+      "Browser route validation failed"
+    );
     assert.equal(writes.length, 1, "One submission must send one POST");
     assert.equal(
       headers.get("x-request-id"),
@@ -91,12 +126,24 @@ export async function submitStagingRegistration({
       { timeout: 15000 }
     );
     await page.waitForTimeout(1000);
+    assert.equal(
+      routeValidationFailed,
+      false,
+      "Browser route validation failed"
+    );
+    assert.equal(corePostAttempts, 1, "Unexpected browser submission attempt");
     assert.equal(writes.length, 1, "Registration must not retry automatically");
     console.log(
       "PASS live Landing browser: confirmed registration, direct credential-free Core POST, exact payload, request ID and no retry"
     );
     return { status: response.status(), body: JSON.parse(text), text, headers };
+  } catch {
+    // Playwright assertions can include DOM text or header actual values.
+    // Expose no original error/cause, even when this helper is called directly.
+    throw new Error(
+      "Staging browser verification failed; private diagnostics suppressed"
+    );
   } finally {
-    await browser.close();
+    if (browser) await browser.close().catch(() => {});
   }
 }

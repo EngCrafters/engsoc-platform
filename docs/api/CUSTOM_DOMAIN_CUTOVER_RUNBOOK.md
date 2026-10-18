@@ -1,6 +1,6 @@
 # ESSQU custom-domain cutover checklist
 
-Status: **pre-domain preparation, October 18, 2026**. No custom domain or DNS
+Status: **pre-domain preparation, October 19, 2026 (Dubai)**. No custom domain or DNS
 change has been made. This document records gates for a later cutover, not
 authorization to execute them now. Preserve the existing Core service and Auth
 configuration until each prerequisite is verified.
@@ -13,8 +13,9 @@ configuration until each prerequisite is verified.
 | Landing   | Private `EngCrafters/essqu-web`, preserved source `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0`; Git-connected Vercel project `essqu-web` (`prj_yXxcM8AlVAuARpepUJMUAo4N20AL`) | `essqu.com`, `www.essqu.com`       |
 
 GitHub identifies `EngCrafters` as a User namespace, not an Organization.
-Landing deployment readiness and its cross-project staging smoke are pending.
-Project creation and a Git connection alone do not prove a working deployment.
+Landing cross-project staging verification passed, including a real credential-free
+confirmed registration. Production API reads passed; Landing is Ready at `https://essqu-web.vercel.app`.
+Final actual-secret browser verification passed for English/Arabic on desktop/mobile.
 
 ## Pre-domain gates
 
@@ -22,27 +23,32 @@ Project creation and a Git connection alone do not prove a working deployment.
 - [x] Migration 0024 applied to staging `wnrdgnmmcdedmilnzzsl` through MCP.
 - [x] Staging catalog invariants verified: forced RLS, owner SELECT policy,
       runtime-only routine execution, no runtime table grants, five registrations retained.
-- [ ] Staging API client provisioned privately and installed server-side on Landing.
-- [ ] Staging Core and Landing deployments verified at their actual URLs.
-- [ ] Live restricted-runtime HTTP verification and cross-project browser registration
+- [x] Staging API client provisioned privately and installed server-side on Landing.
+- [x] Staging Core and Landing deployments verified at their actual URLs.
+- [x] Live restricted-runtime HTTP verification and cross-project browser registration
       pass, including confirmed, explicit waitlist, duplicate and capacity-race outcomes.
-- [ ] Final local gates, GitHub CI and Vercel deployment evidence recorded for both repositories.
+- [x] Final local gates, GitHub CI and Vercel deployment evidence recorded for both repositories.
 - [x] Owner accepted backup risk only for unchanged additive 0024 after live staging/concurrency passes; no backup is claimed.
-- [ ] Live staging/concurrency gate and exact-file preflight for the waiver completed.
-- [ ] Production migration 0024 applied explicitly and catalog invariants rechecked.
-- [ ] Production `events:read` client installed only in Landing's server environment.
+- [x] Live staging/concurrency gate and exact-file preflight for the waiver completed.
+- [x] Production migration 0024 applied explicitly and catalog invariants rechecked.
+- [x] Production `events:read` client installed only in Landing's server environment.
 
-Production currently lacks 0024, retains seven registrations, has forced RLS on
-all ten application tables, zero `app_runtime` table grants and NOBYPASSRLS.
+Production has 0024 version `20261018200028`, retains seven registrations with an
+unchanged fingerprint, and has forced RLS on eleven tables (ten prior plus registry),
+zero direct/effective `app_runtime` table privileges and NOBYPASSRLS.
 The Free organization returned no listed backup or PITR point in authenticated
 inspection (`backups: null`, `physical_backup_data: {}`, `pitr_enabled: false`,
 `walg_enabled: true`). The owner waived managed-backup readiness only for exact
 unchanged migration 0024, conditional on successful live staging and concurrency
 checks. This is a recorded risk acceptance, not evidence of recovery readiness.
-Keep production 0024 pending until those checks pass; the waiver covers no other
-DDL or existing-row DML. Do not take a local dump/export of PII, upgrade the
+Those checks passed before the exact 0024 application in an explicit transaction;
+the waiver covers no other DDL or existing-row DML. Do not take a local dump/export of PII, upgrade the
 subscription, or change domains/Auth under this waiver. The owner confirmed
 retaining Landing under the `EngCrafters` User namespace.
+
+Pre-domain functional verification is complete. Existing fresh real-credential Auth
+pilot flows, the leaked-password protection warning and development-only advisory
+follow-ups remain deferred; none is represented as completed by browser boundary checks.
 
 ## Future domain and Auth sequence
 
@@ -56,8 +62,11 @@ retaining Landing under the `EngCrafters` User namespace.
    `AUTH_REDIRECT_ORIGIN` to `https://admin.essqu.com` together and deploy.
 5. Verify sign-in, sign-out, emailed recovery, reset, signed-out protected-route
    redirects and rejected foreign `next` values before retiring the old origin.
-6. Configure Landing's server-only production Core base URL and read key, then
-   attach `essqu.com` and redirect `www.essqu.com` to the apex; verify DNS and TLS.
+6. Switch both Landing URL variables together to the custom API:
+   `CORE_API_BASE_URL=https://api.essqu.com/v1` for server reads and
+   `NEXT_PUBLIC_CORE_API_BASE_URL=https://api.essqu.com/v1` for browser registration.
+   Keep the read key server-only. Deploy, attach `essqu.com`, redirect
+   `www.essqu.com` to the apex, and verify DNS/TLS.
 7. Verify exact-origin registration CORS, public event list/detail, safe error
    handling, no credential in browser assets, and no database credential in Landing.
    Use staging for attendee-writing scenarios; do not manufacture production registrations.
@@ -65,7 +74,11 @@ retaining Landing under the `EngCrafters` User namespace.
    deploy. Check API-host `/admin/login` and `/auth/*` return 404, admin-host
    `/v1/events` returns 404, and intended API/admin routes remain available.
 9. Observe both deployments and retain the previous callback/rollback settings
-   until normal operation is established.
+   until normal operation is established. Then remove temporary production origin
+   `https://essqu-web.vercel.app` from Core's exact-origin CORS allowlist. Retain
+   intended custom origins and separately configured staging origins. Redeploy
+   Core; verify custom-origin CORS works and the retired origin receives no
+   allow-origin header before retiring old aliases.
 
 ## Rollback and evidence
 

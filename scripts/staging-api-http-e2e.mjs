@@ -11,6 +11,14 @@ import { submitStagingRegistration } from "./lib/staging-browser-registration.mj
 // This is deliberately separate from the hermetic unit suite and local diagnostic.
 // Provision a preview with staging app_runtime first; never start a privileged app.
 const env = process.env;
+if (
+  typeof env.CORE_HTTP_E2E_LANDING_OIDC_TOKEN !== "string" ||
+  !/^\S+$/.test(env.CORE_HTTP_E2E_LANDING_OIDC_TOKEN)
+) {
+  throw new Error(
+    "Full staging HTTP E2E requires a Landing preview identity before fixture setup"
+  );
+}
 const base = assertStagingHttpTarget(env);
 const origin = "https://essqu-web-git-staging-eng-crafters.vercel.app";
 const runId = randomUUID();

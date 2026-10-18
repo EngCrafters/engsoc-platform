@@ -1,10 +1,12 @@
 # Current work - handoff state
 
-**CURRENT — pre-domain preparation (October 18, 2026):** This note supersedes
+**CURRENT — pre-domain functional verification complete (October 19, 2026, Dubai):** This note supersedes
 the dated handoffs below. Work began at Core `15875f4`; the serving Core remains
 `https://engsoc-platform.vercel.app`. ADR 0016 separates Landing from Core.
-Core source changes through `4ca9f82` are pushed to main and staging. The
-release documentation is being updated as live verification proceeds.
+Core main `6e71995` passed GitHub CI `39160613952` and reached Vercel deployment
+`https://engsoc-platform-59x8jkk42-eng-crafters.vercel.app`. Core deployment ID is `dpl_F5pTn1aWz6rudnq9nyTy5J9pgVeH`.
+Staging includes runtime fixes `25c433d` and the CI-only
+shared-fixture assertion correction `4ca9f82`.
 The private GitHub repository `EngCrafters/essqu-web` preserves Landing source
 `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0` and is connected to the separate
 Vercel project `essqu-web` (`prj_yXxcM8AlVAuARpepUJMUAo4N20AL`). GitHub reports
@@ -15,15 +17,44 @@ Supabase MCP. Read-only invariants passed: forced RLS with the routine-owner
 SELECT policy, runtime routine execution, no anon/authenticated/PUBLIC execution,
 zero runtime table grants, and five existing registrations retained. Staging
 clients and the restricted runtime are provisioned. Core and Landing serve their
-explicit staging aliases. Live reads, pagination, CORS, capacity-one concurrency
-and the first registration window passed; the complete live matrix remains in
-progress. Landing desktop/mobile English/Arabic read-only QA and CI passed.
+explicit staging aliases. Full live run `7e31d8dd-bea1-4c25-9edc-6d83b93fc046`
+passed read authentication/scope and exact DTO, visibility, precise upcoming/past
+pagination, CORS and validation, all five conflict reasons, confirmed/waitlist and
+duplicate outcomes, capacity-one concurrency (201/409, exactly one confirmed),
+and real 429 with Retry-After 600. A real Landing browser registration returned
+201 with credential-free exact payload, request-ID echo and no automatic retry.
+Four anonymous success audit outcomes reconciled. Cleanup left zero fixtures and
+retained the five existing staging registrations. Landing English/Arabic
+desktop/mobile QA and CI passed.
 
-Production `rbeyqrfypowyocmnmvwu` still lacks migration 0024 and retains seven
-registrations. All ten application tables have forced RLS, `app_runtime` has no
-table grants and is NOBYPASSRLS. The owner explicitly accepted the lack of a
+Production `rbeyqrfypowyocmnmvwu` has migration `0024_api_clients`, version
+`20261018200028` (October 18 UTC; completion October 19 Dubai), applied through
+MCP after all seven prechecks and the successful live matrix. All eleven
+application tables (ten prior plus registry) have forced RLS. The registry owner,
+owner SELECT policy, verifier owner/SECURITY DEFINER/search path and execution
+grants passed postflight. `app_runtime` has zero direct and effective table
+privileges and is NOBYPASSRLS; anon/authenticated/PUBLIC cannot execute the verifier.
+Seven registrations retained the exact pre/post fingerprint
+`d6768a9e715e9e9fb4a43f63b5616214`; `register_for_event` retained fingerprint
+`54ffeccd2ed187f21f420be46e95c17f`. Bogus API reads changed from 503 to 401.
+Production client `ESSQU Landing Production` is active with production-only
+`events:read`, installed as a Landing Production Secret. Live reads passed
+401/403/200, existing public detail 200, and immediate canary revocation 401.
+Landing production is Ready at `https://essqu-web.vercel.app`, deployment
+`essqu-obivj77wp-eng-crafters.vercel.app`, merge
+`8f5c0bffb0cf431c98777bc3d6111f014dd3db7b`, CI `39161420446` passed.
+Landing deployment ID is `dpl_4Kj8rku9wS9iUUKdTwCHsaRcPU8M`.
+Final actual-secret browser verification passed for English/Arabic on desktop/mobile: 16
+main-route responses plus four details were 200; one upcoming/two past events,
+correct direction and no overflow. The exact private key was compared in memory
+against 358 loaded HTML/RSC/JS responses plus URLs/headers/storage/cookies with
+zero violations; 20 canceled-prefetch bodies were separately unreadable, with no
+pending scans. Four registration POSTs were aborted before network with exact
+credential-free payload and request ID, generic failure guidance and no retry
+within 1.2 seconds. No production registration was written. The real browser
+confirmed-201 flow is proven on staging. The owner explicitly accepted the lack of a
 verified managed backup **only for unchanged additive migration 0024**, after
-successful live staging and concurrency checks. That prerequisite remains pending;
+successful live staging and concurrency checks. That prerequisite passed;
 the waiver does not authorize other DDL, existing-row DML, a local dump/PII export,
 a subscription upgrade or domain/Auth changes. The owner confirmed keeping
 Landing under the GitHub User namespace `EngCrafters`.
@@ -31,19 +62,23 @@ The Supabase organization is Free; authenticated backup
 inspection returned `backups: null`, empty `physical_backup_data`,
 `pitr_enabled: false`, and `walg_enabled: true`. WAL archiving alone does not
 establish a usable backup or restoration path. No backup is claimed. Production
-0024 remains unapplied until the staging gate passes and exact-file preflight is
-recorded; API-client provisioning is a separate scoped operation, and production
-attendee mutation is not part of this verification.
+0024 was applied under this narrow waiver; API-client provisioning is a separate
+scoped operation, and no production attendee mutation was used for verification.
 
 Independent review found 0024 byte-identical at `15875f4` and `1eac4db`:
 SHA-256 `cab56a820213bf11bca3f72d0581ed3505b509de8886e66837446c81b5de5479`.
 It creates only registry objects and touches no existing rows. Its final checks
 cover only registry runtime table grants, runtime execution and PUBLIC execution;
 pre/post checks must separately verify RLS, ownership, other execution grants and
-existing data counts. The SQL has no explicit transaction wrapper; the planned
-MCP application sends `BEGIN;`, the unchanged reviewed 0024 file, and `COMMIT;`
+existing data counts. The SQL has no explicit transaction wrapper; the completed
+MCP application sent `BEGIN;`, the unchanged reviewed 0024 file, and `COMMIT;`
 in one request, with no other DDL or migration. This makes atomicity explicit
 without assuming undocumented backend transaction behavior.
+
+Pre-domain functionality is complete. Fresh real-credential login/logout and
+emailed recovery/reset were not repeated; existing leaked-password protection
+and development-only advisory follow-ups remain deferred. No backup was created
+and the waiver does not extend to future DDL.
 
 Custom domains and DNS are untouched. Auth origins and host enforcement remain
 unchanged. The current release checklist is
