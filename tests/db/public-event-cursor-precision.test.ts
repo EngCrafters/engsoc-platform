@@ -41,6 +41,7 @@ describe("public event cursor PostgreSQL timestamp precision", () => {
         const collected: string[] = [];
         let cursor: string | undefined;
         let pages = 0;
+        let preciseCursorSeen = false;
         do {
           const page = await getPublicEventPage({ period, cursor });
           for (const event of page.events) {
@@ -52,14 +53,16 @@ describe("public event cursor PostgreSQL timestamp precision", () => {
               expect(event).not.toHaveProperty("cursorDate");
             }
           }
-          if (
-            page.nextCursor &&
-            page.events.some((event) => ids.includes(event.id))
-          ) {
+          if (page.nextCursor) {
             const payload = JSON.parse(
               Buffer.from(page.nextCursor, "base64url").toString("utf8")
             );
-            expect(payload.date).toContain(".123456");
+            // Other suites may leave public fixtures on the same page. Its
+            // cursor describes the final row, not every row on that page.
+            if (ids.includes(payload.id)) {
+              expect(payload.date).toContain(".123456");
+              preciseCursorSeen = true;
+            }
           }
           cursor = page.nextCursor ?? undefined;
           expect(++pages).toBeLessThan(100);
@@ -67,6 +70,7 @@ describe("public event cursor PostgreSQL timestamp precision", () => {
         expect(collected).toEqual(
           period === "upcoming" ? ids : ids.toReversed()
         );
+        expect(preciseCursorSeen).toBe(true);
         expect(state.execute).toHaveBeenCalledTimes(pages);
       } finally {
         await admin`DELETE FROM public.events WHERE committee_id=${committee};`;
