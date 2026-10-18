@@ -78,6 +78,9 @@ describe("POST /v1/events/{id}/registrations", () => {
     expect(res.headers.get("access-control-allow-origin")).toBe(
       "https://essqu.com"
     );
+    expect(res.headers.get("access-control-expose-headers")).toBe(
+      "X-Request-Id, Retry-After"
+    );
     expect(await res.json()).toEqual({ data: { status: "confirmed" } });
   });
 
@@ -95,6 +98,7 @@ describe("POST /v1/events/{id}/registrations", () => {
     );
     expect(res.status).toBe(403);
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
+    expect(res.headers.get("access-control-expose-headers")).toBeNull();
     expect(state.registerForEvent).not.toHaveBeenCalled();
   });
 
@@ -215,6 +219,46 @@ describe("POST /v1/events/{id}/registrations", () => {
     expect(
       (await POST(post(VALID), ctx)).headers.get("retry-after")
     ).toBeNull();
+  });
+
+  it.each([
+    ["already_registered", "already-registered"],
+    ["already_waitlisted", "already-waitlisted"],
+    ["event_full", "event-full"],
+    ["registration_closed", "registration-closed"],
+    ["registration_available", "registration-available"],
+  ] as const)(
+    "publishes a safe conflict reason for %s",
+    async (error, reason) => {
+      state.registerForEvent.mockResolvedValue({ ok: false, error });
+      const res = await POST(
+        post(VALID, { "x-request-id": "landing-reason-123" }),
+        ctx
+      );
+      expect(res.status).toBe(409);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(await res.json()).toEqual({
+        type: "https://api.essqu.com/problems/conflict",
+        title: "Conflict",
+        status: 409,
+        code: "conflict",
+        requestId: "landing-reason-123",
+        reason,
+      });
+    }
+  );
+
+  it("exposes retry guidance to allowed browsers without adding a conflict reason", async () => {
+    state.registerForEvent.mockResolvedValue({
+      ok: false,
+      error: "rate_limited",
+    });
+    const res = await POST(post(VALID), ctx);
+    expect(res.headers.get("retry-after")).toBe("600");
+    expect(res.headers.get("access-control-expose-headers")).toBe(
+      "X-Request-Id, Retry-After"
+    );
+    expect(await res.json()).not.toHaveProperty("reason");
   });
 
   it("answers a preflight for an allowed origin", async () => {

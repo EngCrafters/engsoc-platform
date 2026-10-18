@@ -1,18 +1,29 @@
 # ESSQU Core — production cutover runbook
 
-Status: **every step below is an owner action.** The Core code for all of it is
-merged and deployed; nothing here has been executed against production.
+Status (October 18, 2026): **production cutover is held**. Core continues serving
+at `https://engsoc-platform.vercel.app`; custom domains, DNS, Auth origins and
+host enforcement remain unchanged. The current pre-domain work has not yet been
+committed or deployed. The checklist below describes future operations; it is
+not evidence that an operation has run.
+
+Staging `wnrdgnmmcdedmilnzzsl` has migration 0024 applied through Supabase MCP.
+Forced RLS, the routine-owner SELECT policy, restricted execution and zero
+runtime table grants passed; five existing registrations were retained.
+Production `rbeyqrfypowyocmnmvwu` lacks 0024 and retains seven registrations.
+All ten application tables have forced RLS and runtime table grants remain zero.
+Staging client/deployment/live verification is pending. See the
+[custom-domain runbook](CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md) for the release gates.
 
 Ordering follows the program's release order and is not negotiable: Core
 compatible first, landing switches last.
 
-| #   | Gate                    | State           |
-| --- | ----------------------- | --------------- |
-| A   | Production DB migration | **not applied** |
-| B   | Production API client   | **not created** |
-| C   | DNS / domain cutover    | **not started** |
-| D   | Auth redirect cutover   | **not started** |
-| E   | Backup                  | **not taken**   |
+| #   | Gate                    | State                      |
+| --- | ----------------------- | -------------------------- |
+| A   | Production DB migration | **not applied**            |
+| B   | Production API client   | **not created**            |
+| C   | DNS / domain cutover    | **not started**            |
+| D   | Auth redirect cutover   | **not started**            |
+| E   | Managed recovery path   | **not verified; blocks A** |
 
 ---
 
@@ -41,8 +52,8 @@ register_for_event SUCCESS after the upgrade
 
 valid client 1 row
 correct staging env 1 row
-wrong hash / unknown prefix / revoked / expired /
-missing scope / wrong env 0 rows each
+wrong hash / unknown prefix / inactive / revoked / expired / wrong env 0 rows each
+valid active client without the required scope 1 row, has_scope = false
 `@
 
 `db:check` is green. The migration is **transactional and self-verifying**: its
@@ -55,15 +66,15 @@ SECURITY` applies to the table _owner_, so with no policy the
 valid client — the auth path was silently inert. Fixed with a SELECT-only policy
 for `uc02_routine_owner`. Do not "tidy" that policy away.
 
-**What is needed to apply it:** a privileged DDL route. The documented route is
-the Supabase MCP `apply_migration` tool. From this workstation the data plane to
-the production pooler times out (`CONNECT_TIMEOUT` on 5432, with and without a
-password) and no `DATABASE_URL` is provisioned in Vercel, so **the migration was
-deliberately not applied.**
+**What is needed to apply it:** first verify the managed recovery gate in section
+E, then use the privileged Supabase MCP `apply_migration` route against the
+explicit production ref. MCP successfully applied the same migration to staging;
+the production hold is recovery readiness, not lack of a DDL tool. Production
+DDL remains unperformed.
 
 **Do not use `npx supabase db push`.** Production's history is
 timestamp-versioned while this repository's files are `NNNN_`-named, so a push
-has no defined scope. `npm run db:target` refuses it for that reason.
+has no defined scope. Use the explicit single migration and verify its scope.
 
 **Verify afterwards, read-only:**
 
@@ -79,9 +90,17 @@ select has_function_privilege('anon','private.verify_api_client(text,text,text,t
 bogus token flips from **503** to **401**. That is the signal the registry is
 live.
 
-**Rollback:** `drop function private.verify_api_client(text,text,text,text);
-drop table private.api_clients;` — nothing references either until a client is
-created, so this is safe and loses no business data.
+Both event-read endpoints return **401** (`unauthorized`) for missing, malformed,
+unknown, wrong-hash, inactive, revoked, expired or wrong-environment credentials.
+A valid active credential without `events:read` returns **403** (`forbidden`);
+the registry returns its client row with `has_scope = false` so authentication
+and scope denial remain distinct. A registry failure returns **503**.
+
+**Rollback:** Prefer disabling consumers and reverting application configuration
+while preserving the additive registry and audit history. Dropping the function
+and table is a separate destructive operation requiring a verified absence of
+clients/dependencies and explicit authorization; do not treat it as a routine
+recovery command after client provisioning.
 
 ---
 
@@ -198,11 +217,18 @@ proven.
 
 ## E. Backup
 
-`docs/Platform_Maintenance_Runbook.md` requires a fresh restorable logical backup
-before a schema change. Taking one means copying real attendee rows — names,
-emails — to storage outside this repository. **That is a data-handling decision,
-not an engineering default**, and it has not been made. The migration is additive
-and touches no row, which lowers the risk but does not remove the requirement.
+Production DDL requires a verified managed recovery path. The authenticated
+Supabase backup inspection on October 18 returned `backups: null`, empty
+`physical_backup_data`, `pitr_enabled: false`, and `walg_enabled: true`; the
+organization is on Free. These values do not establish an available restore
+point. WAL archiving alone is insufficient evidence.
+
+Have the owner enable or identify suitable managed recovery and record the
+available restore point, retention and restoration procedure before applying
+0024 to production. If that cannot be verified, leave production unchanged and
+continue staging work. Do not silently substitute a local export of real attendee
+data or infer readiness from historical logical-restore evidence. No new
+production attendee export or backup has been taken in this pre-domain pass.
 
 ---
 

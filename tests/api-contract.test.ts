@@ -83,6 +83,15 @@ describe("problem details", () => {
     const withoutErrors = await problem("invalid-fields", RID).json();
     expect(withoutErrors.errors).toBeUndefined();
   });
+
+  it("keeps legacy conflicts valid and restricts reasons to conflicts", async () => {
+    expect(await problem("conflict", RID).json()).not.toHaveProperty("reason");
+    expect(
+      await problem("service-unavailable", RID, {
+        reason: "event-full",
+      }).json()
+    ).not.toHaveProperty("reason");
+  });
 });
 
 describe("CORS", () => {
@@ -113,6 +122,7 @@ describe("CORS", () => {
   it("returns only Vary for a rejected origin", () => {
     const headers = corsHeaders("https://evil.example");
     expect(headers["access-control-allow-origin"]).toBeUndefined();
+    expect(headers["access-control-expose-headers"]).toBeUndefined();
     expect(headers.vary).toBe("Origin");
   });
 

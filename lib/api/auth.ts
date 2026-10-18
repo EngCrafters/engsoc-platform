@@ -61,11 +61,11 @@ function bearerToken(request: Request): string | null {
 /**
  * Authenticate a request for a scope.
  *
- * Fails closed: a malformed token, an unknown prefix, a wrong hash, an inactive
- * client, an expired client, a revoked client, a wrong environment and a
- * missing scope all produce a refusal, and the caller learns only that it was
- * refused. Nothing about which check failed is returned, so the response cannot
- * be used to enumerate tokens.
+ * Fails closed: missing or malformed tokens, unknown prefixes, wrong hashes,
+ * inactive, expired or revoked clients, and wrong environments all return
+ * unauthorized without identifying which credential check failed. A valid
+ * active credential missing the required scope returns forbidden. Registry
+ * failures return service-unavailable.
  */
 export async function authenticate(
   request: Request,

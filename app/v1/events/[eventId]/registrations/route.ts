@@ -1,7 +1,11 @@
 import { registerForEvent } from "@/lib/registrations";
 import { resolveClientIp } from "@/lib/client-ip/server";
 import { corsHeaders, isAllowedOrigin, preflight } from "@/lib/api/cors";
-import { publicCodeFor, toRegistrationDto } from "@/lib/api/dto";
+import {
+  publicCodeFor,
+  registrationConflictReasonFor,
+  toRegistrationDto,
+} from "@/lib/api/dto";
 import { json, problem, readJsonBody, requestIdFrom } from "@/lib/api/http";
 
 export const dynamic = "force-dynamic";
@@ -106,7 +110,10 @@ export async function POST(
       // The canonical limiter is a rolling ten-minute window, so that is the
       // honest retry hint.
       if (code === "rate-limited") headers["retry-after"] = "600";
-      return problem(code, requestId, { headers });
+      return problem(code, requestId, {
+        headers,
+        reason: registrationConflictReasonFor(result.error),
+      });
     }
 
     return json(toRegistrationDto(result), {

@@ -1,5 +1,44 @@
 # Current work - handoff state
 
+**CURRENT — pre-domain preparation (October 18, 2026):** This note supersedes
+the dated handoffs below. Work began at Core `15875f4`; the serving Core remains
+`https://engsoc-platform.vercel.app`. ADR 0016 separates Landing from Core.
+The private GitHub repository `EngCrafters/essqu-web` preserves Landing source
+`17bdcc4244f608a5b3ec8361db470ec1ae32a8c0` and is connected to the separate
+Vercel project `essqu-web` (`prj_yXxcM8AlVAuARpepUJMUAo4N20AL`). GitHub reports
+the `EngCrafters` namespace as type **User**, not Organization.
+
+Staging `wnrdgnmmcdedmilnzzsl` has migration `0024_api_clients` applied through
+Supabase MCP. Read-only invariants passed: forced RLS with the routine-owner
+SELECT policy, runtime routine execution, no anon/authenticated/PUBLIC execution,
+zero runtime table grants, and five existing registrations retained. Staging API
+client provisioning, serving deployment and live cross-project verification are
+still in progress; do not describe them as passed until their evidence is recorded.
+
+Production `rbeyqrfypowyocmnmvwu` still lacks migration 0024 and retains seven
+registrations. All ten application tables have forced RLS, `app_runtime` has no
+table grants and is NOBYPASSRLS. Production DDL remains held for a verified
+managed recovery path. The Supabase organization is Free; authenticated backup
+inspection returned `backups: null`, empty `physical_backup_data`,
+`pitr_enabled: false`, and `walg_enabled: true`. WAL archiving alone does not
+establish a usable backup or restoration path. No production migration, API
+client or attendee mutation is authorized by this status note.
+
+Custom domains and DNS are untouched. Auth origins and host enforcement remain
+unchanged. The current release checklist is
+[CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md](api/CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md);
+[PRODUCTION_CUTOVER_RUNBOOK.md](api/PRODUCTION_CUTOVER_RUNBOOK.md) retains the
+production migration and credential procedure.
+
+Final local gates for the updated runtime source passed: format, lint, migration
+consistency, types, 398 unit/database tests across 40 files, and webpack build.
+The browser suite passed 43 tests with one intentional skip against the updated
+runtime source; the missing pinned Chromium executable was installed before that
+successful rerun. Later script/test additions require their own relevant checks.
+`npm audit --omit=dev --json` returned zero vulnerabilities on October 18.
+The older disposable HTTP script produced expected diagnostics but uses a local
+superuser and lacks assertions; it is not evidence of a hosted restricted-role run.
+
 **FOCUSED PRODUCTION FIX (October 8, 2026):** CSV export investigation confirmed
 native form POSTs sent `Origin: null` under the global `no-referrer` policy;
 Vercel Host/forwarded headers and request URL were correct. Registration-only

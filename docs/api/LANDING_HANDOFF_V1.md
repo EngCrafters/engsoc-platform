@@ -1,9 +1,22 @@
 # Core Public API v1 — landing handoff
 
-Production public site: https://essqu.com
-Production API: https://api.essqu.com
-Production admin: https://admin.essqu.com
+Planned public site: https://essqu.com
+Planned API: https://api.essqu.com
+Planned admin: https://admin.essqu.com
 API version: **v1**
+
+**Pre-domain status (October 18, 2026):** These hostnames have not been attached
+or cut over. Core currently serves at `https://engsoc-platform.vercel.app`.
+The private `EngCrafters/essqu-web` repository preserves source
+`17bdcc4244f608a5b3ec8361db470ec1ae32a8c0` and is Git-connected to the separate
+Vercel `essqu-web` project. `EngCrafters` is a GitHub User namespace.
+Staging has migration 0024; staging provisioning and live integration checks
+remain pending. Production has no migration 0024 or production read credential;
+production DDL awaits a verified managed recovery path. Consult
+[current work](../CURRENT_WORK.md) and the
+[custom-domain checklist](CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md) before configuring
+a consumer. Do not point Landing at an unverified API or copy a production key
+into staging.
 
 The contract is `docs/api/openapi.v1.yaml`. This page is the practical
 companion: how to call it, and what you must not do.
@@ -76,23 +89,42 @@ staging landing hostname is configured explicitly instead.
 If `www.essqu.com` always redirects and never serves the app, it can be removed
 from the allowlist later.
 
+Allowed-origin responses expose `X-Request-Id` and `Retry-After` to browser
+JavaScript through `Access-Control-Expose-Headers`.
+
 ## Error handling
 
 Errors are `application/problem+json` with a stable `code`:
 
-| Status    | code                                           | Meaning for the landing site                                           |
-| --------- | ---------------------------------------------- | ---------------------------------------------------------------------- |
-| 400       | `bad-request`                                  | Malformed body. A bug on your side.                                    |
-| 403       | `forbidden`                                    | Origin not allowed, or key lacks `events:read`.                        |
-| 404       | `not-found`                                    | Unknown event, or not public.                                          |
-| 409       | `conflict`                                     | Already registered, full, closed, etc. Show the message, do not retry. |
-| 413 / 415 | `payload-too-large` / `unsupported-media-type` | Fix the request.                                                       |
-| 422       | `invalid-fields`                               | Show `errors[].field`.                                                 |
-| 429       | `rate-limited`                                 | Back off. Honour `Retry-After`.                                        |
-| 503       | `service-unavailable`                          | Core problem. Show a neutral message and retry later.                  |
+| Status    | code                                           | Meaning for the landing site                                                                              |
+| --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 400       | `bad-request`                                  | Malformed body. A bug on your side.                                                                       |
+| 401       | `unauthorized`                                 | Read credential missing, malformed, unknown, wrong-hash, inactive, revoked, expired or wrong-environment. |
+| 403       | `forbidden`                                    | Registration origin not allowed, or a valid active read credential lacks `events:read`.                   |
+| 404       | `not-found`                                    | Unknown event, or not public.                                                                             |
+| 409       | `conflict`                                     | Already registered, full, closed, etc. Show the message, do not retry.                                    |
+| 413 / 415 | `payload-too-large` / `unsupported-media-type` | Fix the request.                                                                                          |
+| 422       | `invalid-fields`                               | Show `errors[].field`.                                                                                    |
+| 429       | `rate-limited`                                 | Back off. Honour `Retry-After`.                                                                           |
+| 503       | `service-unavailable`                          | Core problem. Show a neutral message and retry later.                                                     |
 
 Never display `type` or `requestId` to a visitor. Log `requestId` — it is how
 a failure is traced across the two systems.
+
+Registration `409` responses can include an optional `reason`. The existing
+`code: "conflict"` and status remain unchanged. Handle these reasons explicitly:
+
+| reason                   | Visitor guidance                                                            |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `already-registered`     | This email is already registered.                                           |
+| `already-waitlisted`     | This email is already on the waitlist.                                      |
+| `event-full`             | Offer an explicit waitlist choice; never submit it automatically.           |
+| `registration-closed`    | Registration is closed.                                                     |
+| `registration-available` | Seats are available; offer normal registration instead of waitlist joining. |
+
+If `reason` is absent (including older Core deployments) or unknown, show a
+generic conflict message and let the visitor refresh. Do not infer a reason
+from the problem title or retry automatically.
 
 ## Retry policy
 

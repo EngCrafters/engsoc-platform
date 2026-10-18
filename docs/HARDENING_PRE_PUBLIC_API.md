@@ -153,23 +153,23 @@ hits were UI copy reading "Resend invitation"). Removed; lockfile regenerated.
 
 ## F-09 — advisories, classified
 
-`npm audit --omit=dev --json` reports **exactly one production-runtime
-advisory**:
+The original hardening audit at Next `16.3.6` reported **one
+production-runtime advisory**:
 
 | Package | Severity | Direct | Fix available        |
 | ------- | -------- | ------ | -------------------- |
 | `next`  | high     | yes    | `16.4.2` (non-major) |
 
-Everything else in the full audit (5 moderate, 11 high) is **dev-only**: `esbuild`
+Everything else in that audit (5 moderate, 11 high) was **dev-only**: `esbuild`
 via `drizzle-kit`'s `@esbuild-kit` chain, `fast-glob` via ESLint plugins, and
-`brace-expansion` / `braces` through the toolchain. None of it ships.
+`brace-expansion` / `braces` through the toolchain. Those were development dependencies.
 
-**Deferred deliberately.** `npm audit fix --force` was not run. The single
-production item is a Next **minor** upgrade (16.3.6 → 16.4.2), which is not a
-patch bump: it can change App Router behaviour, and performing it inside a
-hardening+API program would invalidate the regression evidence this branch
-depends on. It is recorded here as the top outstanding security item and should
-be its own change, with the full suite as its acceptance test.
+That snapshot is historical. The current manifest and lockfile select Next
+`16.4.2`, so the original Next upgrade is no longer an outstanding change.
+The original pass deferred it to preserve its regression evidence;
+`npm audit fix --force` was not run. Re-run `npm audit --omit=dev --json` and
+the full audit against the current lockfile before making a current advisory
+claim; the historical counts above do not establish today's security status.
 
 ## Quality gate
 

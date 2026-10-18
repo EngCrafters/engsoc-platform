@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PublicEvent, PublicEventPage } from "@/lib/events";
+import type { RegistrationConflictReason } from "@/lib/api/problems";
 import type {
   RegisterForEventError,
   RegisterForEventResult,
@@ -65,8 +66,8 @@ export type RegistrationDto = { data: { status: RegistrationStatusDto } };
  *
  * The mapping is exhaustive over `RegisterForEventError`, so adding a domain
  * error is a compile error here rather than a silent 500. The public vocabulary
- * is coarser than the domain's on purpose: a caller learns "conflict", not
- * which internal branch produced it.
+ * remains stable; registration conflicts can additionally carry a fixed public
+ * reason through `registrationConflictReasonFor`.
  */
 export function publicCodeFor(
   error: RegisterForEventError
@@ -106,6 +107,26 @@ export function toRegistrationDto(
   return {
     data: { status: result.waitlisted === true ? "waitlisted" : "confirmed" },
   };
+}
+
+/** Translate existing domain outcomes without duplicating registration rules. */
+export function registrationConflictReasonFor(
+  error: RegisterForEventError
+): RegistrationConflictReason | undefined {
+  switch (error) {
+    case "already_registered":
+      return "already-registered";
+    case "already_waitlisted":
+      return "already-waitlisted";
+    case "event_full":
+      return "event-full";
+    case "registration_closed":
+      return "registration-closed";
+    case "registration_available":
+      return "registration-available";
+    default:
+      return undefined;
+  }
 }
 
 /** True when the failure is the caller's fault, which also affects caching. */

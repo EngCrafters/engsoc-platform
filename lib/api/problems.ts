@@ -31,6 +31,17 @@ export const PUBLIC_ERROR_CODES = [
 
 export type PublicErrorCode = (typeof PUBLIC_ERROR_CODES)[number];
 
+/** Optional public detail for registration conflicts; never an internal code. */
+export const REGISTRATION_CONFLICT_REASONS = [
+  "already-registered",
+  "already-waitlisted",
+  "event-full",
+  "registration-closed",
+  "registration-available",
+] as const;
+export type RegistrationConflictReason =
+  (typeof REGISTRATION_CONFLICT_REASONS)[number];
+
 type ProblemSpec = { status: number; title: string; type: string };
 
 const SPECS: Record<PublicErrorCode, ProblemSpec> = {
@@ -72,6 +83,7 @@ export type ProblemBody = {
   status: number;
   code: PublicErrorCode;
   requestId: string;
+  reason?: RegistrationConflictReason;
   /** Field-level detail for validation failures only. */
   errors?: { field: string; code: string }[];
 };
@@ -88,6 +100,7 @@ export function problem(
   options: {
     errors?: { field: string; code: string }[];
     headers?: Record<string, string>;
+    reason?: RegistrationConflictReason;
   } = {}
 ): Response {
   const spec = SPECS[code];
@@ -99,6 +112,7 @@ export function problem(
     requestId,
   };
   if (options.errors?.length) body.errors = options.errors;
+  if (code === "conflict" && options.reason) body.reason = options.reason;
 
   const headers: Record<string, string> = {
     "content-type": "application/problem+json; charset=utf-8",

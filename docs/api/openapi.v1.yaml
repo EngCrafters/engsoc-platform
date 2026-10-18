@@ -93,6 +93,8 @@ paths:
                     $ref: "#/components/schemas/Event"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "503":
@@ -105,7 +107,8 @@ paths:
         Public endpoint. No API key, no cookie, no credentials of any kind.
 
         The browser posts directly from the landing site to this origin; CORS is
-        restricted to exact allowed origins. The canonical registration rules —
+        restricted to exact allowed origins. Allowed-origin responses expose
+        X-Request-Id and Retry-After to browser JavaScript. The canonical registration rules —
         capacity, waitlist ordering, duplicate prevention, registration-open
         state and the per-IP rate limit — are enforced by Core, not by the
         caller.
@@ -164,7 +167,9 @@ paths:
         "409":
           description: |
             A conflicting state: already registered, already waitlisted, event
-            full, registration closed, or a waitlist is unexpectedly available.
+            full, registration closed, or registration is available instead of
+            waitlist joining. The optional reason provides a stable public
+            distinction; code remains conflict. Older deployments may omit reason.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -276,6 +281,15 @@ components:
             - rate-limited
             - service-unavailable
         requestId: { type: string }
+        reason:
+          type: string
+          description: Optional registration conflict detail, present only with code conflict (409). Unknown or absent reasons must use generic conflict handling.
+          enum:
+            - already-registered
+            - already-waitlisted
+            - event-full
+            - registration-closed
+            - registration-available
         errors:
           type: array
           items:
@@ -291,7 +305,7 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
     Unauthorized:
-      description: Missing, malformed, unknown, revoked or expired credential.
+      description: Missing, malformed, unknown, wrong-hash, inactive, revoked, expired or wrong-environment credential.
       headers:
         WWW-Authenticate:
           schema: { type: string }
@@ -299,7 +313,7 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
     Forbidden:
-      description: The origin is not allowed, or the credential lacks the scope.
+      description: The registration origin is not allowed, or a valid active read credential lacks events:read.
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }

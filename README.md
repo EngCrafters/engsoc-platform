@@ -44,19 +44,19 @@ Do not run migrations during the UC-02 specification gate. The historical
 staging-only 0002 SQL is not in the Drizzle journal; the UC-02 data contract
 specifies its forward reconciliation. A schema file is not itself a migration.
 
-## Working on the public site (`app/(marketing)/`)
+## Core and the separate public site
 
-This is the public event-discovery and registration surface. It is part of
-the same application and data model as the rest of the platform.
+This repository owns Core administration, Auth, event and registration rules,
+and the versioned `/v1` public API. Its existing `app/(marketing)/` pages remain
+the current public surface while the separate landing site is prepared.
 
-**What `app/(marketing)/` is.** It's the landing page and event
-registration flow: everything a visitor sees without logging in. It lives
-in this same repo (not a separate one) specifically so it can read events
-directly from the database code the rest of the app uses
-(`lib/events`'s `getPublishedEvents`) instead of calling a separate API.
-Domain and database behavior lives in `lib/` and `db/`; do not duplicate it
-in this route group. Follow the active UC-02 specification and its open
-decisions before changing those boundaries.
+The landing source is preserved in the private repository
+[`EngCrafters/essqu-web`](https://github.com/EngCrafters/essqu-web), connected to
+the separate Vercel project `essqu-web`. GitHub reports `EngCrafters` as a **User**
+namespace, not an Organization. ADR 0016 defines this separation. Landing reads
+Core events server-to-server with an `events:read` credential and submits public
+registration requests through the API; it receives no database or admin secret.
+Core remains the authority for capacity, waitlist, duplicates, audit and access.
 
 **Running it locally.** Obtain the staging `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and restricted `APP_RUNTIME_DATABASE_URL`.
@@ -84,7 +84,8 @@ reserved for exceptional collaboration, not the normal delivery path.
 
 ```
 app/                    Next.js App Router pages and routes
-app/(marketing)/        The public site — see "Working on the public site" below
+app/(marketing)/        Existing Core public pages during pre-domain preparation
+app/v1/                 Versioned public API transport adapters
 db/schema.ts            Implemented schema; UC-02 target ER addendum is in docs/
 db/index.ts             Drizzle client, server-only
 lib/events/             Domain module: reading/publishing events
@@ -101,10 +102,14 @@ drizzle.config.ts       Database migration config
 **Phase 0 (Foundation):** done, except this repo, which is what you're
 looking at right now.
 
-**Phase 1 (Registration):** UC-02's authentication and access-control milestone
-is complete. A repository and production hardening pass precedes the landing-page
-migration. UC-01 (member profiles) is deliberately deferred, not cancelled. See
-`docs/CURRENT_WORK.md` for current evidence and outstanding verification.
+**Pre-domain release preparation (October 18, 2026):** Core production remains
+at `https://engsoc-platform.vercel.app`. Staging has migration 0024; production
+does not. A verified managed recovery path blocks production DDL. Landing
+provisioning and staging integration verification are in progress; custom domains,
+DNS, Auth origins and host enforcement remain unchanged. UC-01 remains deferred.
+See [current work](docs/CURRENT_WORK.md), the
+[API handoff](docs/api/LANDING_HANDOFF_V1.md), and the
+[custom-domain cutover checklist](docs/api/CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md).
 
 ## How we work
 

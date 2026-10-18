@@ -47,6 +47,7 @@ export function corsHeaders(origin: string | null): Record<string, string> {
     "access-control-allow-origin": origin as string,
     "access-control-allow-methods": "POST, OPTIONS",
     "access-control-allow-headers": "Content-Type, X-Request-Id",
+    "access-control-expose-headers": "X-Request-Id, Retry-After",
     "access-control-max-age": "600",
   };
 }
