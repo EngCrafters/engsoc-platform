@@ -11,16 +11,21 @@ info:
     changes, no error code changes meaning, and no required field becomes
     optional. A breaking change means `/v2`.
 servers:
+  - url: https://engsoc-platform.vercel.app/v1
+    description: Current pre-domain production
   - url: https://api.essqu.com/v1
-    description: Production
+    description: Planned custom domain, deferred
   - url: http://127.0.0.1:3000/v1
     description: Local development
 tags:
   - name: Events
+    description: Published event reads for trusted servers.
   - name: Registration
+    description: Anonymous registration and explicit waitlist requests.
 paths:
   /events:
     get:
+      operationId: listEvents
       tags: [Events]
       summary: List published events
       description: |
@@ -65,6 +70,7 @@ paths:
           $ref: "#/components/responses/Unavailable"
   /events/{eventId}:
     get:
+      operationId: getEvent
       tags: [Events]
       summary: Get one published event
       description: |
@@ -100,7 +106,14 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
   /events/{eventId}/registrations:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
     post:
+      operationId: registerForEvent
+      security: []
       tags: [Registration]
       summary: Register for an event
       description: |
@@ -193,6 +206,8 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
     options:
+      operationId: registrationPreflight
+      security: []
       tags: [Registration]
       summary: CORS preflight
       description: |

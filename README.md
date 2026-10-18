@@ -104,7 +104,8 @@ looking at right now.
 
 **Pre-domain release preparation (October 18, 2026):** Core production remains
 at `https://engsoc-platform.vercel.app`. Staging has migration 0024; production
-does not. A verified managed recovery path blocks production DDL. Landing
+does not. The owner waived managed-backup readiness only for unchanged additive
+0024 after successful live staging and concurrency checks; no backup is claimed. Landing
 provisioning and staging integration verification are in progress; custom domains,
 DNS, Auth origins and host enforcement remain unchanged. UC-01 remains deferred.
 See [current work](docs/CURRENT_WORK.md), the

@@ -12,7 +12,8 @@ The private `EngCrafters/essqu-web` repository preserves source
 Vercel `essqu-web` project. `EngCrafters` is a GitHub User namespace.
 Staging has migration 0024; staging provisioning and live integration checks
 remain pending. Production has no migration 0024 or production read credential;
-production DDL awaits a verified managed recovery path. Consult
+production 0024 awaits live staging and concurrency verification under the owner's
+specific backup-risk waiver; no backup has been established. Consult
 [current work](../CURRENT_WORK.md) and the
 [custom-domain checklist](CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md) before configuring
 a consumer. Do not point Landing at an unverified API or copy a production key

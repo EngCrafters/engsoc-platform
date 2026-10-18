@@ -1,9 +1,14 @@
 # ESSQU Core — production cutover runbook
 
-Status (October 18, 2026): **production cutover is held**. Core continues serving
+Status (October 18, 2026): **production 0024 awaits live staging/concurrency**.
+The owner explicitly waived managed-backup readiness only for the unchanged
+additive migration 0024 after those checks pass. No backup is claimed; the waiver
+does not cover other DDL, existing-row DML, a local dump or PII export, subscription
+upgrades, custom domains, DNS or Auth changes. Core continues serving
 at `https://engsoc-platform.vercel.app`; custom domains, DNS, Auth origins and
-host enforcement remain unchanged. The current pre-domain work has not yet been
-committed or deployed. The checklist below describes future operations; it is
+host enforcement remain unchanged. Core changes through `4ca9f82` are pushed to
+main and staging; production database activation remains separate. The checklist
+below describes future operations; it is
 not evidence that an operation has run.
 
 Staging `wnrdgnmmcdedmilnzzsl` has migration 0024 applied through Supabase MCP.
@@ -11,19 +16,20 @@ Forced RLS, the routine-owner SELECT policy, restricted execution and zero
 runtime table grants passed; five existing registrations were retained.
 Production `rbeyqrfypowyocmnmvwu` lacks 0024 and retains seven registrations.
 All ten application tables have forced RLS and runtime table grants remain zero.
-Staging client/deployment/live verification is pending. See the
+Staging clients and deployments are provisioned; complete live verification is
+in progress. See the
 [custom-domain runbook](CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md) for the release gates.
 
 Ordering follows the program's release order and is not negotiable: Core
 compatible first, landing switches last.
 
-| #   | Gate                    | State                      |
-| --- | ----------------------- | -------------------------- |
-| A   | Production DB migration | **not applied**            |
-| B   | Production API client   | **not created**            |
-| C   | DNS / domain cutover    | **not started**            |
-| D   | Auth redirect cutover   | **not started**            |
-| E   | Managed recovery path   | **not verified; blocks A** |
+| #   | Gate                    | State                                                                     |
+| --- | ----------------------- | ------------------------------------------------------------------------- |
+| A   | Production DB migration | **not applied**                                                           |
+| B   | Production API client   | **not created**                                                           |
+| C   | DNS / domain cutover    | **not started**                                                           |
+| D   | Auth redirect cutover   | **not started**                                                           |
+| E   | Managed recovery path   | **not verified; owner waiver limited to exact 0024 after staging passes** |
 
 ---
 
@@ -56,9 +62,22 @@ wrong hash / unknown prefix / inactive / revoked / expired / wrong env 0 rows ea
 valid active client without the required scope 1 row, has_scope = false
 `@
 
-`db:check` is green. The migration is **transactional and self-verifying**: its
-final `DO` block raises and rolls everything back if `app_runtime` ends up with
-any table privilege, if it cannot execute the routine, or if `PUBLIC` can.
+`db:check` is green. The repository SQL has **no explicit BEGIN/COMMIT**. Apply it
+as one MCP migration request containing `BEGIN;`, the unchanged reviewed file,
+and `COMMIT;`; add no other SQL, DDL or migration. This explicit transaction
+envelope makes its failure rollback independent of assumptions about the MCP
+backend. The final `DO` block checks only `app_runtime` direct grants on
+`private.api_clients`, runtime execution of the verification routine, and PUBLIC
+execution. It does not self-verify every role, RLS/owner settings, existing tables
+or row preservation; check those separately before and after.
+
+Independent review confirmed byte identity at baseline `15875f4`, commit
+`1eac4db`, and the worktree. SHA-256 of the repository file:
+`cab56a820213bf11bca3f72d0581ed3505b509de8886e66837446c81b5de5479`.
+Its statements create the registry table/policy/routine and set ownership,
+RLS and privileges only on those new objects; there is no destructive DDL or
+existing-row INSERT/UPDATE/DELETE. `CREATE OR REPLACE FUNCTION` is safe here only
+when preflight confirms that exact routine is absent.
 
 **The bug the rehearsal caught, and why it matters here:** `FORCE ROW LEVEL
 SECURITY` applies to the table _owner_, so with no policy the
@@ -66,11 +85,37 @@ SECURITY` applies to the table _owner_, so with no policy the
 valid client — the auth path was silently inert. Fixed with a SELECT-only policy
 for `uc02_routine_owner`. Do not "tidy" that policy away.
 
-**What is needed to apply it:** first verify the managed recovery gate in section
-E, then use the privileged Supabase MCP `apply_migration` route against the
-explicit production ref. MCP successfully applied the same migration to staging;
-the production hold is recovery readiness, not lack of a DDL tool. Production
-DDL remains unperformed.
+**What is needed to apply it:** first pass live staging and capacity-race checks,
+record the owner's exact waiver and the preflight below, then use the privileged
+Supabase MCP `apply_migration` route against explicit production ref
+`rbeyqrfypowyocmnmvwu` with the transaction envelope above. MCP already applied
+the same migration to staging. Production DDL remains unperformed as of this note.
+
+**Preflight, read-only:**
+
+- Confirm the target ref and that 0024 is absent from migration history.
+- Confirm `private.api_clients` and the exact four-text-argument verification
+  routine are absent; stop on any conflicting preexisting object.
+- Recompute the file SHA-256 above and confirm no other migration is included.
+- Record existing registration/event counts, ten application tables' forced RLS,
+  zero runtime table grants, runtime NOBYPASSRLS, existing routine ownership and
+  grants. Record counts and catalog facts only, never attendee rows or secrets.
+- Record successful live staging, duplicate/waitlist, capacity-race and fixture
+  cleanup evidence; ensure the deployed runtime uses `app_runtime`.
+
+**Postflight, read-only:**
+
+- Confirm exactly one 0024 migration record, the registry and exact routine.
+- Confirm registry owner `uc02_routine_owner`, ENABLE/FORCE RLS, and its
+  owner-only SELECT policy; verify the routine owner, SECURITY DEFINER and fixed
+  search path.
+- Verify runtime execution true, anon/authenticated/PUBLIC execution false, and
+  zero direct runtime table grants across public/private schemas.
+- Compare preflight existing counts, RLS, owners and grants; preserve the seven
+  existing registrations and all business rows. Confirm no new API client exists
+  until the separate client-provisioning operation.
+- Exercise production public/auth/admin boundaries and no-key/bogus-key reads
+  without creating attendee registrations. Stop and investigate any discrepancy.
 
 **Do not use `npx supabase db push`.** Production's history is
 timestamp-versioned while this repository's files are `NNNN_`-named, so a push
@@ -217,18 +262,19 @@ proven.
 
 ## E. Backup
 
-Production DDL requires a verified managed recovery path. The authenticated
+The ordinary production DDL gate requires a verified managed recovery path. The authenticated
 Supabase backup inspection on October 18 returned `backups: null`, empty
 `physical_backup_data`, `pitr_enabled: false`, and `walg_enabled: true`; the
 organization is on Free. These values do not establish an available restore
 point. WAL archiving alone is insufficient evidence.
 
-Have the owner enable or identify suitable managed recovery and record the
-available restore point, retention and restoration procedure before applying
-0024 to production. If that cannot be verified, leave production unchanged and
-continue staging work. Do not silently substitute a local export of real attendee
-data or infer readiness from historical logical-restore evidence. No new
-production attendee export or backup has been taken in this pre-domain pass.
+The owner explicitly accepted this risk only for exact additive 0024 after
+successful live staging and concurrency checks. That narrow waiver supersedes
+the backup gate for this one migration; it does not establish a backup, waive
+future migration gates or authorize local dumps/PII export or a paid plan change.
+Record the pre/post checklist in section A and retain the migration digest and
+transaction envelope in the application evidence. Until live checks pass, leave
+production unchanged. No new production attendee export or backup has been taken.
 
 ---
 

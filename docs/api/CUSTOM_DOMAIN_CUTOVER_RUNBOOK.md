@@ -27,7 +27,8 @@ Project creation and a Git connection alone do not prove a working deployment.
 - [ ] Live restricted-runtime HTTP verification and cross-project browser registration
       pass, including confirmed, explicit waitlist, duplicate and capacity-race outcomes.
 - [ ] Final local gates, GitHub CI and Vercel deployment evidence recorded for both repositories.
-- [ ] Managed production recovery path verified before production DDL.
+- [x] Owner accepted backup risk only for unchanged additive 0024 after live staging/concurrency passes; no backup is claimed.
+- [ ] Live staging/concurrency gate and exact-file preflight for the waiver completed.
 - [ ] Production migration 0024 applied explicitly and catalog invariants rechecked.
 - [ ] Production `events:read` client installed only in Landing's server environment.
 
@@ -35,8 +36,13 @@ Production currently lacks 0024, retains seven registrations, has forced RLS on
 all ten application tables, zero `app_runtime` table grants and NOBYPASSRLS.
 The Free organization returned no listed backup or PITR point in authenticated
 inspection (`backups: null`, `physical_backup_data: {}`, `pitr_enabled: false`,
-`walg_enabled: true`). Leave production DDL held until a usable managed recovery
-path is verified. Do not export attendee data as an implicit substitute.
+`walg_enabled: true`). The owner waived managed-backup readiness only for exact
+unchanged migration 0024, conditional on successful live staging and concurrency
+checks. This is a recorded risk acceptance, not evidence of recovery readiness.
+Keep production 0024 pending until those checks pass; the waiver covers no other
+DDL or existing-row DML. Do not take a local dump/export of PII, upgrade the
+subscription, or change domains/Auth under this waiver. The owner confirmed
+retaining Landing under the `EngCrafters` User namespace.
 
 ## Future domain and Auth sequence
 

@@ -3,6 +3,8 @@
 **CURRENT — pre-domain preparation (October 18, 2026):** This note supersedes
 the dated handoffs below. Work began at Core `15875f4`; the serving Core remains
 `https://engsoc-platform.vercel.app`. ADR 0016 separates Landing from Core.
+Core source changes through `4ca9f82` are pushed to main and staging. The
+release documentation is being updated as live verification proceeds.
 The private GitHub repository `EngCrafters/essqu-web` preserves Landing source
 `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0` and is connected to the separate
 Vercel project `essqu-web` (`prj_yXxcM8AlVAuARpepUJMUAo4N20AL`). GitHub reports
@@ -11,18 +13,37 @@ the `EngCrafters` namespace as type **User**, not Organization.
 Staging `wnrdgnmmcdedmilnzzsl` has migration `0024_api_clients` applied through
 Supabase MCP. Read-only invariants passed: forced RLS with the routine-owner
 SELECT policy, runtime routine execution, no anon/authenticated/PUBLIC execution,
-zero runtime table grants, and five existing registrations retained. Staging API
-client provisioning, serving deployment and live cross-project verification are
-still in progress; do not describe them as passed until their evidence is recorded.
+zero runtime table grants, and five existing registrations retained. Staging
+clients and the restricted runtime are provisioned. Core and Landing serve their
+explicit staging aliases. Live reads, pagination, CORS, capacity-one concurrency
+and the first registration window passed; the complete live matrix remains in
+progress. Landing desktop/mobile English/Arabic read-only QA and CI passed.
 
 Production `rbeyqrfypowyocmnmvwu` still lacks migration 0024 and retains seven
 registrations. All ten application tables have forced RLS, `app_runtime` has no
-table grants and is NOBYPASSRLS. Production DDL remains held for a verified
-managed recovery path. The Supabase organization is Free; authenticated backup
+table grants and is NOBYPASSRLS. The owner explicitly accepted the lack of a
+verified managed backup **only for unchanged additive migration 0024**, after
+successful live staging and concurrency checks. That prerequisite remains pending;
+the waiver does not authorize other DDL, existing-row DML, a local dump/PII export,
+a subscription upgrade or domain/Auth changes. The owner confirmed keeping
+Landing under the GitHub User namespace `EngCrafters`.
+The Supabase organization is Free; authenticated backup
 inspection returned `backups: null`, empty `physical_backup_data`,
 `pitr_enabled: false`, and `walg_enabled: true`. WAL archiving alone does not
-establish a usable backup or restoration path. No production migration, API
-client or attendee mutation is authorized by this status note.
+establish a usable backup or restoration path. No backup is claimed. Production
+0024 remains unapplied until the staging gate passes and exact-file preflight is
+recorded; API-client provisioning is a separate scoped operation, and production
+attendee mutation is not part of this verification.
+
+Independent review found 0024 byte-identical at `15875f4` and `1eac4db`:
+SHA-256 `cab56a820213bf11bca3f72d0581ed3505b509de8886e66837446c81b5de5479`.
+It creates only registry objects and touches no existing rows. Its final checks
+cover only registry runtime table grants, runtime execution and PUBLIC execution;
+pre/post checks must separately verify RLS, ownership, other execution grants and
+existing data counts. The SQL has no explicit transaction wrapper; the planned
+MCP application sends `BEGIN;`, the unchanged reviewed 0024 file, and `COMMIT;`
+in one request, with no other DDL or migration. This makes atomicity explicit
+without assuming undocumented backend transaction behavior.
 
 Custom domains and DNS are untouched. Auth origins and host enforcement remain
 unchanged. The current release checklist is
@@ -31,7 +52,7 @@ unchanged. The current release checklist is
 production migration and credential procedure.
 
 Final local gates for the updated runtime source passed: format, lint, migration
-consistency, types, 398 unit/database tests across 40 files, and webpack build.
+consistency, types, 421 unit/database tests across 44 files, and webpack build.
 The browser suite passed 43 tests with one intentional skip against the updated
 runtime source; the missing pinned Chromium executable was installed before that
 successful rerun. Later script/test additions require their own relevant checks.
