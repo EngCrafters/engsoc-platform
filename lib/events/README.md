@@ -20,6 +20,13 @@ call `notFound()` uniformly). Cursors are opaque base64url-encoded
 `{v, period, date, id}` objects, validated on decode; an invalid or
 mismatched-period cursor is treated as no cursor, not an error.
 
+Cursor boundaries retain PostgreSQL's timestamp text, including microseconds,
+through encode/decode and the next routine call. Only the public event display
+uses JavaScript `Date` (millisecond precision). Converting the cursor boundary
+through `Date` would repeat upcoming rows or skip past rows within the same
+millisecond. The precise boundary stays in hidden query rows and never adds a
+public event or HTTP DTO field; each page still uses one canonical routine call.
+
 Import from `./index.ts` only. `./db.ts` (queries), `./types.ts` (shapes) and
 `./format.ts` (Asia/Muscat date formatting, D01) are implementation details
 and shouldn't be imported directly from outside `lib/events/`.

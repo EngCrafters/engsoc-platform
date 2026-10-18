@@ -30,17 +30,25 @@ function mapPublicEvent(row: PublicEventRow): PublicEvent {
 
 export async function selectPublicEvents(input: {
   period: "upcoming" | "past";
-  cursor?: { eventDate: Date; id: string };
+  cursor?: { eventDate: string; id: string };
   limit: number;
-}): Promise<PublicEvent[]> {
+}): Promise<{ event: PublicEvent; cursorDate: string }[]> {
+  // Text on both sides preserves PostgreSQL microseconds. Without the input
+  // text cast postgres-js may apply its timestamptz Date serializer and truncate
+  // an otherwise precise string to milliseconds before sending the parameter.
   const rows = await db.execute<PublicEventRow>(sql`
-    select * from private.list_public_events(
+    select id, title, description, event_date::text as event_date,
+      location, committee_name, availability
+    from private.list_public_events(
       ${input.period},
-      ${input.cursor?.eventDate.toISOString() ?? null}::timestamptz,
+      ${input.cursor?.eventDate ?? null}::text::timestamptz,
       ${input.cursor?.id ?? null}::uuid, ${input.limit}
     )
   `);
-  return rows.map(mapPublicEvent);
+  return rows.map((row) => ({
+    event: mapPublicEvent(row),
+    cursorDate: row.event_date,
+  }));
 }
 
 export async function selectPublicEvent(

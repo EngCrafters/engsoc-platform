@@ -17,6 +17,8 @@ import type { PublicEvent, PublicEventPage } from "./types";
  */
 const PAGE_SIZE = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CURSOR_DATE =
+  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)$/;
 
 type Cursor = {
   v: 1;
@@ -35,22 +37,24 @@ function decodeCursor(value: string | undefined, period: Cursor["period"]) {
       cursor.v !== 1 ||
       cursor.period !== period ||
       !UUID.test(cursor.id) ||
+      typeof cursor.date !== "string" ||
+      !CURSOR_DATE.test(cursor.date) ||
       !Number.isFinite(new Date(cursor.date).getTime())
     )
       return undefined;
-    return { eventDate: new Date(cursor.date), id: cursor.id };
+    return { eventDate: cursor.date, id: cursor.id };
   } catch {
     return undefined;
   }
 }
 
-function encodeCursor(event: PublicEvent, period: Cursor["period"]) {
+function encodeCursor(id: string, date: string, period: Cursor["period"]) {
   return Buffer.from(
     JSON.stringify({
       v: 1,
       period,
-      date: event.eventDate.toISOString(),
-      id: event.id,
+      date,
+      id,
     })
   ).toString("base64url");
 }
@@ -68,8 +72,11 @@ export async function getPublicEventPage(input: {
   const page = hasNext ? events.slice(0, PAGE_SIZE) : events;
   const last = page.at(-1);
   return {
-    events: page,
-    nextCursor: hasNext && last ? encodeCursor(last, input.period) : null,
+    events: page.map((row) => row.event),
+    nextCursor:
+      hasNext && last
+        ? encodeCursor(last.event.id, last.cursorDate, input.period)
+        : null,
   };
 }
 

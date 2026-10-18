@@ -11,7 +11,7 @@ import { db } from "@/db";
  * Only the prefix and a SHA-256 hash of the whole token are ever stored, so a
  * database leak does not yield usable credentials.
  *
- * The verification itself is a single `private.verify_api_client` call. Every
+ * Verification uses one query of `private.verify_api_client`. Every
  * condition that can invalidate a client — active flag, revocation, expiry,
  * environment, required scope — is enforced inside that routine, so a caller
  * cannot skip a check by not implementing it.
@@ -33,7 +33,12 @@ export function hashToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
-type ParsedToken = { prefix: string; hash: string; environment: string };
+type ParsedToken = {
+  prefix: string;
+  prefixes: string[];
+  hash: string;
+  environment: string;
+};
 
 /**
  * Parse a token without touching the database.
@@ -44,8 +49,23 @@ type ParsedToken = { prefix: string; hash: string; environment: string };
 export function parseToken(token: string): ParsedToken | null {
   const match = TOKEN_PATTERN.exec(token.trim());
   if (!match) return null;
+  // Prefix and secret both permit underscores. A greedy or non-greedy split
+  // alone can reject a genuine key, so enumerate the bounded valid splits and
+  // let the registry match prefix + full-token hash. At most 33 candidates.
+  const payload = token.trim().slice(`essq_${match[1]}_`.length);
+  const prefixes: string[] = [];
+  for (let length = 8; length <= 40; length++) {
+    if (
+      payload[length] === "_" &&
+      /^[a-z0-9_]{8,40}$/.test(payload.slice(0, length)) &&
+      /^[A-Za-z0-9_-]{32,}$/.test(payload.slice(length + 1))
+    ) {
+      prefixes.push(payload.slice(0, length));
+    }
+  }
   return {
     prefix: match[2],
+    prefixes,
     hash: hashToken(token.trim()),
     environment: match[1] === "live" ? "production" : "staging",
   };
@@ -84,8 +104,12 @@ export async function authenticate(
       has_scope: boolean;
     }>(sql`
       select client_id, client_name, has_scope
-      from private.verify_api_client(
-        ${parsed.prefix},
+      from unnest(ARRAY[${sql.join(
+        parsed.prefixes.map((prefix) => sql`${prefix}`),
+        sql`, `
+      )}]::text[]) as candidates(prefix)
+      cross join lateral private.verify_api_client(
+        candidates.prefix,
         ${parsed.hash},
         ${requiredScope},
         ${parsed.environment}
@@ -93,7 +117,7 @@ export async function authenticate(
     `);
 
     const row = rows[0];
-    if (!row) {
+    if (!row || rows.length !== 1) {
       // Unknown prefix, wrong hash, inactive, revoked or expired. All of these
       // are "this credential is not valid", and they stay indistinguishable so
       // the response cannot be used to enumerate tokens.
