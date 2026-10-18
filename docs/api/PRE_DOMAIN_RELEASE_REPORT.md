@@ -243,4 +243,4 @@ Provider-managed Vercel Secrets are authoritative. No plaintext key files were
 created. Temporary encrypted staging and production operator state was removed
 after final verification; both exact state paths were checked absent. Provider
 Vercel Secrets remain authoritative. The local operational helpers contain no
-raw credentials and require fresh provisioning before future credential checks.
+raw private credentials and require fresh provisioning before future credential checks.
