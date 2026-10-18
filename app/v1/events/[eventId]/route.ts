@@ -23,13 +23,7 @@ export async function GET(
 
   const auth = await authenticate(request);
   if (!auth.ok) {
-    return problem(
-      auth.reason === "service-unavailable"
-        ? "service-unavailable"
-        : "unauthorized",
-      requestId,
-      { headers: cors }
-    );
+    return problem(auth.reason, requestId, { headers: cors });
   }
 
   const { eventId } = await context.params;

@@ -81,8 +81,9 @@ export async function authenticate(
     const rows = await db.execute<{
       client_id: string;
       client_name: string;
+      has_scope: boolean;
     }>(sql`
-      select client_id, client_name
+      select client_id, client_name, has_scope
       from private.verify_api_client(
         ${parsed.prefix},
         ${parsed.hash},
@@ -93,10 +94,16 @@ export async function authenticate(
 
     const row = rows[0];
     if (!row) {
-      // A well-formed token can still be wrong, revoked, expired or missing the
-      // scope. All of those mean "not authorized"; 401 keeps the response free
-      // of information and avoids distinguishing a bad token from a weak one.
+      // Unknown prefix, wrong hash, inactive, revoked or expired. All of these
+      // are "this credential is not valid", and they stay indistinguishable so
+      // the response cannot be used to enumerate tokens.
       return { ok: false, reason: "unauthorized" };
+    }
+    if (!row.has_scope) {
+      // A valid credential that simply is not allowed to do this. 403 is the
+      // truth; collapsing it into 401 would send an integrator hunting for a key
+      // problem that does not exist.
+      return { ok: false, reason: "forbidden" };
     }
     return { ok: true, client: { id: row.client_id, name: row.client_name } };
   } catch {

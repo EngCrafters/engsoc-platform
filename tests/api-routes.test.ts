@@ -286,6 +286,17 @@ describe("GET /v1/events", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
+  it("returns 403 for a valid credential that lacks the scope", async () => {
+    // The contract distinguishes "bad credential" (401) from "valid but not
+    // allowed" (403). Collapsing them would send an integrator hunting a key
+    // problem that does not exist.
+    state.authenticate.mockResolvedValue({ ok: false, reason: "forbidden" });
+    const res = await GET_LIST(new Request("https://api.essqu.com/v1/events"));
+    expect(res.status).toBe(403);
+    expect(res.headers.get("www-authenticate")).toBeNull();
+    expect(state.getPublicEventPage).not.toHaveBeenCalled();
+  });
+
   it("returns 503 when the database is unreachable", async () => {
     state.authenticate.mockResolvedValue({
       ok: false,

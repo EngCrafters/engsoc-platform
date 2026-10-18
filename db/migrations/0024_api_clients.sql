@@ -79,14 +79,24 @@ CREATE OR REPLACE FUNCTION private.verify_api_client(
   p_environment text
 ) RETURNS TABLE (
   client_id uuid,
-  client_name text
+  client_name text,
+  -- Whether the client holds the requested scope.
+  --
+  -- This is returned rather than filtered on, so the caller can tell "this
+  -- credential is not valid" (no row) apart from "this credential is valid but
+  -- not allowed to do that" (a row with has_scope = false). Without it, both
+  -- collapse into one response and the API has to answer 401 for a perfectly
+  -- valid client that merely lacks a scope - which is the wrong status and sends
+  -- integrators hunting a key problem that does not exist. The contract calls
+  -- for 401 and 403 respectively.
+  has_scope boolean
 )
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT c.id, c.name
+  SELECT c.id, c.name, p_scope = ANY (c.scopes) AS has_scope
   FROM private.api_clients c
   WHERE c.key_prefix = p_prefix
     AND c.key_hash = p_hash
@@ -94,7 +104,6 @@ AS $$
     AND c.revoked_at IS NULL
     AND (c.expires_at IS NULL OR c.expires_at > clock_timestamp())
     AND c.environment = p_environment
-    AND p_scope = ANY (c.scopes)
   LIMIT 1;
 $$;
 

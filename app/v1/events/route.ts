@@ -26,13 +26,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const auth = await authenticate(request);
   if (!auth.ok) {
-    return problem(
-      auth.reason === "service-unavailable"
-        ? "service-unavailable"
-        : "unauthorized",
-      requestId,
-      { headers: cors }
-    );
+    return problem(auth.reason, requestId, { headers: cors });
   }
 
   try {
