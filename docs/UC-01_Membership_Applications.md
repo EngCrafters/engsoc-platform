@@ -1,11 +1,14 @@
 # UC-01 membership applications: data and security contract
 
 Status: implemented on branch `feat/uc01-membership-applications` (October 20, 2026, Dubai).
-**Not deployed.** Migration `0025_membership_applications` has been applied only to disposable
-local databases. Final approval and activation stay disabled until the owner confirms the approval
-policy (ADR 0017, "Open decisions").
+**Not deployed.** Migrations `0025_membership_applications` and
+`0026_membership_document_storage` have been applied only to disposable local databases; the
+staging rollout is prepared in [UC-01_Staging_Rollout.md](UC-01_Staging_Rollout.md). Final approval
+and activation stay disabled until the owner confirms the approval policy (ADR 0017, "Open
+decisions").
 
-Decision record: [ADR 0017](adr/0017-membership-applications-and-review.md). Access model:
+Decision records: [ADR 0017](adr/0017-membership-applications-and-review.md) and, for where ID
+cards are stored, [ADR 0018](adr/0018-membership-id-cards-in-private-storage.md). Access model:
 [ACCESS_CONTROL.md](ACCESS_CONTROL.md). Public API: [openapi.v1.yaml](api/openapi.v1.yaml) and
 [LANDING_HANDOFF_V1.md](api/LANDING_HANDOFF_V1.md).
 
@@ -59,19 +62,22 @@ any password.
 
 ## 3. The ID card document
 
-| Aspect    | Contract                                                                                                                             |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Types     | JPEG, PNG, WebP or PDF, established from the file's leading bytes, never from its name or declared type                              |
-| PDFs      | Refused if they contain active content: `/JavaScript`, `/JS`, `/Launch`, `/EmbeddedFile`, `/OpenAction`, `/AA`, `/RichMedia`, `/XFA` |
-| Size      | 1 byte to 4 MiB; the whole request is capped at 4.5 MB before parsing                                                                |
-| Integrity | The routine recomputes SHA-256 over the bytes and refuses a mismatch                                                                 |
-| Browser   | The website re-encodes photos to JPEG (longest side ≤ 2000 px, white background), which drops metadata; PDFs are sent unchanged      |
-| Storage   | `private.membership_documents`, one row per application, `bytea`, `ON DELETE CASCADE`                                                |
-| Viewing   | `GET /admin/membership/{id}/document`, signed-in reviewers only, re-checked per request; audited as `membership.document_viewed`     |
-| Headers   | Stored type, `inline; filename="squ-id-card.<ext>"`, `private, no-store`, `nosniff`, `no-referrer`, CSP `default-src 'none'`         |
-| Deletion  | In the same transaction as approval or rejection; `document_deleted_at` records it                                                   |
+| Aspect    | Contract                                                                                                                                                                                                                                                                                  |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Types     | JPEG, PNG, WebP or PDF, established from the file's leading bytes, never from its name or declared type                                                                                                                                                                                   |
+| PDFs      | Refused if they contain active content: `/JavaScript`, `/JS`, `/Launch`, `/EmbeddedFile`, `/OpenAction`, `/AA`, `/RichMedia`, `/XFA`                                                                                                                                                      |
+| Size      | 1 byte to 4 MiB; the whole request is capped at 4.5 MB before parsing                                                                                                                                                                                                                     |
+| Integrity | PostgreSQL: the routine recomputes SHA-256 over the bytes. Storage: Core checks size and SHA-256 again on every read                                                                                                                                                                      |
+| Browser   | The website re-encodes photos to JPEG (longest side ≤ 2000 px, white background), which drops metadata; PDFs are sent unchanged                                                                                                                                                           |
+| Storage   | A private Supabase Storage bucket (`SUPABASE_S3_MEMBERSHIP_BUCKET`, staging `v1`) under `membership-id-cards/<uuid>.<ext>`; the row in `private.membership_documents` keeps the bucket, key, type, size and SHA-256. With no Storage variables set, the bytes are kept in that row (0025) |
+| Viewing   | `GET /admin/membership/{id}/document`, signed-in reviewers only, re-checked per request; audited as `membership.document_viewed`                                                                                                                                                          |
+| Headers   | Stored type, `inline; filename="squ-id-card.<ext>"`, `private, no-store`, `nosniff`, `no-referrer`, CSP `default-src 'none'`                                                                                                                                                              |
+| Deletion  | The row is deleted in the same transaction as approval or rejection (`document_deleted_at` records it); a trigger queues the Storage object in that transaction, and Core deletes it right after                                                                                          |
 
-There is no Supabase Storage bucket, public URL or signed URL. See ADR 0017 for the reasons.
+The bucket is private and has no Storage policies. There is no public URL or signed URL: only Core,
+with server-only S3 keys used in `lib/membership/storage.ts`, reaches the objects, and reviewers get
+the bytes through the authenticated route above. Submission order, failure handling and the
+deletion queue are in ADR 0018.
 
 ## 4. Roles and permissions
 
@@ -124,6 +130,12 @@ shows the number awaiting action. `/admin/membership/{id}` shows the fields, the
 to reveal), the review history and the actions allowed for the viewer. A banner explains when
 the policy is unset, and Technical users see the policy form.
 
+When the database cannot confirm access (for example, migration 0025 is missing), the section is
+not silently hidden from the people it is for. Society Affairs managers, Board and Technical see it
+marked **Setup** (or "!" for other database errors), and its pages explain the problem. Other
+committee managers still see nothing. Nothing is listed or opened in that state, and the server
+logs `membership_review_unavailable` with the database error code only.
+
 Activation (`app/admin/(protected)/membership/actions.ts`) asks the database first. If no Auth
 identity has the application's email, it sends the standard Supabase invitation to the email read
 from the database, never from the request, and then records the member. An existing identity
@@ -172,37 +184,59 @@ permanent records, like other UC-02 audit.
 
 ## 11. Verification evidence (local only)
 
-- `tests/db/membership.test.ts`: 22 tests on real PostgreSQL 17 with the production role model.
+- `tests/db/membership.test.ts`: 23 tests on real PostgreSQL 17 with the production role model.
   They cover every transition and refusal, the Society Affairs/other-manager split, revocation
   taking effect at once, self-review by email, both policies, document deletion, `members`
   writes, grants and RLS, and audit contents.
-- Route, action, document-route, domain and navigation unit tests; the full Core suite passed:
-  48 files, 478 tests, 1 skipped.
+- `tests/db/membership-storage.test.ts`: 0026 on real PostgreSQL. Covers begin limits and
+  duplicates, the required begin, reference validation, one location per row, reviewer-only
+  references, queuing in the decision's transaction, and never queuing or handing out a referenced
+  object.
+- `tests/membership-storage.test.ts`: SigV4 signing reproduces AWS's published GET and PUT example
+  signatures. Also covers configuration rules, keys, and object operations with no secret in any
+  header or log.
+- `tests/membership-submission-storage.test.ts`: the submission order and every failure path.
+- `tests/db/membership-storage-s3.test.ts`: the full Storage round trip with Core's real
+  submission, document route and deletion worker. It runs against a local S3 stand-in behind a
+  proxy that verifies every SigV4 signature independently. Covers storing, Society Affairs viewing,
+  403 for another manager, 401 when signed out, refusing a tampered object, approval refused while
+  the policy is unset, and deletion after rejection. Skipped unless pointed at a local stand-in.
+- Dashboard: the access result, the layout for confirmed, refused and unavailable access, and the
+  sidebar setup state.
+- Full Core suite: 54 files, 523 tests passed, 1 skipped.
+- The destructive rollback script restores the exact post-0024 catalog (checked locally), and its
+  guard refuses once membership data exists.
 - Playwright (`tests/e2e/admin-auth.spec.ts`): the membership pages and the document route are
   behind the sign-in boundary on desktop and mobile. 45 passed, 1 skipped.
 - Cross-project browser run: website production build against a Core production build on a
-  disposable database, synthetic identities and files only. It covered validation, client-side
-  type refusal, JPEG re-encoding without metadata, PDF byte-for-byte, active-PDF refusal, both
-  duplicate reasons, 429, the review lifecycle, website status views, Arabic and phone layouts,
-  and unchanged event registration.
+  disposable database, synthetic identities and files only, run in both storage modes. It
+  covered:
+  - validation and client-side type refusal;
+  - JPEG re-encoding without metadata, and PDFs byte for byte;
+  - active-PDF refusal, both duplicate reasons and 429, with no upload for any refused applicant;
+  - a simulated Storage outage (503, nothing saved, the object queued for cleanup);
+  - the review lifecycle and the website's status views;
+  - Arabic and phone layouts, and unchanged event registration.
 
-Not verified: signed-in dashboard pages against real Supabase Auth, and a real invitation email.
+Not verified: signed-in dashboard pages against real Supabase Auth, a real invitation email, and
+real Supabase Storage (no rotated keys yet).
 
 ## 12. Deployment actions (each needs the owner's approval)
 
 1. Review and merge `feat/uc01-membership-applications`.
-2. Apply `0025_membership_applications.sql` to **staging**, using the same MCP or CLI method and
-   the read-only postflight used for 0024: forced RLS on the four new tables, zero `app_runtime`
-   table grants, execution only on the listed routines, and existing registrations unchanged.
-3. On staging: run the live API checks, one synthetic application, and the dashboard as a pilot
-   Society Affairs manager, Board user and Technical user. Delete the synthetic data afterwards.
-4. Apply 0025 to **production** only after staging passes and with explicit approval. 0025 is
-   additive: new tables, new routines, a wider audit CHECK, and select/insert on `members` for
-   the routine owner.
-5. Record the approval policy only after the owner's decision. A Technical user does this from
+2. Staging: follow [UC-01_Staging_Rollout.md](UC-01_Staging_Rollout.md):
+   - pre-checks (already run read-only, all as expected);
+   - apply 0025 and then 0026, then run the post-flight checks;
+   - rotate the exposed S3 keys and restrict bucket `v1`;
+   - install the five Storage variables;
+   - run the synthetic smoke test with the dashboard as a pilot Society Affairs manager, Board user
+     and Technical user.
+3. Production only after staging passes and with separate explicit approval. It needs its own
+   private bucket and keys.
+4. Record the approval policy only after the owner's decision. A Technical user does this from
    `/admin/membership`.
-6. Supabase Auth: confirm the invite template wording suits new members, not only
+5. Supabase Auth: confirm the invite template wording suits new members, not only
    administrators. The configured custom SMTP allows 30 Auth emails an hour, which limits
-   activations per hour. No storage bucket is needed.
-7. Grant a Society Affairs manager through `/admin/access` when the owner names one. Nothing
+   activations per hour.
+6. Grant a Society Affairs manager through `/admin/access` when the owner names one. Nothing
    in the organisational chart is imported.

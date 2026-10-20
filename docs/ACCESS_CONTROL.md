@@ -222,7 +222,14 @@ creates `administrative_access`.
 
 The Society Affairs committee is identified by slug, never by display name. A title in the
 society's organisational chart grants nothing: a reviewer exists only after a grant at
-`/admin/access`. Full contract: [UC-01_Membership_Applications.md](UC-01_Membership_Applications.md).
+`/admin/access`.
+
+A database that cannot answer, for example one without migration 0025, never grants access. The
+three reviewer roles see the section marked as needing setup, which opens an explanation only;
+every other manager still sees nothing. The ID card is reachable only through the authenticated,
+audited document route: the private Storage bucket has no public or signed URL and no Storage
+policies (ADR 0018). Full contract:
+[UC-01_Membership_Applications.md](UC-01_Membership_Applications.md).
 
 ## Acceptance and rollout
 

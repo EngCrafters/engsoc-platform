@@ -1,7 +1,9 @@
 # 0017 — Membership applications, SQU ID verification and review
 
 Status: accepted for implementation (owner direction, 2026-10-20); **final approval policy
-pending owner confirmation** (see "Open decisions")
+pending owner confirmation** (see "Open decisions"). The section "Where the ID card lives" is
+superseded by [ADR 0018](0018-membership-id-cards-in-private-storage.md) (private Supabase
+Storage); PostgreSQL storage remains the fallback until Storage is configured.
 Related: UC-01 (`docs/UC-01_Deep_Dive.pdf`), ADR 0004, ADR 0012, ADR 0013, ADR 0015, ADR 0016,
 `docs/UC-01_Membership_Applications.md` (the data and security contract)
 

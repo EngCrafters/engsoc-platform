@@ -230,8 +230,10 @@ reordering.
 differs from the line above; the mismatch is recorded here rather than
 silently resolved. Registration goes through SQU ID verification,
 review and approval instead of the deep dive's direct creation (ADR 0017,
-`docs/UC-01_Membership_Applications.md`). It is on branch
-`feat/uc01-membership-applications` and is not deployed. The approval policy
+`docs/UC-01_Membership_Applications.md`); ID cards go to private Supabase
+Storage (ADR 0018). It is on branch `feat/uc01-membership-applications` and is
+not deployed; `docs/UC-01_Staging_Rollout.md` is the prepared, unapplied
+staging plan. The approval policy
 and the other open decisions in ADR 0017 wait on the owner. UC-02 stays the
 active line until the owner moves it.
 

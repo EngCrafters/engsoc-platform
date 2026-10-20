@@ -111,6 +111,21 @@ review, document, activation and policy routines (EXECUTE for `app_runtime` only
 owner, so activation is the only path that writes members. The final block verifies
 its own grants and RLS. Additive only; it has not been applied to staging or production.
 
+`0026_membership_document_storage.sql` (ADR 0018) lets a document row reference a private
+Supabase Storage object instead of holding bytes. A CHECK constraint allows exactly one of the
+two; `content` becomes nullable and no column is dropped. It also adds:
+
+- the begin and stored-submit routines Core uses around its upload;
+- `private.membership_storage_deletions`, a forced-RLS queue that a trigger fills in the same
+  transaction that removes a Storage-backed document;
+- routines to queue abandoned uploads (never a referenced object), and to claim and complete
+  deletions;
+- a replacement `get_membership_document` that also returns the reference.
+
+Forward-only; 0025 is unchanged. Staging steps, checks and recovery:
+`docs/UC-01_Staging_Rollout.md`. `db/rollback/` holds the destructive 0026+0025 rollback for
+that runbook's last-resort step. It is not a migration and is never applied automatically.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.
