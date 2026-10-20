@@ -176,6 +176,13 @@
       "when": 1791442800000,
       "tag": "0024_api_clients",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791529200000,
+      "tag": "0025_membership_applications",
+      "breakpoints": true
     }
   ]
 }
