@@ -1,6 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Sql } from "postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  CONSENT_VERSIONS,
+  MAX_INTERESTS,
+  MEMBERSHIP_DISCIPLINES,
+  MEMBERSHIP_INTERESTS,
+} from "../../lib/membership/types";
 import { adminDb, close, runtimeDb } from "./helpers";
 
 /**
@@ -206,6 +212,24 @@ describe("membership applications", () => {
     for (const fullName of ["عائشة بنت سالم الهنائية", "Ma'mun Al-Rawahi"]) {
       expect((await submit({ fullName })).result.code).toBe("SUCCESS");
     }
+  });
+
+  it("accepts exactly the vocabularies the server and website use", async () => {
+    for (const discipline of MEMBERSHIP_DISCIPLINES) {
+      expect((await submit({ discipline })).result.code, discipline).toBe(
+        "SUCCESS"
+      );
+    }
+    for (let i = 0; i < MEMBERSHIP_INTERESTS.length; i += MAX_INTERESTS) {
+      const interests = MEMBERSHIP_INTERESTS.slice(i, i + MAX_INTERESTS);
+      expect((await submit({ interests })).result.code, String(interests)).toBe(
+        "SUCCESS"
+      );
+    }
+    for (const consent of CONSENT_VERSIONS) {
+      expect((await submit({ consent })).result.code, consent).toBe("SUCCESS");
+    }
+    expect((await submit({ interests: [] })).result.code).toBe("SUCCESS");
   });
 
   it("validates every field and the document inside the routine", async () => {

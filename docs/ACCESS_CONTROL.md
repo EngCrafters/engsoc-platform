@@ -200,6 +200,30 @@ review-required draft, clears approval, increments revision and writes audit;
 it needs no new status or rejection table. Approval and rejection audit records
 include actor, event, committee, prior and resulting review state and time.
 
+## Membership applications (ADR 0017)
+
+Membership review is the one place where a committee manager's authority depends on which
+committee they manage. It is computed from live access on every call:
+
+| Access                                                           | Membership authority           |
+| ---------------------------------------------------------------- | ------------------------------ |
+| `COMMITTEE_MANAGER` of the committee with slug `society-affairs` | Society Affairs reviewer       |
+| `BOARD_ADMIN`                                                    | Senior Management reviewer     |
+| `TECHNICAL`                                                      | Senior Management reviewer     |
+| Any other manager, or no active access                           | None; the section is not shown |
+
+All reviewers can list and open applications, view the ID card (audited), verify, reject and
+activate an approved application. Final approval follows the recorded policy: under `two_step`
+only a Senior Management reviewer other than the verifier approves; under `single_step` any
+reviewer approves; while the policy is unset, approval and activation are refused. Only
+Technical records the policy. Nobody reviews an application with their own Auth email.
+Activation creates a `members` row and, when needed, sends the standard Auth invitation. It never
+creates `administrative_access`.
+
+The Society Affairs committee is identified by slug, never by display name. A title in the
+society's organisational chart grants nothing: a reviewer exists only after a grant at
+`/admin/access`. Full contract: [UC-01_Membership_Applications.md](UC-01_Membership_Applications.md).
+
 ## Acceptance and rollout
 
 Tests must exercise Technical global reads, counts and access management;

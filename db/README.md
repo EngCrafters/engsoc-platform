@@ -101,6 +101,16 @@ The export route rejects an empty or partial export when the database's row
 limit or a concurrent registration change makes its result disagree with the
 authorized registration count.
 
+`0025_membership_applications.sql` adds UC-01 membership applications (ADR 0017,
+`docs/UC-01_Membership_Applications.md`). It creates four `private` tables owned by
+`uc02_routine_owner` with forced RLS and no other grants: applications, their ID
+documents (`bytea`, deleted at the decision), per-IP submission attempts, and a one-row
+settings table whose `approval_policy` starts `NULL`. It also adds the submit, status,
+review, document, activation and policy routines (EXECUTE for `app_runtime` only), the
+`membership.*` audit actions, and `SELECT`/`INSERT` on `public.members` for the routine
+owner, so activation is the only path that writes members. The final block verifies
+its own grants and RLS. Additive only; it has not been applied to staging or production.
+
 ## Applying migrations
 
 `npm run db:migrate` replays the journal via Drizzle against `DATABASE_URL`.
