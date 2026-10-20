@@ -137,6 +137,17 @@ describe("membership review actions", () => {
     expect(state.invite).not.toHaveBeenCalled();
   });
 
+  it("never invites over an applicant's own unconfirmed account", async () => {
+    state.activate.mockResolvedValue({ code: "EMAIL_UNCONFIRMED" });
+    expect(await reviewMembershipAction(null, reviewForm("approve"))).toEqual({
+      code: "SUCCESS",
+      decision: "approve",
+      activation: "EMAIL_UNCONFIRMED",
+    });
+    expect(state.invite).not.toHaveBeenCalled();
+    expect(state.activate).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the approval when the invitation cannot be sent, so activation can be retried", async () => {
     state.activate.mockResolvedValue({ code: "NEEDS_INVITATION" });
     state.invite.mockResolvedValue({ code: "EMAIL_RATE_LIMIT" });

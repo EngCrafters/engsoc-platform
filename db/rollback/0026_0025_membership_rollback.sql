@@ -1,5 +1,6 @@
--- DESTRUCTIVE. Last-resort schema rollback of 0026_membership_document_storage and
--- 0025_membership_applications, restoring the database to its exact post-0024 shape.
+-- DESTRUCTIVE. Last-resort schema rollback of 0027_membership_member_accounts (if applied),
+-- 0026_membership_document_storage and 0025_membership_applications, restoring the database to
+-- its exact post-0024 shape.
 --
 -- Not a migration and never applied automatically (it lives outside db/migrations). Prefer the
 -- non-destructive recovery in docs/UC-01_Staging_Rollout.md. Run only with the owner's explicit
@@ -7,7 +8,7 @@
 -- refuses to run if any application, pending Storage deletion or membership audit row exists,
 -- because those are permanent records this script would otherwise destroy.
 --
--- Afterwards, remove the two rows from supabase_migrations.schema_migrations (or the Drizzle
+-- Afterwards, remove the rows of the rolled-back migrations from supabase_migrations.schema_migrations (or the Drizzle
 -- journal on a local database) so the migrations can be applied again later.
 
 DO $$
@@ -23,6 +24,10 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- 0027 (its replacement of activate_membership is dropped with 0025's routines below) ----------
+DROP FUNCTION IF EXISTS private.get_my_membership(uuid);
+DROP FUNCTION IF EXISTS private.membership_complete_activation(uuid, uuid, uuid, text, text);
 
 -- 0026 ------------------------------------------------------------------------------------------
 DROP FUNCTION private.get_membership_document(uuid, uuid);

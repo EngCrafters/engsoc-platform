@@ -112,6 +112,24 @@ export async function completeStorageDeletionThroughRoutine(
   `);
 }
 
+// The signed-in applicant's own view (migration 0027). The user ID is the one
+// Supabase Auth verified for this request, never a value from the request.
+export async function ownMembershipThroughRoutine(userId: string): Promise<{
+  code: string;
+  member?: { status: string; since: string } | null;
+  application?: {
+    status: string;
+    submittedAt: string;
+    decidedAt: string | null;
+    activated: boolean;
+  } | null;
+}> {
+  const rows = await db.execute<{ result: { code: string } }>(sql`
+    SELECT private.get_my_membership(${userId}::uuid) AS result
+  `);
+  return rows[0]?.result ?? { code: "SERVER_ERROR" };
+}
+
 export async function statusThroughRoutine(statusTokenHash: string): Promise<{
   code: string;
   status?: string;

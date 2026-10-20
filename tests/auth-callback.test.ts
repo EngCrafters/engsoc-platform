@@ -6,6 +6,7 @@ import {
   parseOtpType,
   readAuthHash,
   resolveCallbackDestination,
+  rootEmailLinkRedirect,
   validateNewPassword,
 } from "../lib/auth/callback";
 import { authRedirectUrl } from "../lib/auth/server";
@@ -174,5 +175,32 @@ describe("auth email problems and password policy", () => {
       /too long/
     );
     expect(validateNewPassword("x".repeat(12), "x".repeat(12))).toBeNull();
+  });
+});
+
+describe("email links that land on the root", () => {
+  it("forwards only a well-formed token-hash link of a known type to the callback", () => {
+    expect(
+      rootEmailLinkRedirect({
+        token_hash: "pkce_abcdef0123456789",
+        type: "recovery",
+      })
+    ).toBe("/auth/callback?token_hash=pkce_abcdef0123456789&type=recovery");
+    expect(rootEmailLinkRedirect({})).toBeNull();
+    expect(
+      rootEmailLinkRedirect({ token_hash: "abcdef0123456789" })
+    ).toBeNull();
+    expect(
+      rootEmailLinkRedirect({ token_hash: "abcdef0123456789", type: "admin" })
+    ).toBeNull();
+    expect(
+      rootEmailLinkRedirect({
+        token_hash: "x/../../evil?next=",
+        type: "recovery",
+      })
+    ).toBeNull();
+    expect(
+      rootEmailLinkRedirect({ token_hash: ["a", "b"], type: "recovery" })
+    ).toBeNull();
   });
 });

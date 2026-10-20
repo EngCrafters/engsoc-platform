@@ -13,6 +13,7 @@ import { checkDocument } from "./document";
 import {
   beginSubmissionThroughRoutine,
   queueAbandonedUploadThroughRoutine,
+  ownMembershipThroughRoutine,
   statusThroughRoutine,
   submitStoredThroughRoutine,
   submitThroughRoutine,
@@ -31,6 +32,7 @@ import {
   MEMBERSHIP_INTERESTS,
   type ApplicantStatus,
   type ApplicationField,
+  type ApplicationStatus,
   type ApplicationStatusResult,
   type DocumentMediaType,
   type FieldCode,
@@ -295,5 +297,59 @@ export async function getApplicationStatus(
     };
   } catch {
     return { ok: false, error: "server_error" };
+  }
+}
+
+export type OwnMembership =
+  | { ok: true; emailConfirmed: false }
+  | {
+      ok: true;
+      emailConfirmed: true;
+      member: { status: "member" | "graduate"; since: string } | null;
+      application: {
+        status: ApplicationStatus;
+        submittedAt: string;
+        decidedAt: string | null;
+        activated: boolean;
+      } | null;
+    }
+  | { ok: false };
+
+const iso = (value: string) => new Date(value).toISOString();
+
+/**
+ * The signed-in person's own membership and latest application (ADR 0019).
+ * `userId` must be the identity Supabase Auth verified for this request. The
+ * database links an application only to a confirmed email and completes an
+ * activation reviewers already approved; it never approves anything itself.
+ */
+export async function getOwnMembership(userId: string): Promise<OwnMembership> {
+  try {
+    const result = await ownMembershipThroughRoutine(userId);
+    if (result.code === "EMAIL_UNCONFIRMED") {
+      return { ok: true, emailConfirmed: false };
+    }
+    if (result.code !== "SUCCESS") return { ok: false };
+    const app = result.application;
+    return {
+      ok: true,
+      emailConfirmed: true,
+      member: result.member
+        ? {
+            status: result.member.status as "member" | "graduate",
+            since: iso(result.member.since),
+          }
+        : null,
+      application: app
+        ? {
+            status: app.status as ApplicationStatus,
+            submittedAt: iso(app.submittedAt),
+            decidedAt: app.decidedAt ? iso(app.decidedAt) : null,
+            activated: app.activated === true,
+          }
+        : null,
+    };
+  } catch {
+    return { ok: false };
   }
 }

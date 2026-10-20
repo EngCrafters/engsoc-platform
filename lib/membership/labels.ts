@@ -81,6 +81,8 @@ export const MEMBERSHIP_MESSAGES: Record<string, string> = {
     "A different Senior Management reviewer must give final approval after your verification.",
   CONFLICT:
     "Another member record already uses this email or student ID. Resolve it with the Technical Team before activating.",
+  EMAIL_UNCONFIRMED:
+    "Approved. The applicant has not confirmed their email yet, so no account can be linked. Their membership activates when they confirm and sign in; you can also retry activation later.",
   INVITE_RATE_LIMITED:
     "The invitation email limit has been reached. The application stays approved; try activation again later.",
   INVITE_UNAVAILABLE:

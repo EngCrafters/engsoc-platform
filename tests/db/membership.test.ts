@@ -603,9 +603,9 @@ describe("membership applications", () => {
         .code
     ).toBe("NEEDS_INVITATION");
 
-    // What the Auth invitation does: an identity now exists for that email.
+    // What the Auth invitation does: an invited identity now exists for that email.
     const applicant = randomUUID();
-    await admin`INSERT INTO auth.users (id, email) VALUES (${applicant}, ${email})`;
+    await admin`INSERT INTO auth.users (id, email, invited_at) VALUES (${applicant}, ${email}, now())`;
     expect(
       await call(runtime, "activate_membership", [
         people.societyAffairs,
@@ -660,7 +660,7 @@ describe("membership applications", () => {
     // Another member record with the same student ID appears through some other path.
     const other = randomUUID();
     await admin`INSERT INTO public.members (id, full_name, email, university_id) VALUES (${other}, 'Other', ${`other-${other.slice(0, 6)}@squ.edu.om`}, ${first.universityId})`;
-    await admin`INSERT INTO auth.users (id, email) VALUES (${randomUUID()}, ${first.email})`;
+    await admin`INSERT INTO auth.users (id, email, email_confirmed_at) VALUES (${randomUUID()}, ${first.email}, now())`;
     expect(
       (
         await call(runtime, "activate_membership", [

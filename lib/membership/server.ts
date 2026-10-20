@@ -392,6 +392,7 @@ export type ActivationCode =
   | "SUCCESS"
   | "ALREADY_ACTIVE"
   | "NEEDS_INVITATION"
+  | "EMAIL_UNCONFIRMED"
   | "CONFLICT"
   | "VALIDATION_ERROR"
   | "FORBIDDEN"

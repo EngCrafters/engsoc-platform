@@ -22,6 +22,25 @@ export function parseOtpType(value: string | null): CallbackOtpType | null {
 }
 
 /**
+ * Email templates build `{{ .RedirectTo }}?token_hash=…&type=…` (ADR 0019), so
+ * an email sent without a redirect (for example from the Supabase Dashboard)
+ * lands on the Site URL root. That one shape is forwarded to the callback,
+ * which verifies it; anything else on the root is ignored.
+ */
+export function rootEmailLinkRedirect(query: {
+  token_hash?: string | string[];
+  type?: string | string[];
+}): string | null {
+  const tokenHash =
+    typeof query.token_hash === "string" ? query.token_hash : null;
+  const type = parseOtpType(typeof query.type === "string" ? query.type : null);
+  if (!tokenHash || !type || !/^[A-Za-z0-9_-]{8,512}$/.test(tokenHash)) {
+    return null;
+  }
+  return `/auth/callback?${new URLSearchParams({ token_hash: tokenHash, type })}`;
+}
+
+/**
  * Where a verified Auth email link should land. Recovery and invitation links
  * always go to the password page; so does a PKCE `code` when this browser asked
  * for a recovery (the intent cookie) or the link carries the explicit

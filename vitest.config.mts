@@ -4,10 +4,14 @@ import path from "node:path";
 
 // Vitest doesn't read .env.local the way Next.js does — load it explicitly
 // so tests/rls-staging-anon.test.ts can see STAGING_SUPABASE_URL /
-// STAGING_SUPABASE_ANON_KEY. "" as the third arg means "load every var,
-// not just VITE_-prefixed ones" — safe here since this only ever runs
-// locally or in CI, never bundled into client code.
-Object.assign(process.env, loadEnv("", process.cwd(), ""));
+// STAGING_SUPABASE_ANON_KEY. Only those opt-in staging test variables are
+// taken: a developer's runtime settings (allowed origins, Storage keys, the
+// runtime database URL) must never change what the hermetic suite tests or
+// connect it to a real project.
+const localEnv = loadEnv("", process.cwd(), "");
+for (const [name, value] of Object.entries(localEnv)) {
+  if (/^STAGING_|^RUN_STAGING_/.test(name)) process.env[name] = value;
+}
 
 export default defineConfig({
   // Component tests render server components to static markup; tsconfig keeps
