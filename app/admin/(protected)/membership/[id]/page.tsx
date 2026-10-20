@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getManagerContext } from "@/lib/auth/manager";
 import {
+  getMembershipAccess,
   getMembershipApplication,
   listMembershipHistory,
 } from "@/lib/membership/server";
@@ -13,6 +14,8 @@ import {
 import { formatEventDate } from "@/lib/events/format";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { MembershipStatusBadge } from "@/components/admin/membership-status-badge";
+import { MembershipUnavailable } from "@/components/admin/membership-unavailable";
+import { hasMembershipReviewerRole } from "@/lib/membership/access";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -53,7 +56,16 @@ export default async function MembershipApplicationPage({
   const [{ id }, manager] = await Promise.all([params, getManagerContext()]);
   if (manager.kind !== "manager") return null;
   if (!UUID.test(id)) notFound();
-  const result = await getMembershipApplication(manager.userId, id);
+  // Shared with the layout's check for this request; the routine below still
+  // re-checks the actor's access itself.
+  const access = await getMembershipAccess(manager.userId);
+  if (access.kind === "unavailable" && hasMembershipReviewerRole(manager)) {
+    return <MembershipUnavailable reason={access.reason} />;
+  }
+  const result =
+    access.kind === "reviewer"
+      ? await getMembershipApplication(manager.userId, id)
+      : ({ code: "FORBIDDEN" } as const);
   if (result.code === "FORBIDDEN") {
     return (
       <p role="alert">

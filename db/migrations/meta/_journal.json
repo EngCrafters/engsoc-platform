@@ -183,6 +183,13 @@
       "when": 1791529200000,
       "tag": "0025_membership_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791615600000,
+      "tag": "0026_membership_document_storage",
+      "breakpoints": true
     }
   ]
 }

@@ -16,7 +16,12 @@ export type ManagerContext =
       userId: string;
       email: string | null;
       accessLevel: AccessLevel;
-      committees: ReadonlyArray<{ id: string; name: string }>;
+      /** `slug` is the stable committee identifier (null for legacy rows). */
+      committees: ReadonlyArray<{
+        id: string;
+        name: string;
+        slug?: string | null;
+      }>;
     };
 
 /**
@@ -73,7 +78,7 @@ export async function resolveManagerContext(
     throw new Error("Unable to verify committee authorization.");
   }
 
-  const query = supabase.from("committees").select("id, name");
+  const query = supabase.from("committees").select("id, name, slug");
   const { data: committees, error: committeesError } =
     level === "COMMITTEE_MANAGER"
       ? await query.in("id", [access.committee_id!]).order("name")
@@ -97,6 +102,7 @@ export async function resolveManagerContext(
     committees: committees.map((committee) => ({
       id: committee.id,
       name: committee.name,
+      slug: committee.slug,
     })),
   };
 }

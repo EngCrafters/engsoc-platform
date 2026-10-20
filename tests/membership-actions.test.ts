@@ -8,6 +8,8 @@ const state = vi.hoisted(() => ({
   setPolicy: vi.fn(),
   invite: vi.fn(),
   revalidatePath: vi.fn(),
+  after: vi.fn(),
+  deletions: vi.fn(),
 }));
 
 vi.mock("../lib/auth/manager", () => ({ getManagerContext: state.manager }));
@@ -16,9 +18,11 @@ vi.mock("../lib/membership/server", () => ({
   activateMembership: state.activate,
   getMembershipApplication: state.detail,
   setMembershipApprovalPolicy: state.setPolicy,
+  processMembershipStorageDeletions: state.deletions,
 }));
 vi.mock("../lib/auth/admin", () => ({ inviteAuthUser: state.invite }));
 vi.mock("next/cache", () => ({ revalidatePath: state.revalidatePath }));
+vi.mock("next/server", () => ({ after: state.after }));
 
 const {
   reviewMembershipAction,
@@ -81,6 +85,21 @@ describe("membership review actions", () => {
       note: null,
     });
     expect(state.activate).not.toHaveBeenCalled();
+    // Verification keeps the ID card: nothing is scheduled for deletion.
+    expect(state.after).not.toHaveBeenCalled();
+  });
+
+  it("schedules the ID card's Storage deletion after an approval or rejection", async () => {
+    state.activate.mockResolvedValue({ code: "SUCCESS", memberId: "x" });
+    for (const decision of ["approve", "reject"]) {
+      state.after.mockReset();
+      state.deletions.mockReset();
+      await reviewMembershipAction(null, reviewForm(decision));
+      expect(state.after, decision).toHaveBeenCalledTimes(1);
+      expect(state.deletions).not.toHaveBeenCalled();
+      await state.after.mock.calls[0][0]();
+      expect(state.deletions, decision).toHaveBeenCalledTimes(1);
+    }
   });
 
   it("after approval, invites the applicant's email from the database and activates", async () => {
@@ -147,6 +166,7 @@ describe("membership review actions", () => {
     }
     expect(state.activate).not.toHaveBeenCalled();
     expect(state.invite).not.toHaveBeenCalled();
+    expect(state.after).not.toHaveBeenCalled();
   });
 
   it("validates input before calling the database", async () => {

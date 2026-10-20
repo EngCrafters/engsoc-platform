@@ -52,14 +52,14 @@ export function isLocalReviewModeActive(): boolean {
  */
 export async function getLocalReviewCommittees(
   userId: string
-): Promise<ReadonlyArray<{ id: string; name: string }>> {
+): Promise<ReadonlyArray<{ id: string; name: string; slug: string | null }>> {
   const url = localReviewUrl();
   if (!url) return [];
 
   const sql = postgres(url, { max: 1, prepare: false });
   try {
-    return await sql<{ id: string; name: string }[]>`
-      SELECT c.id, c.name
+    return await sql<{ id: string; name: string; slug: string | null }[]>`
+      SELECT c.id, c.name, c.slug
       FROM public.administrative_access cm
       JOIN public.committees c ON c.id = cm.committee_id
       WHERE cm.user_id = ${userId} AND cm.revoked_at IS NULL

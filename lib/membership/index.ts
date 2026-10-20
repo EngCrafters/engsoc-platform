@@ -1,16 +1,29 @@
-// Public entry point for UC-01 membership applications (ADR 0017).
+// Public entry point for UC-01 membership applications (ADRs 0017 and 0018).
 //
 // The transport (app/v1/membership-applications) hands this module raw form
 // values; this module decides whether they are a valid application and passes
 // them to the canonical routine, which validates everything again. Nothing a
-// caller sends can choose a status, reviewer, role or committee.
+// caller sends can choose a status, reviewer, role, committee or storage key.
 
 export * from "./types";
 
 import { createHash, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
 import { checkDocument } from "./document";
-import { statusThroughRoutine, submitThroughRoutine } from "./db";
+import {
+  beginSubmissionThroughRoutine,
+  queueAbandonedUploadThroughRoutine,
+  statusThroughRoutine,
+  submitStoredThroughRoutine,
+  submitThroughRoutine,
+} from "./db";
+import {
+  currentDocumentStorage,
+  deleteDocumentObject,
+  newDocumentKey,
+  putDocumentObject,
+  type StorageConfig,
+} from "./storage";
 import {
   CONSENT_VERSIONS,
   MAX_INTERESTS,
@@ -19,6 +32,7 @@ import {
   type ApplicantStatus,
   type ApplicationField,
   type ApplicationStatusResult,
+  type DocumentMediaType,
   type FieldCode,
   type MembershipApplicationInput,
   type MembershipDiscipline,
@@ -144,22 +158,95 @@ const ROUTINE_FIELDS: Record<string, ApplicationField> = {
   idDocument: "idDocument",
 };
 
+type RoutineResult = { code: string; field?: string; applicationId?: string };
+
+/** Queues an object nothing may reference; the routine refuses a referenced one. */
+async function queueAbandonedUpload(bucket: string, key: string) {
+  try {
+    await queueAbandonedUploadThroughRoutine(bucket, key);
+  } catch {
+    // The key is random and identifies no one; it is what cleanup needs.
+    console.error("membership_storage_orphan", { bucket, key });
+  }
+}
+
+/**
+ * The Storage path (ADR 0018): the database records the attempt and refuses
+ * known duplicates before anything is uploaded, Core stores the object under
+ * a random key, and only then does the database write the application with
+ * the reference. An object whose application is not written is deleted, or
+ * queued for deletion when that cannot be done (or confirmed) at once.
+ */
+async function submitWithStorage(
+  config: StorageConfig,
+  application: Parameters<typeof submitThroughRoutine>[0] & {
+    mediaType: DocumentMediaType;
+  }
+): Promise<RoutineResult> {
+  const begun = await beginSubmissionThroughRoutine(application);
+  if (begun.code !== "SUCCESS") return begun;
+
+  const key = newDocumentKey(application.mediaType);
+  const stored = await putDocumentObject(
+    config,
+    key,
+    application.content,
+    application.mediaType,
+    application.sha256
+  );
+  if (!stored.ok) {
+    if (stored.uncertain) await queueAbandonedUpload(config.bucket, key);
+    return { code: "STORAGE_UNAVAILABLE" };
+  }
+
+  let result: RoutineResult;
+  try {
+    result = await submitStoredThroughRoutine({
+      ...application,
+      byteSize: application.content.byteLength,
+      storageBucket: config.bucket,
+      storageKey: key,
+    });
+  } catch (error) {
+    // The write may or may not have committed: only the queue, which checks
+    // for a reference, may remove the object now.
+    await queueAbandonedUpload(config.bucket, key);
+    throw error;
+  }
+  if (result.code !== "SUCCESS") {
+    // A refusal returns before anything is written, so nothing references it.
+    if (!(await deleteDocumentObject(config, key))) {
+      await queueAbandonedUpload(config.bucket, key);
+    }
+  }
+  return result;
+}
+
 export async function submitMembershipApplication(
   input: MembershipApplicationInput,
   ipAddress: string
 ): Promise<SubmitMembershipResult> {
   if (isIP(ipAddress) === 0) return { ok: false, error: "invalid_ip" };
+  const storage = currentDocumentStorage();
+  // Half-configured Storage is a deployment error: never fall back silently.
+  if (storage.mode === "misconfigured") {
+    return { ok: false, error: "server_error" };
+  }
   const statusToken = createStatusToken();
   const content = Buffer.from(input.document.bytes);
+  const application = {
+    ...input,
+    statusTokenHash: hashStatusToken(statusToken),
+    mediaType: input.document.mediaType,
+    sha256: createHash("sha256").update(content).digest("hex"),
+    content,
+    ipAddress,
+  };
   try {
-    const result = await submitThroughRoutine({
-      ...input,
-      statusTokenHash: hashStatusToken(statusToken),
-      mediaType: input.document.mediaType,
-      sha256: createHash("sha256").update(content).digest("hex"),
-      content,
-      ipAddress,
-    });
+    const result =
+      storage.mode === "storage"
+        ? await submitWithStorage(storage.config, application)
+        : await submitThroughRoutine(application);
     switch (result.code) {
       case "SUCCESS":
         return {

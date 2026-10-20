@@ -1,20 +1,24 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { ArrowRight, Inbox, ShieldAlert } from "lucide-react";
 import { getManagerContext } from "@/lib/auth/manager";
 import {
-  getMembershipOverview,
+  getMembershipAccess,
   listMembershipApplications,
   parseMembershipFilter,
+  processMembershipStorageDeletions,
 } from "@/lib/membership/server";
 import {
   decodeMembershipCursor,
   encodeMembershipCursor,
 } from "@/lib/membership/cursor";
+import { hasMembershipReviewerRole } from "@/lib/membership/access";
 import { POLICY_LABELS, REVIEWER_LABELS } from "@/lib/membership/labels";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { EmptyState } from "@/components/admin/empty-state";
 import { MembershipFilters } from "@/components/admin/membership-filters";
 import { MembershipList } from "@/components/admin/membership-list";
+import { MembershipUnavailable } from "@/components/admin/membership-unavailable";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,8 +34,11 @@ export default async function MembershipApplicationsPage({
   const query = await searchParams;
   const manager = await getManagerContext();
   if (manager.kind !== "manager") return null;
-  const overview = await getMembershipOverview(manager.userId);
-  if (!overview) {
+  const access = await getMembershipAccess(manager.userId);
+  if (access.kind === "unavailable" && hasMembershipReviewerRole(manager)) {
+    return <MembershipUnavailable reason={access.reason} />;
+  }
+  if (access.kind !== "reviewer") {
     return (
       <p role="alert">
         Membership applications are reviewed by Society Affairs and Senior
@@ -40,6 +47,9 @@ export default async function MembershipApplicationsPage({
     );
   }
 
+  const { overview } = access;
+  // Retries any ID card deletion an earlier decision could not finish.
+  after(() => processMembershipStorageDeletions());
   const filter = parseMembershipFilter(single(query.status));
   const rawSearch = single(query.q)?.trim().slice(0, 100) || null;
   const view = { filter, query: rawSearch };

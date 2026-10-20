@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getManagerContext } from "@/lib/auth/manager";
 import { inviteAuthUser } from "@/lib/auth/admin";
 import {
   activateMembership,
   getMembershipApplication,
+  processMembershipStorageDeletions,
   reviewMembershipApplication,
   setMembershipApprovalPolicy,
 } from "@/lib/membership/server";
@@ -93,6 +95,9 @@ export async function reviewMembershipAction(
       note: decision === "verify" ? null : rawNote.trim() || null,
     });
     if (result.code !== "SUCCESS") return { code: result.code, decision };
+    // The decision queued the ID card's Storage object for deletion in the
+    // same transaction; delete it once the reviewer has their answer.
+    if (decision !== "verify") after(() => processMembershipStorageDeletions());
     const activation =
       decision === "approve"
         ? await activate(manager.userId, applicationId)

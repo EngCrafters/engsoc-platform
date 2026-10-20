@@ -1,12 +1,24 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+import { cache } from "react";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import type {
-  ApplicationStatus,
-  ApprovalPolicy,
-  ReviewDecision,
-  ReviewerKind,
+import {
+  claimStorageDeletionsThroughRoutine,
+  completeStorageDeletionThroughRoutine,
+} from "./db";
+import {
+  currentDocumentStorage,
+  deleteDocumentObject,
+  getDocumentObject,
+} from "./storage";
+import {
+  MAX_DOCUMENT_BYTES,
+  type ApplicationStatus,
+  type ApprovalPolicy,
+  type ReviewDecision,
+  type ReviewerKind,
 } from "./types";
 
 /**
@@ -118,6 +130,52 @@ export async function getMembershipOverview(
   };
 }
 
+// PostgreSQL's codes for a function, table or schema that does not exist.
+const MISSING_OBJECT_CODES = new Set(["42883", "42P01", "3F000"]);
+
+/** The PostgreSQL error code behind a failed query, through Drizzle's wrapper. */
+function postgresCode(error: unknown): string | null {
+  let current = error;
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string" && /^[0-9A-Z]{5}$/.test(code)) return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return null;
+}
+
+export type MembershipAccess =
+  | { kind: "reviewer"; overview: MembershipOverview }
+  | { kind: "none" }
+  | { kind: "unavailable"; reason: "setup-required" | "database-error" };
+
+/**
+ * Whether the actor reviews membership applications, for the navigation and
+ * the section's pages (once per request). A database that cannot answer, most
+ * often one without migration 0025, is "unavailable", never "reviewer": the
+ * section stays hidden, and one log line says why. Only the error code is
+ * logged, because Drizzle's error message includes the query parameters.
+ */
+export const getMembershipAccess = cache(
+  async (actorId: string): Promise<MembershipAccess> => {
+    try {
+      const overview = await getMembershipOverview(actorId);
+      return overview ? { kind: "reviewer", overview } : { kind: "none" };
+    } catch (error) {
+      const code = postgresCode(error);
+      const missing = code !== null && MISSING_OBJECT_CODES.has(code);
+      console.error("membership_review_unavailable", {
+        reason: missing ? "MIGRATION_0025_NOT_APPLIED" : "DATABASE_ERROR",
+        code,
+      });
+      return {
+        kind: "unavailable",
+        reason: missing ? "setup-required" : "database-error",
+      };
+    }
+  }
+);
+
 export type MembershipCursor = { submittedAt: string; id: string };
 
 export async function listMembershipApplications(
@@ -221,6 +279,12 @@ export async function listMembershipHistory(
 }
 
 /** The document bytes, recorded as viewed; null when the actor may not see it. */
+/**
+ * The document for a reviewer the routine accepts (null otherwise). A Storage
+ * object is fetched here, on the server, and must match the size and SHA-256
+ * recorded at submission; any Storage failure throws, so the route answers
+ * 503 rather than pretending the document does not exist.
+ */
 export async function readMembershipDocument(
   actorId: string,
   applicationId: string
@@ -229,13 +293,66 @@ export async function readMembershipDocument(
     media_type: string;
     byte_size: number;
     sha256: string;
-    content: Buffer;
+    content: Buffer | null;
+    storage_bucket: string | null;
+    storage_key: string | null;
   }>(sql`
     SELECT * FROM private.get_membership_document(${actorId}::uuid, ${applicationId}::uuid)
   `);
   const row = rows[0];
   if (!row) return null;
-  return { mediaType: row.media_type, content: Buffer.from(row.content) };
+  if (row.content) {
+    return { mediaType: row.media_type, content: Buffer.from(row.content) };
+  }
+
+  const storage = currentDocumentStorage();
+  if (storage.mode !== "storage" || !row.storage_bucket || !row.storage_key) {
+    throw new Error("Membership document storage is not configured.");
+  }
+  const object = await getDocumentObject(
+    { ...storage.config, bucket: row.storage_bucket },
+    row.storage_key,
+    MAX_DOCUMENT_BYTES
+  );
+  if (!object.ok) throw new Error("Membership document is unavailable.");
+  const content = Buffer.from(object.bytes);
+  if (
+    content.byteLength !== Number(row.byte_size) ||
+    createHash("sha256").update(content).digest("hex") !== row.sha256
+  ) {
+    console.error("membership_storage_integrity_failed", { applicationId });
+    throw new Error("Membership document failed its integrity check.");
+  }
+  return { mediaType: row.media_type, content };
+}
+
+/**
+ * Deletes Storage objects queued by decisions (and by abandoned uploads), and
+ * records each deletion. A failure leaves the entry queued for the next run;
+ * an object that is already gone counts as deleted. Never throws.
+ */
+export async function processMembershipStorageDeletions(
+  limit = 10
+): Promise<{ deleted: number; failed: number }> {
+  const storage = currentDocumentStorage();
+  if (storage.mode !== "storage") return { deleted: 0, failed: 0 };
+  let deleted = 0;
+  let failed = 0;
+  try {
+    for (const item of await claimStorageDeletionsThroughRoutine(limit)) {
+      // The S3 keys are project-wide; the queued bucket is the one it was stored in.
+      const config = { ...storage.config, bucket: item.bucket };
+      if (await deleteDocumentObject(config, item.key)) {
+        await completeStorageDeletionThroughRoutine(item.id);
+        deleted += 1;
+      } else {
+        failed += 1;
+      }
+    }
+  } catch {
+    console.error("membership_storage_deletions_failed", { deleted, failed });
+  }
+  return { deleted, failed };
 }
 
 export type ReviewCode =

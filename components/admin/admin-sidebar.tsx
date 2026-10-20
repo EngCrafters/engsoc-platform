@@ -49,6 +49,8 @@ import {
 
 type Committees = ReadonlyArray<{ id: string; name: string }>;
 type OpenSettings = (trigger: HTMLElement) => void;
+export type MembershipNavigation =
+  { awaiting: number } | { unavailable: "setup-required" | "database-error" };
 
 function NavLink({
   href,
@@ -60,7 +62,7 @@ function NavLink({
   href: string;
   label: string;
   icon: (typeof adminNavigation.workspace)[number]["icon"];
-  badge?: number;
+  badge?: number | string;
   badgeLabel?: string;
 }) {
   const pathname = usePathname();
@@ -248,8 +250,12 @@ export function AdminSidebar({
   email: string | null;
   accessLevel: AccessLevel;
   committees: Committees;
-  /** Present only for membership reviewers; `awaiting` = pending + verified. */
-  membership?: { awaiting: number } | null;
+  /**
+   * Present only for membership reviewers; `awaiting` = pending + verified.
+   * `unavailable`: the database could not confirm access, so the section
+   * opens an explanation only (shown to the roles the membership rules name).
+   */
+  membership?: MembershipNavigation | null;
   logoutAction: () => void | Promise<void>;
   onOpenSettings: OpenSettings;
 } & Omit<React.ComponentProps<typeof Sidebar>, "children">) {
@@ -294,14 +300,31 @@ export function AdminSidebar({
             <SidebarGroupLabel>Membership</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu aria-label="Membership">
-                {adminNavigation.membership.map((link) => (
-                  <NavLink
-                    key={link.href}
-                    {...link}
-                    badge={membership.awaiting}
-                    badgeLabel={`${membership.awaiting} awaiting a decision`}
-                  />
-                ))}
+                {adminNavigation.membership.map((link) =>
+                  "unavailable" in membership ? (
+                    <NavLink
+                      key={link.href}
+                      {...link}
+                      badge={
+                        membership.unavailable === "setup-required"
+                          ? "Setup"
+                          : "!"
+                      }
+                      badgeLabel={
+                        membership.unavailable === "setup-required"
+                          ? "setup required"
+                          : "temporarily unavailable"
+                      }
+                    />
+                  ) : (
+                    <NavLink
+                      key={link.href}
+                      {...link}
+                      badge={membership.awaiting}
+                      badgeLabel={`${membership.awaiting} awaiting a decision`}
+                    />
+                  )
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

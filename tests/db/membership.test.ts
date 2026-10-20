@@ -347,6 +347,16 @@ describe("membership applications", () => {
         allowed
       ).toBe(true);
       expect((await detail(people[allowed], id)).code, allowed).toBe("SUCCESS");
+      // The dashboard's navigation is driven by this overview.
+      expect(
+        await call(runtime, "get_membership_review_overview", [
+          people[allowed],
+        ]),
+        allowed
+      ).toMatchObject({
+        code: "SUCCESS",
+        reviewer: allowed === "societyAffairs" ? "society_affairs" : "senior",
+      });
     }
     for (const denied of ["media", "noAccess", "revoked"]) {
       expect(
