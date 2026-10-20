@@ -159,8 +159,12 @@ export const RECOVERY_EXPIRED_MESSAGE =
 export const PASSWORD_UPDATE_FAILED_MESSAGE =
   "The password could not be updated. Try again.";
 
-/** Minimum password policy shared by the reset page and the Technical fallback. */
-export const MIN_PASSWORD_LENGTH = 12;
+/**
+ * Minimum password policy shared by the reset page and the Technical fallback.
+ * It matches Supabase Auth's project setting (the owner's decision of
+ * 20 October 2026: 8 characters, for members and administrators alike).
+ */
+export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 1024;
 
 export function validateNewPassword(

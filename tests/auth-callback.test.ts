@@ -167,7 +167,7 @@ describe("auth email problems and password policy", () => {
   });
 
   it("enforces the minimum length and matching confirmation", () => {
-    expect(validateNewPassword("short", "short")).toMatch(/at least 12/);
+    expect(validateNewPassword("short", "short")).toMatch(/at least 8/);
     expect(validateNewPassword("x".repeat(12), "y".repeat(12))).toMatch(
       /do not match/
     );
