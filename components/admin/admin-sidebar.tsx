@@ -37,6 +37,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
@@ -53,10 +54,14 @@ function NavLink({
   href,
   label,
   icon: Icon,
+  badge,
+  badgeLabel,
 }: {
   href: string;
   label: string;
   icon: (typeof adminNavigation.workspace)[number]["icon"];
+  badge?: number;
+  badgeLabel?: string;
 }) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
@@ -71,8 +76,16 @@ function NavLink({
         >
           <Icon aria-hidden="true" />
           <span>{label}</span>
+          {badge ? (
+            <span className="sr-only">, {badgeLabel ?? badge}</span>
+          ) : null}
         </Link>
       </SidebarMenuButton>
+      {badge ? (
+        <SidebarMenuBadge aria-hidden="true" className="tabular-nums">
+          {badge}
+        </SidebarMenuBadge>
+      ) : null}
     </SidebarMenuItem>
   );
 }
@@ -227,6 +240,7 @@ export function AdminSidebar({
   email,
   accessLevel,
   committees,
+  membership = null,
   logoutAction,
   onOpenSettings,
   ...props
@@ -234,6 +248,8 @@ export function AdminSidebar({
   email: string | null;
   accessLevel: AccessLevel;
   committees: Committees;
+  /** Present only for membership reviewers; `awaiting` = pending + verified. */
+  membership?: { awaiting: number } | null;
   logoutAction: () => void | Promise<void>;
   onOpenSettings: OpenSettings;
 } & Omit<React.ComponentProps<typeof Sidebar>, "children">) {
@@ -273,6 +289,23 @@ export function AdminSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {membership ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Membership</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu aria-label="Membership">
+                {adminNavigation.membership.map((link) => (
+                  <NavLink
+                    key={link.href}
+                    {...link}
+                    badge={membership.awaiting}
+                    badgeLabel={`${membership.awaiting} awaiting a decision`}
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
         {accessLevel === "TECHNICAL" ? (
           <SidebarGroup>
             <SidebarGroupLabel>Technical Administration</SidebarGroupLabel>

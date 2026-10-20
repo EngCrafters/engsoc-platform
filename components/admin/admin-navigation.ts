@@ -3,12 +3,21 @@ import {
   CalendarPlus,
   CircleUserRound,
   Shield,
+  UserCheck,
 } from "lucide-react";
 
 export const adminNavigation = {
   workspace: [
     { href: "/admin/events", label: "Events", icon: CalendarDays },
     { href: "/admin/events/new", label: "Create event", icon: CalendarPlus },
+  ],
+  /** Shown only to membership reviewers (Society Affairs, Senior Management). */
+  membership: [
+    {
+      href: "/admin/membership",
+      label: "Membership applications",
+      icon: UserCheck,
+    },
   ],
   account: [
     { href: "/admin/account", label: "Account", icon: CircleUserRound },
@@ -21,6 +30,12 @@ export const adminNavigation = {
 const EVENT_ID = "[0-9a-f-]+";
 
 export function isAdminNavActive(pathname: string, href: string) {
+  if (href === "/admin/membership") {
+    return (
+      pathname === "/admin/membership" ||
+      new RegExp(`^/admin/membership/${EVENT_ID}$`, "i").test(pathname)
+    );
+  }
   if (href === "/admin/events") {
     return (
       pathname === "/admin/events" ||
@@ -38,6 +53,14 @@ export type AdminBreadcrumb = { label: string; href?: string };
 export function adminBreadcrumbs(pathname: string): AdminBreadcrumb[] {
   if (pathname === "/admin/access")
     return [{ label: "Technical Administration" }];
+  if (pathname === "/admin/membership")
+    return [{ label: "Membership applications" }];
+  if (new RegExp(`^/admin/membership/${EVENT_ID}$`, "i").test(pathname)) {
+    return [
+      { label: "Membership applications", href: "/admin/membership" },
+      { label: "Application" },
+    ];
+  }
   if (pathname === "/admin/account") return [{ label: "Account" }];
   if (pathname === "/admin/events/new") {
     return [{ label: "Events", href: "/admin/events" }, { label: "New event" }];

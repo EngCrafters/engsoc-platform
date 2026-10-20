@@ -37,4 +37,26 @@ describe("admin navigation", () => {
     ]);
     expect(adminBreadcrumbs("/admin/account")).toEqual([{ label: "Account" }]);
   });
+
+  it("highlights and trails the membership review section", () => {
+    expect(isAdminNavActive("/admin/membership", "/admin/membership")).toBe(
+      true
+    );
+    expect(
+      isAdminNavActive(`/admin/membership/${id}`, "/admin/membership")
+    ).toBe(true);
+    expect(isAdminNavActive(`/admin/membership/${id}`, "/admin/events")).toBe(
+      false
+    );
+    expect(
+      isAdminNavActive(`/admin/membership/${id}/document`, "/admin/membership")
+    ).toBe(false);
+    expect(adminBreadcrumbs("/admin/membership")).toEqual([
+      { label: "Membership applications" },
+    ]);
+    expect(adminBreadcrumbs(`/admin/membership/${id}`)).toEqual([
+      { label: "Membership applications", href: "/admin/membership" },
+      { label: "Application" },
+    ]);
+  });
 });

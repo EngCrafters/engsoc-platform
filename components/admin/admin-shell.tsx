@@ -17,6 +17,7 @@ export function AdminShell({
   userId,
   accessLevel,
   committees,
+  membership = null,
   logoutAction,
   children,
 }: {
@@ -24,6 +25,7 @@ export function AdminShell({
   userId: string;
   accessLevel: AccessLevel;
   committees: ReadonlyArray<{ id: string; name: string }>;
+  membership?: { awaiting: number } | null;
   logoutAction: () => void | Promise<void>;
   children: ReactNode;
 }) {
@@ -57,6 +59,7 @@ export function AdminShell({
             email={email}
             accessLevel={accessLevel}
             committees={committees}
+            membership={membership}
             logoutAction={logoutAction}
             onOpenSettings={openSettings}
           />
