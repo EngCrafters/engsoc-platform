@@ -18,7 +18,7 @@ export function eventStorage() {
   });
   if (
     mode.mode !== "storage" ||
-    mode.config.bucket === process.env.SUPABASE_S3_MEMBERSHIP_BUCKET
+    mode.config.bucket === process.env.SUPABASE_S3_MEMBERSHIP_BUCKET?.trim()
   ) {
     throw new Error("Event image storage is not configured");
   }

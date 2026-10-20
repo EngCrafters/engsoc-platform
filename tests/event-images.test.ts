@@ -59,6 +59,17 @@ describe("event cover validation", () => {
   it("refuses missing event bucket configuration and sharing the membership bucket", () => {
     vi.stubEnv("SUPABASE_S3_EVENT_BUCKET", "");
     expect(() => eventStorage()).toThrow();
+    for (const [name, value] of Object.entries({
+      SUPABASE_S3_ENDPOINT: "http://127.0.0.1:9999/storage/v1/s3",
+      SUPABASE_S3_REGION: "local-test",
+      SUPABASE_S3_ACCESS_KEY_ID: "synthetic-access-key",
+      SUPABASE_S3_SECRET_ACCESS_KEY: "synthetic-secret",
+      SUPABASE_S3_MEMBERSHIP_BUCKET: "private-ids ",
+      SUPABASE_S3_EVENT_BUCKET: "private-ids",
+      VERCEL: "",
+    }))
+      vi.stubEnv(name, value);
+    expect(() => eventStorage()).toThrow();
     vi.unstubAllEnvs();
   });
   it("uses the event namespace with the shared signer, while leaving membership keys restricted", async () => {
