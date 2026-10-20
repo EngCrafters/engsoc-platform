@@ -220,6 +220,11 @@ Technical records the policy. Nobody reviews an application with their own Auth 
 Activation creates a `members` row and, when needed, sends the standard Auth invitation. It never
 creates `administrative_access`.
 
+Applicants may hold their own Auth account (ADR 0019). An account confers nothing by itself: it
+is a member only once the database activated an approved application, and it never has
+`administrative_access` unless a Technical user grants it at `/admin/access`. Core links an
+application only to a confirmed email.
+
 The Society Affairs committee is identified by slug, never by display name. A title in the
 society's organisational chart grants nothing: a reviewer exists only after a grant at
 `/admin/access`.

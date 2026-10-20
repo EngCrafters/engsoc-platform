@@ -4,8 +4,9 @@ Status: implemented on branch `feat/uc01-membership-applications` (October 20, 2
 **Not deployed.** Migrations `0025_membership_applications` and
 `0026_membership_document_storage` are applied to **staging** with the owner's approval
 (2026-10-20; [UC-01_Staging_Rollout.md](UC-01_Staging_Rollout.md) records what remains). They are not
-applied to production. Final approval and activation stay disabled until the owner confirms the
-approval policy (ADR 0017, "Open decisions").
+applied to production. `0027_membership_member_accounts` (applicants' own accounts, ADR 0019) is
+applied only to disposable local databases. Final approval and activation stay disabled until the
+owner confirms the approval policy (ADR 0017, "Open decisions").
 
 Decision records: [ADR 0017](adr/0017-membership-applications-and-review.md) and, for where ID
 cards are stored, [ADR 0018](adr/0018-membership-id-cards-in-private-storage.md). Access model:
@@ -117,6 +118,11 @@ Both endpoints are public, take no key or cookie, use exact-origin CORS
   - `503` for anything unexpected.
 - `POST /v1/membership-applications/status`, JSON `{statusToken}` (never in a URL):
   `200 {data:{status, submittedAt, decidedAt, activated}}`, `404` for an unknown token.
+- `GET /v1/me/membership` (ADR 0019), the visitor's Supabase access token as a Bearer header,
+  verified by Supabase Auth: `200 {data:{emailConfirmed, member, application}}` with the
+  member state and the latest application's stage (`verified` included), dates and activation;
+  `401` for a missing or rejected token. Only an application linked to (or matching) a
+  **confirmed** email is shown.
 
 The client IP comes only from `x-vercel-forwarded-for` in production, as for event registration.
 
@@ -167,9 +173,11 @@ version in `CONSENT_VERSIONS`, the database routine and the website.
 
 ## 9. Notifications
 
-- On submission: the on-screen confirmation and the status token, stored in that browser.
-- On activation: the Supabase Auth invitation, so the applicant chooses their own password.
-- At any time: the website's status view.
+- On submission: the on-screen confirmation and the status token, stored in that browser; with
+  a password chosen, Supabase Auth's confirmation email (ADR 0019).
+- On activation: nothing for an applicant whose own account is confirmed (they already have a
+  password); otherwise the Supabase Auth invitation, so the applicant chooses their own password.
+- At any time: the website's status view, by token or by signing in at `/login`.
 
 Nothing else is sent. No email contains the ID card, the note, reviewer identities or a
 password. Application-originated email (received and rejected notices) needs
@@ -240,3 +248,15 @@ real Supabase Storage (no rotated keys yet).
    activations per hour.
 6. Grant a Society Affairs manager through `/admin/access` when the owner names one. Nothing
    in the organisational chart is imported.
+
+## 13. Applicant accounts (ADR 0019)
+
+- The password is chosen on the registration form and sent **only** to Supabase Auth's sign-up,
+  after Core accepted the application. No Core table, log, audit row or response holds it.
+- `membership_applications.auth_user_id` links an application to an Auth identity, set only
+  for a confirmed (or Core-invited) identity: on its first sign-in
+  (`membership.account_linked`), or at activation.
+- Activation never attaches an unconfirmed self-registered identity (`EMAIL_UNCONFIRMED`). The
+  applicant's confirmed sign-in completes an activation reviewers already approved; it never
+  approves.
+- The minimum password length is 8 characters (owner decision), for members and administrators.

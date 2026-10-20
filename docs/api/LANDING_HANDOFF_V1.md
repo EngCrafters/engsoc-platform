@@ -123,6 +123,28 @@ Returns `{ "data": { "status": "pending_review" | "approved" | "rejected", "subm
 "decidedAt", "activated" } }`, or `404` for an unknown token. No internal state, reviewer or note
 is ever returned.
 
+## Member sign-in (browser, the visitor's own session)
+
+ADR 0019. The landing site signs members in with Supabase Auth, the same project as Core, from
+the browser. It needs that project's URL and anon (publishable) key, which are public by design
+(`SUPABASE_URL`, `SUPABASE_ANON_KEY`, read on the server and handed to the sign-in pages). It
+never needs the service-role key.
+
+- The registration request to Core never contains the password. After Core answers 201, the
+  browser calls Supabase `auth.signUp` with `emailRedirectTo: <site>/login`.
+- Recovery uses `auth.resetPasswordForEmail` with `redirectTo: <site>/reset-password`. Both
+  pages must be on the Supabase redirect allow-list (see `docs/AUTH_AND_EMAIL.md` section 9).
+
+```
+GET {CORE_API_BASE_URL}/me/membership
+Authorization: Bearer {the visitor's Supabase access token}
+Origin: https://essqu.com
+```
+
+Returns `{ "data": { "emailConfirmed", "member", "application" } }` for that identity only; `401` when
+the token is missing or rejected (sign the visitor out). No cookie is sent. Never put the token in
+a URL. Treat a signed-in visitor as a member only when `member` is not null.
+
 ## CORS
 
 Allowed production origins are exact matches:

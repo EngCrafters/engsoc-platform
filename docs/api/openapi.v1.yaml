@@ -411,8 +411,71 @@ paths:
       responses:
         "204":
           description: Preflight response
+  /me/membership:
+    get:
+      tags: [Membership]
+      summary: The signed-in visitor's own membership (ADR 0019)
+      description: |
+        For the public website's sign-in page. The visitor's Supabase Auth
+        access token goes in the Authorization header (never a URL, never a
+        cookie); Supabase Auth verifies it and the answer is about that
+        identity only. An application is linked only to a confirmed email.
+        Signing in grants nothing: `member` is null until reviewers approved
+        the application and it was activated. No note, reviewer, student ID or
+        document is returned.
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: The visitor's membership and latest application
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [emailConfirmed, member, application]
+                    properties:
+                      emailConfirmed: { type: boolean }
+                      member:
+                        type: [object, "null"]
+                        required: [status, since]
+                        properties:
+                          status: { type: string, enum: [member, graduate] }
+                          since: { type: string, format: date-time }
+                      application:
+                        type: [object, "null"]
+                        required: [status, submittedAt, decidedAt, activated]
+                        properties:
+                          status:
+                            type: string
+                            enum: [pending_review, verified, approved, rejected]
+                          submittedAt: { type: string, format: date-time }
+                          decidedAt:
+                            { type: [string, "null"], format: date-time }
+                          activated: { type: boolean }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Membership]
+      summary: CORS preflight (allows GET with Authorization)
+      responses:
+        "204":
+          description: Preflight response
 components:
   securitySchemes:
+    memberSession:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        A Supabase Auth access token from the visitor's own sign-in in the
+        browser. Not an API client key; it identifies a person, not a server.
     clientKey:
       type: http
       scheme: bearer

@@ -13,6 +13,7 @@ with separate authorization; nothing has been applied there.
 | 5. Restrict bucket `v1` | **Not done** (no size or MIME limit yet)                                  |
 | 6. Configuration        | Developer `.env.local` only; **not on Vercel**                            |
 | 7. Smoke test           | **Not run**                                                               |
+| 10. 0027 (accounts)     | **Not applied**; awaiting approval (section 10)                           |
 
 How step 2 was done: the Supabase MCP was not available, so each committed file (hashes as in
 section 2) was sent unchanged in its own transaction over the developer's staging connection.
@@ -214,3 +215,32 @@ WHERE o.bucket_id = 'v1' AND o.name LIKE 'membership-id-cards/%'
      privileges, RLS flags, constraints, indexes, policies, triggers and types. Its audit CHECK is
      the definition staging has now (md5 `b9dadd8d…`).
    - Afterwards, delete the two `supabase_migrations.schema_migrations` rows.
+
+## 10. Migration 0027: applicant accounts (ADR 0019), awaiting approval
+
+`0027_membership_member_accounts`, SHA-256 at commit `a2c7dfe`:
+`933515cd3e9c3eda636e2f4db3f87b29e7eba46fcca90ee2c03342190eb1a3a3`. It is additive and changes no
+row:
+
+- a nullable `auth_user_id` column and its index;
+- the audit CHECK widened by `membership.account_linked`;
+- the new `get_my_membership` routine and an internal helper;
+- `activate_membership` replaced with the same signature, adding only the confirmed-identity rule.
+
+It was rehearsed on the full local chain and is covered by `tests/db/membership-accounts.test.ts`.
+
+Apply it like step 2 (`BEGIN;` + the unchanged file + `COMMIT;` with its history row), after
+0025 and 0026. Post-flight, read-only:
+
+```sql
+SELECT has_function_privilege('app_runtime', 'private.get_my_membership(uuid)', 'EXECUTE');   -- true
+SELECT has_function_privilege('authenticated', 'private.get_my_membership(uuid)', 'EXECUTE'); -- false
+SELECT has_function_privilege('app_runtime',
+  'private.membership_complete_activation(uuid, uuid, uuid, text, text)', 'EXECUTE');          -- false
+SELECT position('membership.account_linked' IN pg_get_constraintdef(oid)) > 0
+FROM pg_constraint WHERE conname = 'uc02_audit_action_check';                                 -- true
+```
+
+Then the Supabase configuration in `AUTH_AND_EMAIL.md` section 9: minimum length 8, the website
+redirect URLs, and the token-hash templates. The member pages need it before passwords are
+offered; until then, registration works without them.
