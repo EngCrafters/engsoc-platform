@@ -22,6 +22,8 @@ tags:
     description: Published event reads for trusted servers.
   - name: Registration
     description: Anonymous registration and explicit waitlist requests.
+  - name: Membership
+    description: Society membership applications with SQU ID verification (ADR 0017).
 paths:
   /events:
     get:
@@ -217,6 +219,198 @@ paths:
       responses:
         "204":
           description: Preflight response
+  /membership-applications:
+    post:
+      tags: [Membership]
+      summary: Apply for society membership
+      description: |
+        Public endpoint, like registration: no API key, no cookie. CORS is
+        restricted to exact allowed origins and Core rate-limits each client
+        address (five submissions an hour).
+
+        The application is stored as `pending_review` together with the SQU ID
+        card. Core validates every field and identifies the card by its file
+        signature (JPEG, PNG, WebP or PDF; at most 4 MiB). No field can set a
+        status, role, committee or reviewer. Society Affairs and Senior
+        Management review it in the Core dashboard; an approved applicant is
+        invited by email to set a password.
+
+        `statusToken` is returned once and is the only way to read the
+        application's status. Core stores only its SHA-256 hash.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                [
+                  fullName,
+                  email,
+                  universityId,
+                  academicYear,
+                  discipline,
+                  consent,
+                  consentVersion,
+                  idDocument,
+                ]
+              properties:
+                fullName: { type: string, minLength: 1, maxLength: 200 }
+                email:
+                  type: string
+                  maxLength: 254
+                  description: An SQU address (`…@squ.edu.om` or a subdomain of it).
+                universityId: { type: string, pattern: "^[0-9]{6,10}$" }
+                academicYear: { type: string, enum: ["1", "2", "3", "4", "5"] }
+                discipline:
+                  type: string
+                  enum:
+                    [
+                      mechanical,
+                      electrical,
+                      civil,
+                      petroleum,
+                      chemical,
+                      mechatronics,
+                      industrial,
+                    ]
+                interests:
+                  type: array
+                  maxItems: 4
+                  description: Repeat the field once per interest.
+                  items:
+                    type: string
+                    enum:
+                      [
+                        cad,
+                        simulation,
+                        embedded,
+                        robotics,
+                        structures,
+                        process,
+                        data,
+                        programming,
+                        power,
+                        reservoir,
+                        quality,
+                        management,
+                        sustainability,
+                        hse,
+                      ]
+                consent: { type: string, enum: ["true"] }
+                consentVersion: { type: string, enum: ["2026-10-v1"] }
+                idDocument:
+                  type: string
+                  format: binary
+                  description: Image (JPEG, PNG, WebP) or PDF of the SQU student ID card, ≤ 4 MiB.
+      responses:
+        "201":
+          description: Application stored as pending review
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status, statusToken]
+                    properties:
+                      status: { type: string, enum: [pending_review] }
+                      statusToken:
+                        { type: string, pattern: "^[A-Za-z0-9_-]{43}$" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: The same email or student ID already has an open or approved application (`reason` already-applied) or a membership (`reason` already-member).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "413":
+          description: Body exceeded 4.5 MB.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "415":
+          description: Content-Type was not multipart/form-data.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "422":
+          description: |
+            `errors[]` names each field: `code` is `required`, `invalid`,
+            `too-long`, `too-large`, `unsupported-type` or `unexpected-field`.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Membership]
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight response
+  /membership-applications/status:
+    post:
+      tags: [Membership]
+      summary: The applicant's own application status
+      description: |
+        The token travels in the body, never in a URL. The answer contains a
+        status and dates only. `pending_review` covers every stage before the
+        final decision; `activated` is true once the member account exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [statusToken]
+              properties:
+                statusToken: { type: string, pattern: "^[A-Za-z0-9_-]{43}$" }
+      responses:
+        "200":
+          description: The status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status, submittedAt, decidedAt, activated]
+                    properties:
+                      status:
+                        {
+                          type: string,
+                          enum: [pending_review, approved, rejected],
+                        }
+                      submittedAt: { type: string, format: date-time }
+                      decidedAt: { type: [string, "null"], format: date-time }
+                      activated: { type: boolean }
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Malformed token or unexpected field.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Membership]
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight response
 components:
   securitySchemes:
     clientKey:
@@ -298,13 +492,15 @@ components:
         requestId: { type: string }
         reason:
           type: string
-          description: Optional registration conflict detail, present only with code conflict (409). Unknown or absent reasons must use generic conflict handling.
+          description: Optional conflict detail, present only with code conflict (409). Registration uses the first five; membership applications the last two. Unknown or absent reasons must use generic conflict handling.
           enum:
             - already-registered
             - already-waitlisted
             - event-full
             - registration-closed
             - registration-available
+            - already-applied
+            - already-member
         errors:
           type: array
           items:
