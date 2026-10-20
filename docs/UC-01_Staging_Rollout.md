@@ -1,7 +1,24 @@
 # UC-01 membership: staging rollout runbook (0025 and 0026, private Storage)
 
-Status: **prepared, not applied** (October 20, 2026, Dubai). Every step that changes staging needs
-the owner's explicit approval. Production is a separate rollout with separate authorization.
+Status (October 20, 2026, Dubai): **steps 1–3 done on staging with the owner's approval.** Every
+step that changes staging needs the owner's explicit approval. Production is a separate rollout
+with separate authorization; nothing has been applied there.
+
+| Step                    | State on staging                                                          |
+| ----------------------- | ------------------------------------------------------------------------- |
+| 1. Pre-checks           | Re-run immediately before applying; all as listed                         |
+| 2. 0025, 0026           | Applied; versions `20261020170444` and `20261020170445`                   |
+| 3. Post-flight          | All as listed; registrations 5 and `register_for_event` md5 unchanged     |
+| 4. Rotate keys          | Owner reports the pair in the developer's `.env.local` is the rotated one |
+| 5. Restrict bucket `v1` | **Not done** (no size or MIME limit yet)                                  |
+| 6. Configuration        | Developer `.env.local` only; **not on Vercel**                            |
+| 7. Smoke test           | **Not run**                                                               |
+
+How step 2 was done: the Supabase MCP was not available, so each committed file (hashes as in
+section 2) was sent unchanged in its own transaction over the developer's staging connection.
+Each history row (`statements` = the file, `created_by` empty) was inserted in the same
+transaction. A read-only signed GET of a nonexistent object then returned 404 from the real
+bucket, which confirms the keys, region, bucket and signature.
 Decisions: [ADR 0017](adr/0017-membership-applications-and-review.md),
 [ADR 0018](adr/0018-membership-id-cards-in-private-storage.md). Contract:
 [UC-01_Membership_Applications.md](UC-01_Membership_Applications.md).

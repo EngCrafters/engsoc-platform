@@ -2,10 +2,10 @@
 
 Status: implemented on branch `feat/uc01-membership-applications` (October 20, 2026, Dubai).
 **Not deployed.** Migrations `0025_membership_applications` and
-`0026_membership_document_storage` have been applied only to disposable local databases; the
-staging rollout is prepared in [UC-01_Staging_Rollout.md](UC-01_Staging_Rollout.md). Final approval
-and activation stay disabled until the owner confirms the approval policy (ADR 0017, "Open
-decisions").
+`0026_membership_document_storage` are applied to **staging** with the owner's approval
+(2026-10-20; [UC-01_Staging_Rollout.md](UC-01_Staging_Rollout.md) records what remains). They are not
+applied to production. Final approval and activation stay disabled until the owner confirms the
+approval policy (ADR 0017, "Open decisions").
 
 Decision records: [ADR 0017](adr/0017-membership-applications-and-review.md) and, for where ID
 cards are stored, [ADR 0018](adr/0018-membership-id-cards-in-private-storage.md). Access model:
