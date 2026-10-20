@@ -28,6 +28,8 @@ export type AdminEvent = {
   approvedBy: string | null;
   confirmedCount: number;
   waitlistedCount: number;
+  coverImageKey?: string | null;
+  phoneRequired?: boolean;
 };
 
 export const ADMIN_EVENT_PAGE_SIZE = 20;

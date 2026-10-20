@@ -1,5 +1,10 @@
 # UC-02 data and security contract
 
+**October 20 extension:** [ADR 0020](adr/0020-event-media-member-registration-and-attendance.md)
+is the ER/security addendum for event covers, private phones, member registration
+and check-in sessions. Its forward migration 0028 follows unapplied 0027;
+the existing account, review, seat and committee rules remain binding.
+
 **Access revision (October 4, 2026):** [ADR 0012](adr/0012-application-access-hierarchy.md)
 and the [access contract](ACCESS_CONTROL.md) specify the owner's replacement
 hierarchy, single-committee constraint, global reviewers, legacy isolation and

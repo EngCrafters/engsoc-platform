@@ -75,6 +75,33 @@ export const authUsers = authSchema.table("users", {
 // PostgREST. See UC-02_Data_and_Security.md section 5.
 export const privateSchema = pgSchema("private");
 
+// ADR 0020: forced RLS, executor-only policy. No runtime/browser table grants.
+// A missing row means closed; raw challenge values are never stored here.
+export const eventCheckinSessions = privateSchema.table(
+  "event_checkin_sessions",
+  {
+    eventId: uuid("event_id")
+      .primaryKey()
+      .references(() => events.id),
+    isOpen: boolean("is_open").notNull().default(false),
+    closesAt: timestamp("closes_at", { withTimezone: true }),
+    challengeHash: text("challenge_hash"),
+    challengeExpiresAt: timestamp("challenge_expires_at", {
+      withTimezone: true,
+    }),
+  },
+  (table) => [
+    check(
+      "event_checkin_sessions_check",
+      sql`NOT ${table.isOpen} OR (${table.closesAt} IS NOT NULL AND ${table.challengeHash} IS NOT NULL AND ${table.challengeExpiresAt} IS NOT NULL)`
+    ),
+    check(
+      "event_checkin_sessions_challenge_hash_check",
+      sql`${table.challengeHash} IS NULL OR ${table.challengeHash} ~ '^[0-9a-f]{64}$'`
+    ),
+  ]
+);
+
 // ---------------------------------------------------------------------------
 // Member — the central record. Every other table connects back to this one.
 // See UC-01. Open decisions on email domain restriction, university_id
@@ -85,18 +112,29 @@ export const privateSchema = pgSchema("private");
 // id matches auth.users.id from Supabase Auth (one-to-one), so login and
 // profile stay linked without a separate foreign key table.
 // ---------------------------------------------------------------------------
-export const members = pgTable("members", {
-  id: uuid("id").primaryKey(), // = auth.users.id
-  fullName: text("full_name").notNull(),
-  email: text("email").notNull().unique(), // compared case-insensitively in app code
-  universityId: text("university_id").notNull().unique(),
-  year: integer("year"),
-  major: text("major"),
-  status: memberStatus("status").notNull().default("member"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const members = pgTable(
+  "members",
+  {
+    id: uuid("id").primaryKey(), // = auth.users.id
+    fullName: text("full_name").notNull(),
+    email: text("email").notNull().unique(), // compared case-insensitively in app code
+    universityId: text("university_id").notNull().unique(),
+    year: integer("year"),
+    major: text("major"),
+    status: memberStatus("status").notNull().default("member"),
+    // ADR 0020: private E.164 phone; own-profile routines only, no browser grants.
+    phone: text("phone"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "members_phone_check",
+      sql`${table.phone} IS NULL OR ${table.phone} ~ '^\\+[1-9][0-9]{6,14}$'`
+    ),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // Committee — who is allowed to publish events. Backs role-based access
@@ -181,6 +219,8 @@ export const events = pgTable(
     description: text("description"),
     eventDate: timestamp("event_date", { withTimezone: true }).notNull(),
     location: text("location"),
+    coverImageKey: text("cover_image_key"),
+    phoneRequired: boolean("phone_required").notNull().default(false),
     committeeId: uuid("committee_id")
       .notNull()
       .references(() => committees.id),
@@ -208,6 +248,10 @@ export const events = pgTable(
       .where(
         sql`${table.archivedAt} IS NULL AND ${table.status} IN ('published','full')`
       ),
+    check(
+      "events_cover_key_check",
+      sql`${table.coverImageKey} IS NULL OR ${table.coverImageKey} ~ '^event-covers/[0-9a-f-]{36}\\.(jpg|png)$'`
+    ),
     check(
       "events_title_bounds",
       sql`${table.title} = btrim(${table.title}) AND char_length(${table.title}) BETWEEN 1 AND 200`
@@ -278,6 +322,7 @@ export const registrations = pgTable(
       .references(() => events.id),
     attendeeName: text("attendee_name").notNull(),
     attendeeEmail: text("attendee_email").notNull(),
+    attendeePhone: text("attendee_phone"), // private guest phone; no public projection
     status: registrationStatus("status").notNull().default("confirmed"), // NEW (M2)
     supersededBy: uuid("superseded_by").references(
       (): AnyPgColumn => registrations.id
@@ -292,11 +337,20 @@ export const registrations = pgTable(
     uniqueIndex("registrations_active_event_email_idx")
       .on(table.eventId, table.attendeeEmail)
       .where(sql`${table.status} IN ('confirmed','waitlisted')`),
+    uniqueIndex("registrations_active_event_member_idx")
+      .on(table.eventId, table.memberId)
+      .where(
+        sql`${table.memberId} IS NOT NULL AND ${table.status} IN ('confirmed','waitlisted')`
+      ),
     index("registrations_event_status_fifo_idx").on(
       table.eventId,
       table.status,
       table.registeredAt,
       table.id
+    ),
+    check(
+      "registrations_attendee_phone_check",
+      sql`${table.attendeePhone} IS NULL OR ${table.attendeePhone} ~ '^\\+[1-9][0-9]{6,14}$'`
     ),
     check(
       "registrations_superseded_consistency",

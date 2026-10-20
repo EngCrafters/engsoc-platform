@@ -9,6 +9,7 @@ export type RegisterForEventInput = {
   eventId: string;
   attendeeName: string;
   attendeeEmail: string;
+  attendeePhone?: string;
   intent?: "register" | "join_waitlist";
   ipAddress: string;
 };
@@ -40,6 +41,7 @@ export type RegisterForEventError =
   | "invalid_intent"
   | "invalid_ip"
   | "invalid_input"
+  | "phone_required"
   | "server_error"
   | "registration_available";
 

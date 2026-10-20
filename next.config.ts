@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Isolate the two-app browser suite from an owner's running dev server.
+  distDir:
+    process.env.ESSQU_EVENT_FLOW === "true" ? ".next-event-flow" : ".next",
   poweredByHeader: false,
   async headers() {
     return [
@@ -24,7 +27,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: "64kb",
+      bodySizeLimit: "4mb",
     },
   },
 };

@@ -15,7 +15,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Registration writes, so it is never cached. */
 const NO_STORE = "no-store";
 
-const ALLOWED_KEYS = new Set(["attendeeName", "attendeeEmail", "intent"]);
+const ALLOWED_KEYS = new Set([
+  "attendeeName",
+  "attendeeEmail",
+  "intent",
+  "attendeePhone",
+]);
 
 export function OPTIONS(request: Request): Response {
   return preflight(request, requestIdFrom(request));
@@ -78,6 +83,11 @@ export async function POST(
     fieldErrors.push({ field: "attendeeEmail", code: "required" });
   }
   const intent = record.intent ?? "register";
+  if (
+    record.attendeePhone !== undefined &&
+    typeof record.attendeePhone !== "string"
+  )
+    fieldErrors.push({ field: "attendeePhone", code: "invalid" });
   if (intent !== "register" && intent !== "join_waitlist") {
     fieldErrors.push({ field: "intent", code: "invalid" });
   }
@@ -102,6 +112,9 @@ export async function POST(
       attendeeEmail: record.attendeeEmail as string,
       intent: intent as "register" | "join_waitlist",
       ipAddress: ip.ip,
+      ...(typeof record.attendeePhone === "string"
+        ? { attendeePhone: record.attendeePhone }
+        : {}),
     });
 
     if (!result.ok) {
@@ -113,6 +126,9 @@ export async function POST(
       return problem(code, requestId, {
         headers,
         reason: registrationConflictReasonFor(result.error),
+        ...(result.error === "phone_required"
+          ? { errors: [{ field: "attendeePhone", code: "required" }] }
+          : {}),
       });
     }
 

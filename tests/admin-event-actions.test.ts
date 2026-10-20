@@ -77,6 +77,8 @@ describe("admin event actions", () => {
       "2027-02-14T09:30:00+04:00",
       "Innovation Lab",
       24,
+      null,
+      false,
     ]);
   });
 

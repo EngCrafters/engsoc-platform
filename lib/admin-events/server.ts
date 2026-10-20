@@ -2,6 +2,7 @@ import "server-only";
 
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
+import { saveEventDetails } from "@/lib/event-management/server";
 import {
   type AdminEvent,
   type AdminEventCursor,
@@ -32,6 +33,7 @@ type AdminEventRow = Omit<
   approved_by: string | null;
   confirmed_count: number;
   waitlisted_count: number;
+  options?: { coverImageKey: string | null; phoneRequired: boolean };
 };
 
 function map(row: AdminEventRow): AdminEvent {
@@ -52,6 +54,8 @@ function map(row: AdminEventRow): AdminEvent {
     approvedBy: row.approved_by,
     confirmedCount: row.confirmed_count,
     waitlistedCount: row.waitlisted_count,
+    coverImageKey: row.options?.coverImageKey ?? null,
+    phoneRequired: row.options?.phoneRequired ?? false,
   };
 }
 
@@ -148,7 +152,7 @@ export async function getAdminEvent(
 ): Promise<AdminEvent | null> {
   if (!UUID_PATTERN.test(eventId)) return null;
   const rows = await db.execute<AdminEventRow>(
-    sql`SELECT * FROM private.get_admin_event(${actorId}::uuid, ${eventId}::uuid)`
+    sql`SELECT e.*, private.admin_event_options(${actorId}::uuid, ${eventId}::uuid) AS options FROM private.get_admin_event(${actorId}::uuid, ${eventId}::uuid) e`
   );
   const row = rows[0];
   return row ? map(row) : null;
@@ -156,8 +160,16 @@ export async function getAdminEvent(
 
 export async function writeAdminEvent(
   routine: "create_event" | "edit_event",
-  values: (string | number | null)[]
+  values: (string | number | boolean | null)[]
 ) {
+  if (values.length === (routine === "create_event" ? 9 : 10)) {
+    const edit = routine === "edit_event";
+    return saveEventDetails(
+      edit
+        ? [values[0], values[1], null, values[2], ...values.slice(3)]
+        : [values[0], null, values[1], null, ...values.slice(2)]
+    );
+  }
   const rows =
     routine === "create_event"
       ? await db.execute<{

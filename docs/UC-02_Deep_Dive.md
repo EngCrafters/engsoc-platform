@@ -1,5 +1,10 @@
 # UC-02: Event announcement, registration, and committee administration
 
+**October 20 extension:** [ADR 0020](adr/0020-event-media-member-registration-and-attendance.md)
+records the owner's approved media, member-registration and attendance scope,
+data/security decisions and verification gate. It supersedes the earlier
+attendance exclusion and editable-field list only for that explicit extension.
+
 **Access revision (October 4, 2026):** The owner has specified a three-level
 application hierarchy, a single committee per ordinary manager, and global
 Board/Technical review authority. See [ADR 0012](adr/0012-application-access-hierarchy.md)

@@ -197,6 +197,8 @@ describe("event DTO", () => {
     expect(Object.keys(dto).sort()).toEqual(
       [
         "availability",
+        "coverImageUrl",
+        "phoneRequired",
         "committeeName",
         "description",
         "eventDate",

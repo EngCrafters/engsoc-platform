@@ -147,6 +147,10 @@ paths:
                   type: string
                   format: email
                   maxLength: 254
+                attendeePhone:
+                  type: string
+                  maxLength: 32
+                  description: International phone; required when the event sets phoneRequired.
                 intent:
                   type: string
                   enum: [register, join_waitlist]
@@ -467,6 +471,192 @@ paths:
       responses:
         "204":
           description: Preflight response
+  /me/profile:
+    get:
+      operationId: getOwnProfile
+      summary: Read the confirmed member's own registration profile
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/MemberProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    patch:
+      operationId: updateOwnPhone
+      summary: Save only the authenticated member's private phone
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [phone]
+              properties:
+                phone:
+                  {
+                    type: string,
+                    maxLength: 32,
+                    description: International phone with country code; normalized to E.164.,
+                  }
+      responses:
+        "200":
+          description: Updated private profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/MemberProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          { description: Invalid phone; RFC 9457 errors code PHONE_REQUIRED. }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/events/{eventId}/registrations:
+    parameters:
+      - {
+          name: eventId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    post:
+      operationId: registerOwnProfile
+      summary: Register with Core's verified profile and canonical seat/waitlist rules
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [intent]
+              properties:
+                intent: { type: string, enum: [register, join_waitlist] }
+      responses:
+        "201":
+          description: Registration accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, enum: [confirmed, waitlisted] }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Existing registration conflict reasons apply. }
+        "422": { description: Invalid fields or required profile phone. }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/events/{eventId}/attendance:
+    parameters:
+      - {
+          name: eventId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: getOwnAttendance
+      summary: Read own event eligibility; never records attendance
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private eligibility and attendance state; no challenge is exposed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { const: SUCCESS }
+                      profile: { $ref: "#/components/schemas/MemberProfile" }
+                      registration:
+                        type: [object, "null"]
+                        properties:
+                          status:
+                            { type: string, enum: [confirmed, waitlisted] }
+                          attended: { type: boolean }
+                          checkedInAt:
+                            { type: [string, "null"], format: date-time }
+                      checkinOpen: { type: boolean }
+                      closesAt: { type: [string, "null"], format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: confirmOwnAttendance
+      summary: Explicit idempotent check-in with an unexpired event challenge
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [challenge]
+              properties:
+                challenge: { type: string, pattern: "^[0-9a-f]{64}$" }
+      responses:
+        "200":
+          description: Recorded attendance or original result of an idempotent retry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { const: SUCCESS }
+                      checkedInAt: { type: string, format: date-time }
+                      alreadyAttended: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          {
+            description: "RFC 9457 errors code NOT_REGISTERED, WAITLISTED, CHECKIN_CLOSED, CHALLENGE_EXPIRED or INVALID_CHALLENGE.",
+          }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /events/{eventId}/image:
+    parameters:
+      - {
+          name: eventId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: getEventCover
+      summary: Sanitized cover image of a currently public event
+      security: []
+      responses:
+        "200":
+          description: JPEG or PNG; no private Storage URL or credentials
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+        "404": { description: No public event or cover. }
+        "503": { description: Storage or database unavailable. }
 components:
   securitySchemes:
     memberSession:
@@ -488,6 +678,15 @@ components:
       description: Correlation id, echoed from a valid caller value or generated.
       schema: { type: string }
   schemas:
+    MemberProfile:
+      type: object
+      additionalProperties: false
+      required: [code, name, email, phone]
+      properties:
+        code: { const: SUCCESS }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: [string, "null"], description: Private E.164 phone. }
     Event:
       type: object
       additionalProperties: false
@@ -516,6 +715,12 @@ components:
           type: string
           enum: [open, waitlist, closed]
           description: Derived by Core. Do not infer from anything else.
+          coverImageUrl:
+            type: [string, "null"]
+            description: Public image route relative to the Core origin, including its version query. Null without a cover.
+          phoneRequired:
+            type: boolean
+            default: false
     EventList:
       type: object
       additionalProperties: false

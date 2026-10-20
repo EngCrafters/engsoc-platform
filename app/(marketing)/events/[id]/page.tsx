@@ -71,6 +71,7 @@ export default async function PublicEventPage({
           <RegistrationForm
             eventId={event.id}
             availability={event.availability}
+            phoneRequired={event.phoneRequired}
           />
         </div>
       </section>

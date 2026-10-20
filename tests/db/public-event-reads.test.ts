@@ -9,7 +9,11 @@ describe("public event read routines", () => {
   afterAll(async () => close(admin, runtime));
 
   it("returns only a safe derived DTO and keeps unpublished events unavailable", async () => {
-    const visible = await createFixture(admin, { status: "published" });
+    // Keep this fixture on the first discovery page independently of earlier suites.
+    const visible = await createFixture(admin, {
+      status: "published",
+      eventDate: new Date(Date.now() + 3600_000),
+    });
     const hidden = await createFixture(admin, { status: "draft" });
 
     const rows = await runtime<PublicRow[]>`

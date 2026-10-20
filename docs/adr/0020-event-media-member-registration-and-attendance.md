@@ -7,8 +7,9 @@ on the existing local feature branches; no push or hosted migration is authorize
 The owner authorizes implementation choices in this extension.
 
 Events gain nullable `cover_image_key` and `phone_required` (false by default).
-Members gain nullable private `phone`; guest registrations gain nullable private
-`attendee_phone`. Existing registration `member_id`, `attended`, and
+Members gain nullable private `phone`; registrations gain nullable private
+`attendee_phone`, an event contact snapshot including guests. The profile is
+the source for later registrations. Existing `member_id`, `attended`, and
 `checked_in_at` are reused. No duplicate attendance entity or account is created.
 Settings follow existing event revision/review rules, extending editable fields.
 

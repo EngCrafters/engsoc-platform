@@ -1,5 +1,10 @@
 /** Shared user-facing messages for expected manager operation outcomes. */
 export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_IMAGE: "Choose a JPEG or PNG image up to 3 MiB and 20 megapixels.",
+  IMAGE_UPLOAD_FAILED:
+    "The image could not be uploaded. Check event Storage configuration and try again.",
+  CHECKIN_CLOSED:
+    "Check-in has closed. Open a new window to display a live QR.",
   AUTH_REQUIRED:
     "Your administrator session has expired. Sign in again to continue.",
   ACTOR_NOT_FOUND:

@@ -32,7 +32,12 @@ export default defineConfig({
     // Hermetic by design: no network, no third-party credentials. The live
     // staging suite lives in tests/integration and is opt-in through
     // `npm run test:integration` (vitest.integration.config.mts).
-    exclude: ["tests/e2e/**", "tests/integration/**", "node_modules/**"],
+    exclude: [
+      "tests/e2e/**",
+      "tests/event-flow/**",
+      "tests/integration/**",
+      "node_modules/**",
+    ],
     environment: "node",
     // The database suites share one PostgreSQL container, and some assert
     // global invariants (for example "the last active Technical owner cannot be

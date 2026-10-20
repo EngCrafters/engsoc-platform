@@ -197,6 +197,13 @@
       "when": 1791702000000,
       "tag": "0027_membership_member_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791788400000,
+      "tag": "0028_event_media_and_attendance",
+      "breakpoints": true
     }
   ]
 }

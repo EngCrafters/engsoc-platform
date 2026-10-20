@@ -1,5 +1,19 @@
 # Current work - handoff state
 
+**CURRENT — local event extension (October 21, 2026, Muscat):** The owner's event
+handoff is implemented on the existing local feature branches, preserving the
+membership commits. ADR 0020 and `docs/api/EVENT_ATTENDANCE.md` describe image
+uploads, safe links, private phones, profile registration, and scoped QR attendance.
+Local verification covers 558 Core tests, 97 website tests, both production builds,
+45 existing browser tests (one intentional skip), and the two-app event workflow.
+The event workflow uses real restricted PostgreSQL routines with synthetic local
+Auth/Storage adapters; it is not hosted Supabase verification. Staging was inspected
+read-only: its journal ends at 0026; 0027's function/column are absent. Apply neither
+0027 nor new 0028 without approval. Deployment also needs a separate private event
+bucket, matching website/CORS origins, and an `app_runtime` URL (the local configured
+URL currently logs in as postgres). No push, deployment or hosted mutation occurred.
+The dated handoffs below describe earlier releases.
+
 **CURRENT — pre-domain functional verification complete (October 19, 2026, Dubai):** This note supersedes
 the dated handoffs below. Work began at Core `15875f4`; the serving Core remains
 `https://engsoc-platform.vercel.app`. ADR 0016 separates Landing from Core.

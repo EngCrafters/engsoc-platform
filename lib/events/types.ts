@@ -17,6 +17,8 @@ export type PublicEvent = {
   location: string | null;
   committeeName: string;
   availability: PublicEventAvailability;
+  coverImageUrl?: string | null;
+  phoneRequired?: boolean;
 };
 
 export type PublicEventPage = {

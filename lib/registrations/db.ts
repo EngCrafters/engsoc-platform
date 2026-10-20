@@ -15,14 +15,16 @@ export async function registerThroughRoutine(input: {
   attendeeEmail: string;
   intent: RegistrationIntent;
   ipAddress: string;
+  attendeePhone?: string;
 }): Promise<RoutineResult> {
   const result = await db.execute<{ result: RoutineResult }>(sql`
-    select private.register_for_event(
+    select private.register_event_guest(
       ${input.eventId}::uuid,
       ${input.attendeeName},
       ${input.attendeeEmail},
       ${input.intent},
-      ${input.ipAddress}::inet
+      ${input.ipAddress}::inet,
+      ${input.attendeePhone ?? null}::text
     ) as result
   `);
   return result[0]?.result ?? { code: "SERVER_ERROR" };
