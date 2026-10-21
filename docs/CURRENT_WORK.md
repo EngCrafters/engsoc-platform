@@ -14,9 +14,10 @@
 - **Diagnostics and descriptions.** Member API failures are logged with SQLSTATE only, and Core's
   public pages render description links safely.
 
-Staging still ends at 0026. `docs/STAGING_ROLLOUT_0027_0030.md` is the prepared, unapplied plan
-(migrations, buckets, configuration, smoke test); every step needs owner approval. No push,
-deployment or hosted mutation occurred.
+Staging was migrated to 0030 on October 21 with the owner's authorization. The rollout covered a
+backup, a rehearsal, post-flight checks, the image buckets, a rotated restricted runtime role and
+16 of 16 end-to-end checks on staging (`docs/STAGING_ROLLOUT_0027_0030.md`). Production is
+untouched: it needs the same plan, each step approved separately. Nothing was pushed or deployed.
 
 **CURRENT — Projects and static page flags (October 21, 2026, Muscat):** The owner's
 correction removes all unfinished dashboard/API/database page controls. ESWebsite's

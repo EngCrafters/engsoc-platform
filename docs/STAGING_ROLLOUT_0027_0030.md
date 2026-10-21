@@ -1,10 +1,33 @@
 # Staging rollout: migrations 0027–0030, storage and runtime role
 
-Prepared October 21, 2026. **Nothing here has been applied.** Each numbered step needs the owner's
-explicit approval; production follows separately, after staging passes.
+Prepared October 21, 2026. Production follows separately, after its own approval.
 
-Staging (`wnrdgnmmcdedmilnzzsl`) ends at `0026_membership_document_storage` (read-only check,
-October 21). The deployed Core branch needs 0027–0030. Without them:
+**Applied to staging on October 21, 2026, with the owner's authorization.**
+
+- **Backup first.** Before any write, a `pg_dump` of `public`, `private`, `supabase_migrations` and
+  `storage.buckets` was kept locally (not in the repository).
+- **No drift.** Staging's schema was identical to a local replay of 0000–0026, so the rehearsal
+  below represents it exactly.
+- **Migrations.** 0027–0030 applied one transaction each, with history versions
+  `20261021060200`, `…202`, `…204` and `…207`. Their SHA-256 checksums matched the rehearsed
+  files.
+- **Post-flight.** Every row count was unchanged, as was the approval policy. Schema version is
+  30, grants are correct, and row-level security is forced everywhere.
+- **Buckets.** Private `event-covers` and `project-images` were created (3 MiB, JPEG/PNG, no
+  browser policies). `v1` is unchanged.
+- **Runtime role.** The staging `app_runtime` password was rotated and validated as a restricted
+  login, then installed only in the developer's local `.env.local`. Any other environment that
+  used the old staging value needs the new one.
+- **End-to-end on staging:** 16 of 16 checks passed, through the local Core dashboard and
+  ESWebsite, with synthetic accounts that were removed afterwards:
+  - events with and without an image, with the image shown on the website;
+  - an application approved and activated without an invitation;
+  - the member's status after sign-in;
+  - a project submitted, reviewed and published;
+  - another committee's manager and a non-admin member refused.
+
+Before the rollout, staging ended at `0026_membership_document_storage` (read-only check, October
+21). The deployed Core branch needs 0027–0030. Without them:
 
 - `GET /v1/me/membership` fails, which shows members "Your membership status couldn't be loaded";
 - `GET /v1/events` and the admin event pages fail.
