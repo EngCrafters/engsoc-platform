@@ -292,6 +292,10 @@ export function AdminSidebar({
               {adminNavigation.workspace.map((link) => (
                 <NavLink key={link.href} {...link} />
               ))}
+              {(accessLevel !== "COMMITTEE_MANAGER" || membership) &&
+                adminNavigation.projects.map((link) => (
+                  <NavLink key={link.href} {...link} />
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

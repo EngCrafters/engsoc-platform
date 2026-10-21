@@ -1,5 +1,18 @@
 # Current work - handoff state
 
+**CURRENT — Projects and static page flags (October 21, 2026, Muscat):** The owner's
+correction removes all unfinished dashboard/API/database page controls. ESWebsite's
+existing `content/site.ts` is the sole developer-controlled flag list; Projects is
+active and the other unfinished modules retain their original Coming Soon views.
+ADR 0021 and `docs/api/PROJECTS.md` describe private member drafts/media, Society
+Affairs/Board/Technical review, explicit approval/publication, retained public
+snapshots during edits, private decision history and scoped authorization.
+Forward migration `0029_member_projects` follows 0027/0028 and remains unapplied
+to hosted environments. Disposable localhost migration tests were explicitly
+approved. Deployment also needs a distinct private project bucket and restricted
+runtime configuration. Existing branches, membership/event work and designs remain.
+No push, merge, hosted mutation or deployment was performed.
+
 **CURRENT — local event extension (October 21, 2026, Muscat):** The owner's event
 handoff is implemented on the existing local feature branches, preserving the
 membership commits. ADR 0020 and `docs/api/EVENT_ATTENDANCE.md` describe image

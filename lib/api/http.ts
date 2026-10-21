@@ -44,7 +44,10 @@ export type BodyResult =
  * accepted; a form post or a text/plain "simple request" is refused, which also
  * blocks the classic CORS-bypass trick of posting JSON as text/plain.
  */
-export async function readJsonBody(request: Request): Promise<BodyResult> {
+export async function readJsonBody(
+  request: Request,
+  maxBytes = MAX_BODY_BYTES
+): Promise<BodyResult> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!/^application\/json\s*(;|$)/i.test(contentType)) {
     return { ok: false, reason: "unsupported-media-type" };
@@ -56,8 +59,7 @@ export async function readJsonBody(request: Request): Promise<BodyResult> {
     if (!Number.isFinite(length) || length < 0) {
       return { ok: false, reason: "bad-request" };
     }
-    if (length > MAX_BODY_BYTES)
-      return { ok: false, reason: "payload-too-large" };
+    if (length > maxBytes) return { ok: false, reason: "payload-too-large" };
   }
 
   if (!request.body) return { ok: false, reason: "bad-request" };
@@ -70,7 +72,7 @@ export async function readJsonBody(request: Request): Promise<BodyResult> {
     if (done) break;
     if (!value) continue;
     total += value.byteLength;
-    if (total > MAX_BODY_BYTES) {
+    if (total > maxBytes) {
       await reader.cancel().catch(() => undefined);
       return { ok: false, reason: "payload-too-large" };
     }

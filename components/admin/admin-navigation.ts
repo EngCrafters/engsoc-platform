@@ -4,12 +4,20 @@ import {
   CircleUserRound,
   Shield,
   UserCheck,
+  FolderKanban,
 } from "lucide-react";
 
 export const adminNavigation = {
   workspace: [
     { href: "/admin/events", label: "Events", icon: CalendarDays },
     { href: "/admin/events/new", label: "Create event", icon: CalendarPlus },
+  ],
+  projects: [
+    {
+      href: "/admin/projects",
+      label: "Projects Management",
+      icon: FolderKanban,
+    },
   ],
   /** Shown only to membership reviewers (Society Affairs, Senior Management). */
   membership: [
@@ -30,6 +38,10 @@ export const adminNavigation = {
 const EVENT_ID = "[0-9a-f-]+";
 
 export function isAdminNavActive(pathname: string, href: string) {
+  if (href === "/admin/projects")
+    return (
+      pathname === "/admin/projects" || pathname.startsWith("/admin/projects/")
+    );
   if (href === "/admin/membership") {
     return (
       pathname === "/admin/membership" ||
@@ -51,6 +63,12 @@ export type AdminBreadcrumb = { label: string; href?: string };
 
 /** Location trail for the header breadcrumb. The last item is the current page. */
 export function adminBreadcrumbs(pathname: string): AdminBreadcrumb[] {
+  if (pathname === "/admin/projects") return [{ label: "Projects Management" }];
+  if (pathname.startsWith("/admin/projects/"))
+    return [
+      { label: "Projects Management", href: "/admin/projects" },
+      { label: "Project" },
+    ];
   if (pathname === "/admin/access")
     return [{ label: "Technical Administration" }];
   if (pathname === "/admin/membership")

@@ -40,6 +40,13 @@ const identities = [
     name: "Synthetic Waitlist Member",
     role: "member",
   },
+  {
+    id: "91000000-0000-4000-8000-000000000005",
+    email: "project-reviewer@example.test",
+    name: "Synthetic Society Affairs Reviewer",
+    role: "COMMITTEE_MANAGER",
+    committee: "society-affairs",
+  },
 ];
 const password = "Synthetic-test-password-42!";
 const anon = "synthetic-public-anon-key-for-local-tests";
@@ -201,7 +208,10 @@ export default async function setup() {
           return;
         }
       }
-      if (url.pathname.startsWith("/storage/v1/s3/events-test/event-covers/")) {
+      if (
+        url.pathname.startsWith("/storage/v1/s3/events-test/event-covers/") ||
+        url.pathname.startsWith("/storage/v1/s3/projects-test/project-images/")
+      ) {
         if (
           !req.headers.authorization?.startsWith(
             "AWS4-HMAC-SHA256 Credential=synthetic-access-key/"
@@ -279,13 +289,14 @@ export default async function setup() {
   }
   const core = process.cwd();
   const website = resolve(core, "../ESWebsite");
+  const production = process.env.EVENT_FLOW_PRODUCTION === "true";
   const baseEnv: NodeJS.ProcessEnv = {
     ...process.env,
     VERCEL: "",
     VERCEL_ENV: "",
     LOCAL_REVIEW_MODE: "",
     ESSQU_EVENT_FLOW: "true",
-    NODE_ENV: "development",
+    NODE_ENV: production ? "production" : "development",
   };
   const coreEnv = {
     ...baseEnv,
@@ -302,6 +313,7 @@ export default async function setup() {
     SUPABASE_S3_SECRET_ACCESS_KEY: "synthetic-secret-key",
     SUPABASE_S3_MEMBERSHIP_BUCKET: "identity-test",
     SUPABASE_S3_EVENT_BUCKET: "events-test",
+    SUPABASE_S3_PROJECT_BUCKET: "projects-test",
   };
   const webEnv = {
     ...baseEnv,
@@ -334,8 +346,7 @@ export default async function setup() {
       process.execPath,
       [
         join(cwd, "node_modules/next/dist/bin/next"),
-        "dev",
-        "--webpack",
+        ...(production ? ["start"] : ["dev", "--webpack"]),
         "--hostname",
         "127.0.0.1",
         "--port",

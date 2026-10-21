@@ -410,6 +410,114 @@ export const archiveItems = pgTable("archive_items", {
     .defaultNow(),
 });
 
+// ADR 0021: private working projects and immutable public snapshots. All tables
+// below have FORCE RLS with a routine-owner-only policy; no raw browser/runtime
+// table grants. Members see only their own records; Society Affairs and existing
+// Board/Technical review them. Public routines return only published snapshots.
+// archive_items is the historical file archive stub, not a second project source.
+export const projects = privateSchema.table(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id),
+    committeeId: uuid("committee_id")
+      .notNull()
+      .references(() => committees.id),
+    content: jsonb("content").notNull().default({}),
+    revision: integer("revision").notNull().default(1),
+    status: text("status").notNull().default("draft"),
+    approvedRevision: integer("approved_revision"),
+    publishedRevision: integer("published_revision"),
+    publishedContent: jsonb("published_content"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("projects_member_updated_idx").on(
+      t.memberId,
+      t.updatedAt.desc(),
+      t.id
+    ),
+    index("projects_status_updated_idx").on(t.status, t.updatedAt.desc(), t.id),
+    check("projects_revision_check", sql`${t.revision}>0`),
+    check(
+      "projects_status_check",
+      sql`${t.status} IN ('draft','submitted','under_review','approved','rejected','changes_requested')`
+    ),
+    check(
+      "projects_check",
+      sql`(${t.publishedRevision} IS NULL)=(${t.publishedContent} IS NULL)`
+    ),
+    check(
+      "projects_check1",
+      sql`${t.approvedRevision} IS NULL OR (${t.status}='approved' AND ${t.approvedRevision}=${t.revision})`
+    ),
+    check(
+      "projects_content_check",
+      sql`octet_length(${t.content}::text)<=65536`
+    ),
+    check(
+      "projects_published_content_check",
+      sql`${t.publishedContent} IS NULL OR octet_length(${t.publishedContent}::text)<=65536`
+    ),
+  ]
+);
+export const projectMedia = privateSchema.table(
+  "project_media",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id),
+    objectKey: text("object_key").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("project_media_project_idx").on(t.projectId),
+    check(
+      "project_media_object_key_check",
+      sql`${t.objectKey} ~ '^project-images/[0-9a-f-]{36}\\.(jpg|png)$'`
+    ),
+  ]
+);
+export const projectHistory = privateSchema.table(
+  "project_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => authUsers.id),
+    revision: integer("revision").notNull(),
+    action: text("action").notNull(),
+    feedback: text("feedback"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("project_history_project_idx").on(t.projectId, t.occurredAt, t.id),
+    check(
+      "project_history_feedback_check",
+      sql`char_length(${t.feedback})<=2000`
+    ),
+    check(
+      "project_history_action_check",
+      sql`${t.action} IN ('created','saved','submitted','under_review','approved','rejected','changes_requested','published','unpublished','media_added','media_removed')`
+    ),
+  ]
+);
+
 // ---------------------------------------------------------------------------
 // Registration attempt — abuse protection for the public registration form,
 // nothing else. Not part of the ER diagram's domain model (it doesn't

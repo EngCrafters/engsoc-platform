@@ -1,4 +1,4 @@
-# ADR 0021: Website pages and reviewed member projects
+# ADR 0021: Reviewed member projects and static website flags
 
 Accepted for local implementation by the owner's October 21, 2026 request.
 This explicitly extends the current event/membership work to Projects (UC-05).
@@ -6,29 +6,29 @@ Keep the existing branches/history and designs; no hosted mutation or deployment
 
 ## Data contract
 
-`private.website_pages` stores the five existing Coming Soon-capable page IDs,
-state, revision, updater and timestamp. Projects starts active after rollout;
-registration stays active; members, network and certificates stay Coming Soon.
-The latter three remain activation-locked: their current content is a prototype.
-Board/Technical can change ready pages, with optimistic concurrency and audit.
-No arbitrary routes, HTML, scripts, URLs or client-supplied readiness flags.
+**Owner correction, October 21:** page state is developer-controlled entirely in
+ESWebsite's existing `content/site.ts`. Projects and registration are active;
+members, network and certificates retain Coming Soon. Preserve both designs and
+check flags on direct routes. There are no dashboard page controls, visibility
+API endpoints, database tables, migrations or Supabase visibility settings.
+Changes take effect through the normal website build/deployment process.
 
 `private.projects` belongs to one existing active Member and the existing
 Society Affairs committee. It stores bounded validated bilingual JSON matching
 the existing Projects design: title, summary, discipline, year, type, stage,
 technologies, problem, solution, technical approach/decisions, milestones,
 validation, next steps, collaboration, parts, achievements, team credits and
-HTTP(S) links. Optional Arabic falls back to the supplied English. No sample
+HTTP(S) links. At least one language is required for the publication minimum; missing translations fall back to the supplied language. No sample
 projects, procedural models or fabricated achievements enter the live catalogue.
 Uploaded JPEG/PNG media is independently recorded in `private.project_media`.
 It is decoded, re-encoded and stripped of metadata by the existing safe image
 processor, stored in a separate private project bucket, and attached only by
-an owner-authorized server routine. Maximum six images, 3 MiB each.
+an owner-authorized server routine. Maximum six selected images per revision, 3 MiB each; up to 12 stored assets permit complete gallery replacement while the approved gallery remains public.
 
 Working content, revision and review status are separate from an immutable
-published content/media snapshot. Draft -> pending_review -> approved/rejected/
+published content/media snapshot. Draft -> submitted -> under_review -> approved/rejected/
 changes_requested; only explicit publication of the current approved revision
-changes the public snapshot. Pending/approved revisions cannot be edited. Editing
+changes the public snapshot. Submitted/under-review/approved-unpublished revisions cannot be edited. Editing
 after a decision starts a new draft without replacing the prior public version.
 Unpublish removes public visibility immediately. No hard delete of project history.
 `private.project_history` records every transition, revision, actor and feedback.
@@ -52,26 +52,22 @@ Feedback is mandatory for rejection/changes requested. All writes use expected
 revision, row locks and bounded input. Reviewer decisions are retained for the
 member, including when a later revision exists.
 
-All four tables have ENABLE/FORCE RLS, no browser or runtime table grants, and
+All three tables have ENABLE/FORCE RLS, no browser or runtime table grants, and
 only the existing NOLOGIN routine owner has table policies. Fixed security-definer
 routines expose least-data public projections, own-member records or reviewer
-scope. Public endpoints return published snapshots only and respect the Projects
-page switch. Media requires current ownership/reviewer scope or membership in
+scope. Public endpoints return published snapshots only and are independent of the static website flag. Media requires current ownership/reviewer scope or membership in
 the published snapshot; storage credentials and object paths remain server-only.
 Raw anon/authenticated roles cannot execute actor-parameter routines.
 
 ## Integration and freshness
 
-Core `/v1/website/pages` and `/v1/projects` are public, read-only projections with
-no-store headers. No privileged client key is needed to read deliberately public
-content. ESWebsite uses bounded no-store server reads, React request memoization
-only, and disables link prefetch for managed pages; My Projects polls while open.
-Admin mutations call revalidatePath for dashboard reads. Navigation indicators
-share the same page state. Next navigation/refocus refresh handles browser state;
-every new request observes the stored setting without a redeployment. Missing
-Core settings fail closed to Coming Soon, never expose prototypes or sample data.
+Core `/v1/projects` is a public read-only projection with no-store headers.
+ESWebsite uses bounded no-store reads and the existing Projects cards, details,
+filters and media viewer. No sample data replaces an unavailable API. My Projects
+polls review status/history while open. Dashboard mutations revalidate their own
+routes. Visibility remains a simple static setting in ESWebsite.
 
-Migration 0029 follows 0027/0028, which remain subject to separate rollout approval.
+Migration 0029_member_projects follows 0027/0028, which remain subject to separate rollout approval.
 Provision `SUPABASE_S3_PROJECT_BUCKET` distinct from membership/event buckets;
 reuse existing Auth, CORS origins, S3 signer and restricted app_runtime connection.
 Acceptance covers real restricted roles, stale/concurrent transitions, self/wrong

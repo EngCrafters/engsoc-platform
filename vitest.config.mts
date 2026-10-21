@@ -35,6 +35,7 @@ export default defineConfig({
     exclude: [
       "tests/e2e/**",
       "tests/event-flow/**",
+      "tests/project-flow/**",
       "tests/integration/**",
       "node_modules/**",
     ],
