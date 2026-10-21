@@ -17,6 +17,12 @@ vi.mock("@/lib/event-management/server", () => ({
   registerMember: state.register,
   confirmAttendance: state.confirm,
 }));
+// GET /v1/me/profile now reads the whole own profile (ADR 0023).
+vi.mock("@/lib/members/profile", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/members/profile")>()),
+  ownProfile: state.profile,
+  updateOwnProfile: vi.fn(),
+}));
 const profile = await import("../app/v1/me/profile/route");
 const attendance =
   await import("../app/v1/me/events/[eventId]/attendance/route");

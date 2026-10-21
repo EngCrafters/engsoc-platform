@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { afterAll, describe, expect, it } from "vitest";
+import journal from "@/db/migrations/meta/_journal.json";
 import { adminDb, close } from "./helpers";
 
 function gate(url: string) {
@@ -36,17 +37,18 @@ describe("release gate against a real database (ADR 0022)", () => {
   });
 
   it("refuses a database older than the code", async () => {
-    await admin.unsafe(
-      "CREATE OR REPLACE FUNCTION private.core_schema_version() RETURNS integer LANGUAGE sql IMMUTABLE AS $$ SELECT 29 $$"
-    );
+    const required = Math.max(...journal.entries.map((e) => e.idx));
+    const setVersion = (v: number) =>
+      admin.unsafe(
+        `CREATE OR REPLACE FUNCTION private.core_schema_version() RETURNS integer LANGUAGE sql IMMUTABLE AS $$ SELECT ${v} $$`
+      );
+    await setVersion(required - 1);
     try {
       const result = gate(process.env.UC02_TEST_APP_RUNTIME_DATABASE_URL!);
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain("this code needs 30");
+      expect(result.stderr).toContain(`this code needs ${required}`);
     } finally {
-      await admin.unsafe(
-        "CREATE OR REPLACE FUNCTION private.core_schema_version() RETURNS integer LANGUAGE sql IMMUTABLE AS $$ SELECT 30 $$"
-      );
+      await setVersion(required);
     }
   });
 });

@@ -218,6 +218,13 @@
       "when": 1792627200000,
       "tag": "0030_attendance_reliability_and_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792713600000,
+      "tag": "0031_member_profiles",
+      "breakpoints": true
     }
   ]
 }

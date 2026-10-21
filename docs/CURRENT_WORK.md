@@ -1,5 +1,23 @@
 # Current work - handoff state
 
+**CURRENT — smart navbar and member profiles (October 21, 2026, Muscat):** ADR 0023 and forward
+migration `0031_member_profiles` give members a real `/profile`. The website's navbar follows the
+Supabase session: Join while signed out, and an avatar menu once signed in. An applicant gets the
+menu without member privileges.
+
+- **Edits.** Members edit their phone, year, discipline and interests, and upload or remove a
+  photo. Photos are re-encoded into a new private bucket, `SUPABASE_S3_MEMBER_PHOTO_BUCKET`.
+- **Corrections.** Name and student ID change only through a correction that a membership
+  reviewer decides on the dashboard.
+- **Feature switches.** `ESWebsite/config/site-features.json` now holds the page flags that
+  `content/site.ts` reads, plus the profile switches. Core enforces its own matching
+  `MEMBER_PHOTO_UPLOADS` and `MEMBER_PROFILE_EDITING`.
+- **Verification.** `npm run test:profile-flow` drives register → confirm → pending → approved →
+  profile → edit → photo → correction → refresh → sign out end to end on the local harness.
+
+0031 and the photo bucket are not applied to staging. Until they are, staging reports
+`schema-behind` and the profile endpoints answer 503. Nothing was pushed or deployed.
+
 **CURRENT — audit repairs (October 21, 2026, Muscat):** ADR 0022 and forward migration
 `0030_attendance_reliability_and_limits` fix the audit's confirmed defects locally.
 

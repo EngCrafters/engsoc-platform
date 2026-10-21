@@ -1,8 +1,9 @@
 # Member Projects
 
 ADR 0021 and migration `0029_member_projects` define this extension. Page flags
-are static and exist only in ESWebsite's `content/site.ts`; no visibility API,
-database settings, or dashboard controls are provided.
+are static and exist only in ESWebsite's `config/site-features.json` (ADR 0023),
+which `content/site.ts` reads; no visibility API, database settings, or dashboard
+controls are provided.
 
 Public no-store reads: `GET /v1/projects?offset=0` and `GET /v1/projects/{id}` return
 `{data:{code:"SUCCESS",projects:[{id,revision,content}],total,hasMore}}`. Catalogue

@@ -142,6 +142,12 @@ export const members = pgTable(
     status: memberStatus("status").notNull().default("member"),
     // ADR 0020: private E.164 phone; own-profile routines only, no browser grants.
     phone: text("phone"),
+    // ADR 0023: changed only through own-profile routines, never a browser grant.
+    // The photo is a key in the private member-photo bucket, served to its owner
+    // alone; interests are at most four of the website's skill ids.
+    photoKey: text("photo_key"),
+    interests: text("interests").array(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

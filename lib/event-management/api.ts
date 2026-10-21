@@ -37,7 +37,7 @@ export async function memberRequest(request: Request) {
   return { actor: actor.userId, requestId, cors };
 }
 export function memberResult(
-  data: { code: string },
+  data: { code: string; field?: unknown },
   requestId: string,
   headers: Record<string, string>,
   successStatus = 200
@@ -67,6 +67,9 @@ export function memberResult(
                   "EVENT_FULL",
                   "REGISTRATION_CLOSED",
                   "REGISTRATION_AVAILABLE",
+                  "ALREADY_PENDING",
+                  "UNCHANGED",
+                  "CONFLICT",
                 ].includes(data.code)
               ? "conflict"
               : "service-unavailable";
@@ -82,7 +85,13 @@ export function memberResult(
       code === "rate-limited" ? { ...headers, "retry-after": "600" } : headers,
     errors: [
       {
-        field: data.code === "PHONE_REQUIRED" ? "phone" : "attendance",
+        field:
+          data.code === "PHONE_REQUIRED"
+            ? "phone"
+            : typeof data.field === "string" &&
+                /^[A-Za-z_]{1,40}$/.test(data.field)
+              ? data.field
+              : "attendance",
         code: data.code,
       },
     ],

@@ -694,9 +694,10 @@ describe("event media, member registration and attendance (real restricted roles
       phoneRequiredChanged: true,
       phoneRequired: true,
     });
+    // 0030 introduced the version marker; later migrations raise it.
     expect(
       (await runtime`SELECT private.core_schema_version() AS v`)[0].v
-    ).toBe(30);
+    ).toBeGreaterThanOrEqual(30);
   });
 
   it("keeps attendance lists/counts/exports scoped, private, filtered, alphabetical and paginated", async () => {

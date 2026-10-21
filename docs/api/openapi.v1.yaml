@@ -497,7 +497,13 @@ paths:
   /me/profile:
     get:
       operationId: getOwnProfile
-      summary: Read the confirmed member's own registration profile
+      summary: Read the confirmed member's own profile (ADR 0023)
+      description: |
+        Name, emails, student ID, academic details, interests, photo state,
+        membership activity and recent correction requests, with the profile
+        features Core currently allows. Private and never cached. A confirmed
+        SQU sign-in email that differs from the membership email is followed
+        here, audited as member.email_synced.
       security: [{ memberSession: [] }]
       responses:
         "200":
@@ -507,13 +513,151 @@ paths:
               schema:
                 type: object
                 properties:
-                  data: { $ref: "#/components/schemas/MemberProfile" }
+                  data: { $ref: "#/components/schemas/OwnProfile" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "503": { $ref: "#/components/responses/Unavailable" }
     patch:
-      operationId: updateOwnPhone
-      summary: Save only the authenticated member's private phone
+      operationId: updateOwnProfile
+      summary: Save the member's self-service fields
+      description: |
+        `{phone}` alone is the event-registration prompt (ADR 0020) and is
+        always accepted. Otherwise all four self-service fields are required,
+        and only while MEMBER_PROFILE_EDITING is not `disabled` (403
+        EDITING_DISABLED). Name, email and student ID are never accepted:
+        they change through POST /me/profile/changes.
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [phone]
+                  properties:
+                    phone:
+                      type: string
+                      maxLength: 32
+                      description: International phone with country code; normalized to E.164.
+                - type: object
+                  additionalProperties: false
+                  required: [phone, academicYear, discipline, interests]
+                  properties:
+                    phone:
+                      type: [string, "null"]
+                      maxLength: 32
+                      description: Empty or null clears it.
+                    academicYear: { type: integer, minimum: 1, maximum: 5 }
+                    discipline:
+                      type: string
+                      enum:
+                        [
+                          mechanical,
+                          electrical,
+                          civil,
+                          petroleum,
+                          chemical,
+                          mechatronics,
+                          industrial,
+                        ]
+                    interests:
+                      type: array
+                      maxItems: 4
+                      uniqueItems: true
+                      items: { type: string }
+      responses:
+        "200":
+          description: The saved profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/OwnProfile"
+                      - $ref: "#/components/schemas/MemberProfile"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: Invalid field; RFC 9457 errors with VALIDATION_ERROR and the field, or PHONE_REQUIRED.
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/profile/photo:
+    get:
+      operationId: getOwnPhoto
+      summary: The member's own photo, re-encoded by Core
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store 512×512 JPEG
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    put:
+      operationId: putOwnPhoto
+      summary: Replace the member's photo
+      description: |
+        The raw bytes of a JPEG or PNG of at most 3 MiB. Core checks the
+        signature, strips metadata, crops it to a 512×512 JPEG and stores it in
+        the private SUPABASE_S3_MEMBER_PHOTO_BUCKET; the replaced object is
+        deleted. Refused with 403 UPLOADS_DISABLED while MEMBER_PHOTO_UPLOADS
+        is `disabled`.
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [code, photoVersion]
+                    properties:
+                      code: { const: SUCCESS }
+                      photoVersion: { type: string, format: uuid }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { description: Larger than 3 MiB. }
+        "415": { description: Not image/jpeg or image/png. }
+        "422": { description: Not a readable JPEG or PNG. }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    delete:
+      operationId: deleteOwnPhoto
+      summary: Remove the member's photo (always allowed)
+      security: [{ memberSession: [] }]
+      responses:
+        "200": { description: Removed, or there was none }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (GET, PUT, DELETE with Authorization)
+      responses:
+        "204": { description: Preflight response }
+  /me/profile/changes:
+    post:
+      operationId: requestProfileCorrection
+      summary: Ask a membership reviewer to correct a verified field
+      description: |
+        Name and student ID were checked against the SQU ID card, so the
+        member cannot change them. A reviewer (Society Affairs, Board or
+        Technical, never the member themself) approves or rejects the request
+        in the dashboard. One pending request per field.
       security: [{ memberSession: [] }]
       requestBody:
         required: true
@@ -522,27 +666,69 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [phone]
+              required: [field, value]
               properties:
-                phone:
-                  {
-                    type: string,
-                    maxLength: 32,
-                    description: International phone with country code; normalized to E.164.,
-                  }
+                field: { type: string, enum: [full_name, university_id] }
+                value:
+                  type: string
+                  maxLength: 200
+                  description: A name, or a student ID of 6–10 digits.
       responses:
-        "200":
-          description: Updated private profile
+        "201":
+          description: Requested; the profile with the pending request
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  data: { $ref: "#/components/schemas/MemberProfile" }
+                  data: { $ref: "#/components/schemas/OwnProfile" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "422":
-          { description: Invalid phone; RFC 9457 errors code PHONE_REQUIRED. }
+        "409":
+          description: errors code UNCHANGED (already the current value) or ALREADY_PENDING.
+        "422": { description: VALIDATION_ERROR }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/events:
+    get:
+      operationId: listOwnRegistrations
+      summary: The member's own registrations, newest event first
+      description: Guest registrations made with the member's confirmed email are linked first (ADR 0022).
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store list of at most 100
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [code, registrations]
+                    properties:
+                      code: { const: SUCCESS }
+                      registrations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            eventId: { type: string, format: uuid }
+                            title: { type: string }
+                            eventDate: { type: string, format: date-time }
+                            location: { type: [string, "null"] }
+                            status:
+                              { type: string, enum: [confirmed, waitlisted] }
+                            attended: { type: boolean }
+                            checkedInAt:
+                              { type: [string, "null"], format: date-time }
+                            method:
+                              {
+                                type: [string, "null"],
+                                enum: [qr, manual, null],
+                              }
+                            registeredAt: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "503": { $ref: "#/components/responses/Unavailable" }
   /me/events/{eventId}/registrations:
     parameters:
@@ -710,6 +896,66 @@ components:
         name: { type: string }
         email: { type: string, format: email }
         phone: { type: [string, "null"], description: Private E.164 phone. }
+    OwnProfile:
+      type: object
+      required:
+        [
+          code,
+          name,
+          email,
+          universityId,
+          phone,
+          hasPhoto,
+          status,
+          interests,
+          changeRequests,
+        ]
+      properties:
+        code: { const: SUCCESS }
+        name: { type: string }
+        email:
+          type: string
+          format: email
+          description: The verified SQU email the membership keeps.
+        signInEmail:
+          type: [string, "null"]
+          format: email
+          description: The Supabase Auth sign-in email.
+        universityId: { type: string }
+        academicYear: { type: [integer, "null"], minimum: 1, maximum: 5 }
+        discipline: { type: [string, "null"] }
+        interests: { type: array, items: { type: string }, maxItems: 4 }
+        phone: { type: [string, "null"], description: Private E.164 phone. }
+        hasPhoto: { type: boolean }
+        photoVersion: { type: [string, "null"] }
+        status: { type: string, enum: [member, graduate] }
+        memberSince: { type: string, format: date-time }
+        updatedAt: { type: [string, "null"], format: date-time }
+        application:
+          type: [object, "null"]
+          properties:
+            status: { type: string }
+            submittedAt: { type: string, format: date-time }
+            verifiedAt: { type: [string, "null"], format: date-time }
+            decidedAt: { type: [string, "null"], format: date-time }
+            activatedAt: { type: [string, "null"], format: date-time }
+        changeRequests:
+          type: array
+          description: Pending requests, and decisions of the last 30 days.
+          items:
+            type: object
+            properties:
+              field: { type: string, enum: [full_name, university_id] }
+              status: { type: string, enum: [pending, approved, rejected] }
+              requestedValue: { type: string }
+              requestedAt: { type: string, format: date-time }
+              decidedAt: { type: [string, "null"], format: date-time }
+        features:
+          type: object
+          description: Core's own switches (MEMBER_PROFILE_EDITING, MEMBER_PHOTO_UPLOADS). Core enforces them whatever a client shows.
+          properties:
+            profileEditing: { type: boolean }
+            photoUploads: { type: boolean }
     Event:
       type: object
       additionalProperties: false

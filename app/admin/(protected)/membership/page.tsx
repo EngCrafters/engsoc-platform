@@ -23,6 +23,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MembershipPolicyForm } from "./policy-form";
+import { ProfileCorrections } from "./corrections";
+import { profileChangeRequests } from "@/lib/members/profile";
+import { logServerError } from "@/lib/api/log";
 
 function single(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? undefined : value;
@@ -104,6 +107,17 @@ export default async function MembershipApplicationsPage({
       {manager.accessLevel === "TECHNICAL" ? (
         <MembershipPolicyForm policy={overview.policy} />
       ) : null}
+
+      <ProfileCorrections
+        requests={
+          (await profileChangeRequests(manager.userId).catch((error) => {
+            // Never let corrections take the applications page down.
+            logServerError("profile_corrections_unavailable", error);
+            return null;
+          })) ?? []
+        }
+        result={single(query.corrections)?.slice(0, 40)}
+      />
 
       <MembershipFilters
         filter={filter}
