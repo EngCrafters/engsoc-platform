@@ -36,6 +36,7 @@ export default defineConfig({
       "tests/e2e/**",
       "tests/event-flow/**",
       "tests/project-flow/**",
+      "tests/profile-flow/**",
       "tests/integration/**",
       "node_modules/**",
     ],

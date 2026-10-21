@@ -18,7 +18,8 @@
     "test:event-flow": "playwright test --config playwright.event.config.ts",
     "format:check": "node scripts/check-format.mjs",
     "db:check": "drizzle-kit check",
-    "test:project-flow": "playwright test --config playwright.projects.config.ts"
+    "test:project-flow": "playwright test --config playwright.projects.config.ts",
+    "test:profile-flow": "playwright test --config playwright.profile.config.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

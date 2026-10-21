@@ -268,8 +268,9 @@ test("create/edit media → real member/waitlist registration → rotating QR �
     expect(scanner.url()).not.toContain("checkin");
     await login(scanner, "event-member@example.test");
     await expect(scanner).toHaveURL(`${WEB}/events/${id}/attendance`);
+    // In the page itself: the navbar's account menu also names the member.
     await expect(
-      scanner.getByText("Synthetic Member", { exact: true })
+      scanner.getByRole("main").getByText("Synthetic Member", { exact: true })
     ).toBeVisible();
     const [opened] =
       await db`SELECT attended FROM public.registrations WHERE id=${registered.id}`;

@@ -3,7 +3,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { join, resolve } from "node:path";
@@ -13,7 +13,18 @@ import setupDatabase from "../db/global-setup";
 
 // These adapters exist only in this isolated test harness. Core's real auth
 // verification calls them over HTTP; all business logic uses real app_runtime SQL.
-const identities = [
+// Accounts created through the website's sign-up join this list, unconfirmed until
+// their emailed link is used; the synthetic inbox below holds those links.
+type Person = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  committee?: string;
+  password?: string;
+  confirmed?: boolean;
+};
+const identities: Person[] = [
   {
     id: "91000000-0000-4000-8000-000000000001",
     email: "event-manager@example.test",
@@ -63,8 +74,15 @@ export default async function setup() {
   });
   const jwtSecret = randomBytes(32);
   const objects = new Map<string, { bytes: Buffer; type: string }>();
+  const inbox: {
+    to: string;
+    type: string;
+    link?: string;
+    newEmail?: string;
+  }[] = [];
+  const links = new Map<string, string>();
   let failNextCover = false;
-  const session = (person: (typeof identities)[number]) => {
+  const session = (person: Person) => {
     const now = Math.floor(Date.now() / 1000);
     const header = Buffer.from(
       JSON.stringify({ alg: "HS256", typ: "JWT" })
@@ -91,11 +109,12 @@ export default async function setup() {
       user: user(person),
     };
   };
-  const user = (person: (typeof identities)[number]) => ({
+  const user = (person: Person) => ({
     id: person.id,
     email: person.email,
-    email_confirmed_at: new Date().toISOString(),
-    confirmed_at: new Date().toISOString(),
+    email_confirmed_at:
+      person.confirmed === false ? null : new Date().toISOString(),
+    confirmed_at: person.confirmed === false ? null : new Date().toISOString(),
     aud: "authenticated",
     role: "authenticated",
     app_metadata: { provider: "email", providers: ["email"] },
@@ -136,7 +155,10 @@ export default async function setup() {
       req.headers["access-control-request-headers"] ??
         "authorization,apikey,content-type,x-client-info"
     );
-    res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+    res.setHeader(
+      "access-control-allow-methods",
+      "GET,POST,PUT,DELETE,OPTIONS"
+    );
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
@@ -156,17 +178,94 @@ export default async function setup() {
         res.end();
         return;
       }
+      if (url.pathname === "/__test__/inbox") {
+        json(res, inbox);
+        return;
+      }
+      if (url.pathname === "/auth/v1/signup" && req.method === "POST") {
+        const body = JSON.parse(bytes.toString());
+        const email = String(body.email).toLowerCase();
+        let person = identities.find((p) => p.email === email);
+        if (!person) {
+          person = {
+            id: randomUUID(),
+            email,
+            name: "",
+            role: "registrant",
+            password: String(body.password),
+            confirmed: false,
+          };
+          identities.push(person);
+          await db`INSERT INTO auth.users(id,email) VALUES(${person.id},${email})`;
+          const token = randomBytes(24).toString("hex");
+          links.set(token, person.id);
+          const redirect =
+            url.searchParams.get("redirect_to") ??
+            "http://127.0.0.1:3601/login";
+          inbox.push({
+            to: email,
+            type: "signup",
+            link: `${redirect}?token_hash=${token}&type=signup`,
+          });
+        }
+        json(res, {
+          ...user(person),
+          confirmation_sent_at: new Date().toISOString(),
+        });
+        return;
+      }
+      if (url.pathname === "/auth/v1/verify" && req.method === "POST") {
+        const body = JSON.parse(bytes.toString());
+        const person = identities.find(
+          (p) => p.id === links.get(String(body.token_hash))
+        );
+        if (!person || body.type !== "signup") {
+          json(
+            res,
+            { code: 403, error_code: "otp_expired", msg: "Link expired" },
+            403
+          );
+          return;
+        }
+        links.delete(String(body.token_hash));
+        person.confirmed = true;
+        await db`UPDATE auth.users SET email_confirmed_at=now() WHERE id=${person.id}`;
+        json(res, session(person));
+        return;
+      }
+      if (url.pathname === "/auth/v1/recover" && req.method === "POST") {
+        inbox.push({
+          to: String(JSON.parse(bytes.toString()).email),
+          type: "recovery",
+        });
+        json(res, {});
+        return;
+      }
       if (url.pathname === "/auth/v1/token") {
         const body = JSON.parse(bytes.toString());
         const person = identities.find(
           (p) =>
-            p.email === body.email || `synthetic-${p.id}` === body.refresh_token
+            p.email === String(body.email ?? "").toLowerCase() ||
+            `synthetic-${p.id}` === body.refresh_token
         );
         if (
           !person ||
-          (body.password !== undefined && body.password !== password)
+          (body.password !== undefined &&
+            body.password !== (person.password ?? password))
         ) {
           json(res, { message: "Invalid credentials" }, 400);
+          return;
+        }
+        if (person.confirmed === false) {
+          json(
+            res,
+            {
+              code: 400,
+              error_code: "email_not_confirmed",
+              msg: "Email not confirmed",
+            },
+            400
+          );
           return;
         }
         json(res, session(person));
@@ -174,6 +273,17 @@ export default async function setup() {
       }
       if (url.pathname === "/auth/v1/user") {
         const person = verified(req);
+        if (person && req.method === "PUT") {
+          // An email change sends links to both addresses; nothing changes until they are used.
+          const body = JSON.parse(bytes.toString());
+          inbox.push({
+            to: person.email,
+            type: "email_change",
+            newEmail: body.email,
+          });
+          json(res, { ...user(person), new_email: body.email });
+          return;
+        }
         json(
           res,
           person ? user(person) : { message: "Invalid JWT" },
@@ -210,7 +320,13 @@ export default async function setup() {
       }
       if (
         url.pathname.startsWith("/storage/v1/s3/events-test/event-covers/") ||
-        url.pathname.startsWith("/storage/v1/s3/projects-test/project-images/")
+        url.pathname.startsWith(
+          "/storage/v1/s3/projects-test/project-images/"
+        ) ||
+        url.pathname.startsWith("/storage/v1/s3/photos-test/member-photos/") ||
+        url.pathname.startsWith(
+          "/storage/v1/s3/identity-test/membership-id-cards/"
+        )
       ) {
         if (
           !req.headers.authorization?.startsWith(
@@ -314,6 +430,7 @@ export default async function setup() {
     SUPABASE_S3_MEMBERSHIP_BUCKET: "identity-test",
     SUPABASE_S3_EVENT_BUCKET: "events-test",
     SUPABASE_S3_PROJECT_BUCKET: "projects-test",
+    SUPABASE_S3_MEMBER_PHOTO_BUCKET: "photos-test",
   };
   const webEnv = {
     ...baseEnv,
