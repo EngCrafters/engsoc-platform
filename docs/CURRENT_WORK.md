@@ -1,5 +1,23 @@
 # Current work - handoff state
 
+**CURRENT — audit repairs (October 21, 2026, Muscat):** ADR 0022 and forward migration
+`0030_attendance_reliability_and_limits` fix the audit's confirmed defects locally.
+
+- **Check-in codes.** Codes are derived per minute in the database, so screens no longer
+  invalidate each other, and each code works for three minutes.
+- **Guest linking.** Guest registrations link to the member who confirmed that email.
+- **Manual attendance.** Organizers record or undo it with fixed reasons, audited.
+- **Rate limits.** Signed-in registration is limited per member, not per address. Guests and
+  applications allow 20 per address, and old IP attempts are purged.
+- **Release gate.** `npm run build` refuses, on Vercel production, a database older than the code
+  or a privileged runtime role. `GET /v1/health` reports schema compatibility.
+- **Diagnostics and descriptions.** Member API failures are logged with SQLSTATE only, and Core's
+  public pages render description links safely.
+
+Staging still ends at 0026. `docs/STAGING_ROLLOUT_0027_0030.md` is the prepared, unapplied plan
+(migrations, buckets, configuration, smoke test); every step needs owner approval. No push,
+deployment or hosted mutation occurred.
+
 **CURRENT — Projects and static page flags (October 21, 2026, Muscat):** The owner's
 correction removes all unfinished dashboard/API/database page controls. ESWebsite's
 existing `content/site.ts` is the sole developer-controlled flag list; Projects is

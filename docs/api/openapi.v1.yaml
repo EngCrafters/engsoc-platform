@@ -415,6 +415,29 @@ paths:
       responses:
         "204":
           description: Preflight response
+  /health:
+    get:
+      operationId: getHealth
+      summary: The database answers and is at least as new as this code (ADR 0022)
+      description: For smoke tests and monitors. Discloses no versions or configuration.
+      security: []
+      responses:
+        "200":
+          description: Compatible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, enum: [ok] }
+        "503":
+          description: The database is older than this code (status schema-behind) or unavailable
+          content:
+            application/json:
+              schema: { type: object }
   /me/membership:
     get:
       tags: [Membership]
