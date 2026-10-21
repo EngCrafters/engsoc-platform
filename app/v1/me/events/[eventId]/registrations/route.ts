@@ -6,7 +6,6 @@ import {
 } from "@/lib/event-management/api";
 import { registerMember } from "@/lib/event-management/server";
 import { isUuid } from "@/lib/admin-events/types";
-import { resolveClientIp } from "@/lib/client-ip/server";
 import { json, problem, readJsonBody } from "@/lib/api/http";
 export const dynamic = "force-dynamic";
 export const OPTIONS = memberPreflight;
@@ -35,17 +34,13 @@ export async function POST(
       auth.requestId!,
       auth.cors!
     );
-  const ip = resolveClientIp(request.headers);
-  if (!ip.ok)
-    return problem("service-unavailable", auth.requestId!, {
-      headers: auth.cors,
-    });
+  // Signed-in registrations are limited per member (ADR 0022), so the client
+  // address is not needed: a shared campus network never blocks a member.
   try {
     const result = await registerMember(
       auth.actor!,
       eventId,
-      String(value.intent),
-      ip.ip
+      String(value.intent)
     );
     if (["SUCCESS", "WAITLISTED"].includes(result.code))
       return json(

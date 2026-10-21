@@ -184,12 +184,12 @@ describe("member event API boundaries", () => {
         )
       ).status
     ).toBe(201);
-    expect(state.register).toHaveBeenCalledWith(
-      USER,
-      EVENT,
-      "register",
-      "198.51.100.110"
-    );
+    expect(state.register).toHaveBeenCalledWith(USER, EVENT, "register");
+    // No client address is needed for a signed-in member (ADR 0022).
+    expect(
+      (await registration.POST(request("POST", { intent: "register" }), ctx))
+        .status
+    ).toBe(201);
     for (const extra of [
       "attendeeName",
       "attendeeEmail",
@@ -205,7 +205,7 @@ describe("member event API boundaries", () => {
         ).status
       ).toBe(422);
     }
-    expect(state.register).toHaveBeenCalledTimes(1);
+    expect(state.register).toHaveBeenCalledTimes(2);
     state.register.mockResolvedValue({ code: "RATE_LIMITED" });
     const limited = await registration.POST(
       request("POST", { intent: "register" }, headers),

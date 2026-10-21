@@ -126,14 +126,10 @@ export function memberEvent(actor: string, event: string) {
     sql`SELECT private.get_member_event(${actor}::uuid,${event}::uuid) AS result`
   );
 }
-export function registerMember(
-  actor: string,
-  event: string,
-  intent: string,
-  ip: string
-) {
+/** Limited per member in the database; the client address plays no part. */
+export function registerMember(actor: string, event: string, intent: string) {
   return result<{ code: string }>(
-    sql`SELECT private.register_event_member(${actor}::uuid,${event}::uuid,${intent},${ip}::inet) AS result`
+    sql`SELECT private.register_event_member(${actor}::uuid,${event}::uuid,${intent},NULL::inet) AS result`
   );
 }
 export function confirmAttendance(
