@@ -119,10 +119,11 @@ describe("membership documents in Storage", () => {
 
     const busy = applicant();
     const codes: string[] = [];
-    for (let i = 0; i < 6; i += 1) {
+    // Twenty an hour per address (0030): room for a shared campus address.
+    for (let i = 0; i < 21; i += 1) {
       codes.push((await begin({ ...applicant(), ip: busy.ip })).code);
     }
-    expect(codes).toEqual([...Array(5).fill("SUCCESS"), "RATE_LIMITED"]);
+    expect(codes).toEqual([...Array(20).fill("SUCCESS"), "RATE_LIMITED"]);
     expect((await begin({ ...busy, email: "x@gmail.com" })).code).toBe(
       "VALIDATION_ERROR"
     );

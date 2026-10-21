@@ -9,6 +9,7 @@ export * from "./types";
 
 import { createHash, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
+import { logServerError } from "@/lib/api/log";
 import { checkDocument } from "./document";
 import {
   beginSubmissionThroughRoutine,
@@ -349,7 +350,9 @@ export async function getOwnMembership(userId: string): Promise<OwnMembership> {
           }
         : null,
     };
-  } catch {
+  } catch (error) {
+    // Without 0027 the routine is missing: logged as a schema mismatch.
+    logServerError("own_membership_failed", error);
     return { ok: false };
   }
 }

@@ -298,19 +298,12 @@ describe("membership applications", () => {
     expect(count).toBe(1);
   });
 
-  it("rate limits a single address to five submissions an hour", async () => {
+  it("rate limits a single address to twenty submissions an hour", async () => {
     const ip = "198.51.100.77";
     const codes: string[] = [];
-    for (let i = 0; i < 6; i += 1)
+    for (let i = 0; i < 21; i += 1)
       codes.push((await submit({ ip })).result.code);
-    expect(codes).toEqual([
-      "SUCCESS",
-      "SUCCESS",
-      "SUCCESS",
-      "SUCCESS",
-      "SUCCESS",
-      "RATE_LIMITED",
-    ]);
+    expect(codes).toEqual([...Array(20).fill("SUCCESS"), "RATE_LIMITED"]);
   });
 
   it("reports the applicant's own status by token, with verification shown as still under review", async () => {

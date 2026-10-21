@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 
@@ -33,6 +33,8 @@ export type AttendanceRow = {
   attended: boolean;
   checkedInAt: string | null;
   registeredAt: string;
+  method: "qr" | "manual" | null;
+  hasAccount: boolean;
 };
 export type AttendanceList = {
   code: string;
@@ -42,13 +44,24 @@ export type AttendanceList = {
   attended: number;
   waitlisted: number;
 };
+/** The live code is derived in the database from the session secret and the current minute. */
 export type CheckinSession = {
   code: string;
   isOpen: boolean;
   closesAt: string | null;
-  challengeExpiresAt: string | null;
-  challenge?: string;
+  checkinCode: string | null;
+  refreshAt: string | null;
+  codeMinutes: number;
 };
+export const MANUAL_CHECKIN_REASONS = [
+  "qr_unavailable",
+  "no_account",
+  "organizer_verified",
+] as const;
+export const MANUAL_UNDO_REASONS = [
+  "recorded_in_error",
+  "not_present",
+] as const;
 
 async function result<T>(query: ReturnType<typeof sql>): Promise<T> {
   const rows = await db.execute<{ result: T }>(query);
@@ -126,45 +139,57 @@ export function registerMember(
 export function confirmAttendance(
   actor: string,
   event: string,
-  challenge: string
+  checkinCode: string
 ) {
-  const hash = createHash("sha256").update(challenge).digest("hex");
   return result<{
     code: string;
     checkedInAt?: string;
     alreadyAttended?: boolean;
   }>(
-    sql`SELECT private.confirm_member_attendance(${actor}::uuid,${event}::uuid,${hash}) AS result`
+    sql`SELECT private.confirm_member_attendance(${actor}::uuid,${event}::uuid,${checkinCode}) AS result`
   );
 }
-export async function manageCheckin(
+export function manageCheckin(
   actor: string,
   event: string,
   operation: string,
   closesAt: string | null = null
 ) {
-  const challenge =
+  // A fresh secret for open/rotate; the database keeps an open session's secret on re-open.
+  const secret =
     operation === "open" || operation === "rotate"
       ? randomBytes(32).toString("hex")
       : null;
-  const hash = challenge
-    ? createHash("sha256").update(challenge).digest("hex")
-    : null;
-  const data = await result<CheckinSession>(
-    sql`SELECT private.manage_event_checkin(${actor}::uuid,${event}::uuid,${operation},${hash},${closesAt}::timestamptz) AS result`
+  return result<CheckinSession>(
+    sql`SELECT private.manage_event_checkin(${actor}::uuid,${event}::uuid,${operation},${secret},${closesAt}::timestamptz) AS result`
   );
-  return data.code === "SUCCESS" && challenge ? { ...data, challenge } : data;
 }
 export function listAttendance(
   actor: string,
   event: string,
   filter = "all",
   search = "",
-  after: string | null = null,
+  offset = 0,
   limit = 51,
   exporting = false
 ) {
   return result<AttendanceList>(
-    sql`SELECT private.list_event_attendance(${actor}::uuid,${event}::uuid,${filter},${search},${after}::uuid,${limit},${exporting}) AS result`
+    sql`SELECT private.list_event_attendance(${actor}::uuid,${event}::uuid,${filter},${search},${offset}::integer,${limit}::integer,${exporting}) AS result`
+  );
+}
+export function recordManualAttendance(
+  actor: string,
+  event: string,
+  registration: string,
+  attended: boolean,
+  reason: string
+) {
+  return result<{
+    code: string;
+    attended?: boolean;
+    checkedInAt?: string | null;
+    unchanged?: boolean;
+  }>(
+    sql`SELECT private.record_manual_attendance(${actor}::uuid,${event}::uuid,${registration}::uuid,${attended},${reason}) AS result`
   );
 }

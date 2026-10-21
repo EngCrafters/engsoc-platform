@@ -5,6 +5,10 @@ export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
     "The image could not be uploaded. Check event Storage configuration and try again.",
   CHECKIN_CLOSED:
     "Check-in has closed. Open a new window to display a live QR.",
+  WAITLISTED:
+    "Waitlisted registrations cannot be checked in. Promote the registration first.",
+  SELF_CHECKIN:
+    "You cannot record your own attendance. Scan the live code or ask another organizer.",
   AUTH_REQUIRED:
     "Your administrator session has expired. Sign in again to continue.",
   ACTOR_NOT_FOUND:

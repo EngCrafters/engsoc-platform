@@ -75,8 +75,10 @@ export const authUsers = authSchema.table("users", {
 // PostgREST. See UC-02_Data_and_Security.md section 5.
 export const privateSchema = pgSchema("private");
 
-// ADR 0020: forced RLS, executor-only policy. No runtime/browser table grants.
-// A missing row means closed; raw challenge values are never stored here.
+// ADR 0020/0022: forced RLS, executor-only policy. No runtime/browser table grants.
+// A missing row means closed. The secret never leaves the database: routines
+// derive each minute's check-in code from it, so every organizer screen shows
+// the same code; replacing the secret revokes all outstanding codes.
 export const eventCheckinSessions = privateSchema.table(
   "event_checkin_sessions",
   {
@@ -85,20 +87,36 @@ export const eventCheckinSessions = privateSchema.table(
       .references(() => events.id),
     isOpen: boolean("is_open").notNull().default(false),
     closesAt: timestamp("closes_at", { withTimezone: true }),
-    challengeHash: text("challenge_hash"),
-    challengeExpiresAt: timestamp("challenge_expires_at", {
-      withTimezone: true,
-    }),
+    codeSecret: text("code_secret"),
   },
   (table) => [
     check(
-      "event_checkin_sessions_check",
-      sql`NOT ${table.isOpen} OR (${table.closesAt} IS NOT NULL AND ${table.challengeHash} IS NOT NULL AND ${table.challengeExpiresAt} IS NOT NULL)`
+      "event_checkin_sessions_open_check",
+      sql`NOT ${table.isOpen} OR (${table.closesAt} IS NOT NULL AND ${table.codeSecret} IS NOT NULL)`
     ),
     check(
-      "event_checkin_sessions_challenge_hash_check",
-      sql`${table.challengeHash} IS NULL OR ${table.challengeHash} ~ '^[0-9a-f]{64}$'`
+      "event_checkin_sessions_code_secret_check",
+      sql`${table.codeSecret} IS NULL OR ${table.codeSecret} ~ '^[0-9a-f]{64}$'`
     ),
+  ]
+);
+
+// ADR 0022: the signed-in registration limiter (per member, ten minutes).
+// Executor-only, forced RLS; rows older than an hour are purged as they age.
+export const memberRegistrationAttempts = privateSchema.table(
+  "member_registration_attempts",
+  {
+    memberId: uuid("member_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+  },
+  (table) => [
+    index("member_registration_attempts_member_idx").on(
+      table.memberId,
+      table.createdAt
+    ),
+    index("member_registration_attempts_created_idx").on(table.createdAt),
   ]
 );
 
@@ -329,11 +347,22 @@ export const registrations = pgTable(
     ), // NEW (M2): self-FK, preserves legacy duplicates without deleting rows
     attended: boolean("attended").notNull().default(false),
     checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+    // ADR 0022: how attendance was recorded: the member's QR scan or an
+    // organizer (audited with a fixed reason). Null when not attended.
+    checkinMethod: text("checkin_method"),
     registeredAt: timestamp("registered_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
+    check(
+      "registrations_checkin_method_check",
+      sql`${table.checkinMethod} IS NULL OR ${table.checkinMethod} IN ('qr', 'manual')`
+    ),
+    check(
+      "registrations_checkin_method_attended_check",
+      sql`${table.checkinMethod} IS NULL OR ${table.attended}`
+    ),
     uniqueIndex("registrations_active_event_email_idx")
       .on(table.eventId, table.attendeeEmail)
       .where(sql`${table.status} IN ('confirmed','waitlisted')`),
@@ -544,6 +573,8 @@ export const registrationAttempts = pgTable(
       table.ipAddress,
       table.createdAt
     ),
+    // ADR 0022: the limiter purges attempts older than an hour as they age.
+    index("registration_attempts_created_idx").on(table.createdAt),
   ]
 );
 

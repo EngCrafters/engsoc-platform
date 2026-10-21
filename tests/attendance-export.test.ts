@@ -65,7 +65,7 @@ describe("private attendance CSV", () => {
       EVENT,
       "all",
       "",
-      null,
+      0,
       10000,
       true
     );

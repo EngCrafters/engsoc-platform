@@ -1,3 +1,4 @@
+import { logServerError } from "@/lib/api/log";
 import {
   memberPreflight,
   memberRequest,
@@ -61,7 +62,8 @@ export async function POST(
         }
       );
     return memberResult(result, auth.requestId!, auth.cors!);
-  } catch {
+  } catch (error) {
+    logServerError("member_registration_failed", error, auth.requestId);
     return problem("service-unavailable", auth.requestId!, {
       headers: auth.cors,
     });

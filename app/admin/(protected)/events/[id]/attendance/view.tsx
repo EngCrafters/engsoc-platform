@@ -6,19 +6,36 @@ import { Label } from "@/components/ui/label";
 import { adminErrorMessage } from "@/lib/admin-errors";
 import type {
   AttendanceList,
+  AttendanceRow,
   CheckinSession,
 } from "@/lib/event-management/server";
-import { attendanceListAction, checkinAction } from "./actions";
+import {
+  attendanceListAction,
+  checkinAction,
+  manualAttendanceAction,
+} from "./actions";
 type Session = CheckinSession & { url: string; qr: string };
+const PAGE = 50;
+const CHECKIN_REASONS = [
+  ["qr_unavailable", "Couldn't scan the live code"],
+  ["no_account", "Registered without a member account"],
+  ["organizer_verified", "Verified in person by an organizer"],
+] as const;
+const UNDO_REASONS = [
+  ["recorded_in_error", "Recorded by mistake"],
+  ["not_present", "Not actually present"],
+] as const;
 export function AttendanceManager({
   eventId,
   title,
   initialSession,
+  printQr,
   initialList,
 }: {
   eventId: string;
   title: string;
   initialSession: Session;
+  printQr: string;
   initialList: AttendanceList;
 }) {
   const [session, setSession] = useState(initialSession);
@@ -29,31 +46,25 @@ export function AttendanceManager({
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [manual, setManual] = useState<{
+    row: AttendanceRow;
+    attended: boolean;
+    reason: string;
+  } | null>(null);
   const display = useRef<HTMLDivElement>(null);
   const busy = useRef(false);
   const refreshVersion = useRef(0);
-  const [history, setHistory] = useState<(string | null)[]>([null]);
-  const after = history.at(-1) ?? null;
   const refresh = useCallback(async () => {
     if (busy.current) return;
     const version = ++refreshVersion.current;
-    const data = await attendanceListAction(eventId, filter, search, after);
+    const data = await attendanceListAction(eventId, filter, search, offset);
     if (version !== refreshVersion.current) return;
     if ("rows" in data && data.code === "SUCCESS") {
       setList(data);
-      if (data.session.code === "SUCCESS")
-        setSession((current) =>
-          data.session.isOpen
-            ? { ...current, isOpen: true, closesAt: data.session.closesAt }
-            : {
-                ...initialSession,
-                isOpen: false,
-                closesAt: data.session.closesAt,
-                challenge: undefined,
-              }
-        );
+      if (data.session) setSession(data.session);
     } else setError(adminErrorMessage(data.code));
-  }, [eventId, filter, search, after, initialSession]);
+  }, [eventId, filter, search, offset]);
   const operate = useCallback(
     async (operation: string) => {
       if (busy.current) return;
@@ -72,6 +83,26 @@ export function AttendanceManager({
     },
     [eventId, minutes]
   );
+  const recordManual = async () => {
+    if (!manual || busy.current) return;
+    busy.current = true;
+    setPending(true);
+    setError("");
+    try {
+      const result = await manualAttendanceAction(
+        eventId,
+        manual.row.id,
+        manual.attended,
+        manual.reason
+      );
+      if (result.code === "SUCCESS") setManual(null);
+      else setError(adminErrorMessage(result.code));
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+    void refresh();
+  };
   useEffect(() => {
     const first = setTimeout(() => void refresh(), 0);
     const id = setInterval(() => void refresh(), 15_000);
@@ -80,11 +111,17 @@ export function AttendanceManager({
       clearInterval(id);
     };
   }, [refresh]);
+  // Every screen derives the same code from the minute; fetch the next one
+  // as the minute turns. Nothing here changes the code for other screens.
   useEffect(() => {
-    if (!session.isOpen) return;
-    const id = setInterval(() => void operate("rotate"), 75_000);
-    return () => clearInterval(id);
-  }, [session.isOpen, operate]);
+    if (!session.isOpen || !session.refreshAt) return;
+    const wait = Math.max(
+      1_000,
+      new Date(session.refreshAt).getTime() - Date.now() + 500
+    );
+    const id = setTimeout(() => void operate("read"), wait);
+    return () => clearTimeout(id);
+  }, [session.isOpen, session.refreshAt, operate]);
   const format = (value: string | null) =>
     value
       ? new Intl.DateTimeFormat("en-GB", {
@@ -93,7 +130,8 @@ export function AttendanceManager({
           timeZone: "Asia/Muscat",
         }).format(new Date(value))
       : "—";
-  const rows = list.rows.slice(0, 50);
+  const rows = list.rows.slice(0, PAGE);
+  const live = session.isOpen && Boolean(session.checkinCode);
   return (
     <>
       {error && (
@@ -143,16 +181,16 @@ export function AttendanceManager({
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            {session.challenge
-              ? "Live QR expires after two minutes and rotates automatically while this page stays open. Printed/downloaded live codes expire too."
-              : "This QR opens the attendance page. Open check-in and display a live QR for members to confirm."}
+            {live
+              ? `The live code changes every minute and each code works for ${session.codeMinutes} minutes. Every organizer screen shows the same code, so opening another screen changes nothing.`
+              : "This QR opens the attendance page. Open check-in to display the live code members scan to confirm."}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setFullscreen(true)}>
               Display
             </Button>
             <Button variant="outline" asChild>
-              <a href={session.qr} download={`attendance-${eventId}.png`}>
+              <a href={printQr} download={`attendance-page-${eventId}.png`}>
                 Download
               </a>
             </Button>
@@ -165,12 +203,11 @@ export function AttendanceManager({
                 const heading = print.document.createElement("h1");
                 heading.textContent = title;
                 const img = print.document.createElement("img");
-                img.src = session.qr;
+                img.src = printQr;
                 img.style.width = "min(90vw,600px)";
                 const note = print.document.createElement("p");
-                note.textContent = session.challenge
-                  ? "Live attendance code: expires within two minutes."
-                  : "Scan to open the event attendance page.";
+                note.textContent =
+                  "Scan to open the attendance page and sign in. Attendance is confirmed by scanning the live code shown at the event.";
                 print.document.body.append(heading, img, note);
                 img.onload = () => {
                   print.focus();
@@ -181,6 +218,10 @@ export function AttendanceManager({
               Print
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Downloaded and printed codes open the attendance page so members can
+            sign in early; they cannot record attendance on their own.
+          </p>
           <Label htmlFor="checkin-duration">Check-in window (minutes)</Label>
           <Input
             id="checkin-duration"
@@ -201,12 +242,28 @@ export function AttendanceManager({
               <Button
                 variant="outline"
                 disabled={pending}
+                onClick={() => void operate("open")}
+              >
+                Set closing time
+              </Button>
+            )}
+            {session.isOpen && (
+              <Button
+                variant="outline"
+                disabled={pending}
                 onClick={() => void operate("rotate")}
               >
-                Refresh live QR
+                Issue new code
               </Button>
             )}
           </div>
+          {session.isOpen && (
+            <p className="text-xs text-muted-foreground">
+              Issue a new code only if a code was shared outside the room: codes
+              already scanned stop working and every screen switches within 15
+              seconds.
+            </p>
+          )}
         </div>
         <div className="flex min-w-0 flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -226,7 +283,7 @@ export function AttendanceManager({
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              setHistory([null]);
+              setOffset(0);
               void refresh();
             }}
           >
@@ -238,7 +295,7 @@ export function AttendanceManager({
                 maxLength={200}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setHistory([null]);
+                  setOffset(0);
                 }}
                 placeholder="Name or email"
               />
@@ -251,7 +308,7 @@ export function AttendanceManager({
                 value={filter}
                 onChange={(e) => {
                   setFilter(e.target.value);
-                  setHistory([null]);
+                  setOffset(0);
                 }}
               >
                 <option value="all">All participants</option>
@@ -275,9 +332,56 @@ export function AttendanceManager({
             </Button>
           </form>
           <p aria-live="polite" className="text-sm text-muted-foreground">
-            {list.total} matching participants · updates every 15 seconds ·
-            timestamps in Oman time
+            {list.total} matching participants · alphabetical · updates every 15
+            seconds · timestamps in Oman time
           </p>
+          {manual && (
+            <div
+              role="group"
+              aria-label="Manual attendance"
+              className="grid gap-3 rounded-lg border p-4"
+            >
+              <p className="text-sm font-medium" dir="auto">
+                {manual.attended
+                  ? `Check in ${manual.row.name}`
+                  : `Undo the check-in for ${manual.row.name}`}
+              </p>
+              <div className="grid gap-1">
+                <Label htmlFor="manual-reason">Reason</Label>
+                <select
+                  id="manual-reason"
+                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                  value={manual.reason}
+                  onChange={(e) =>
+                    setManual({ ...manual, reason: e.target.value })
+                  }
+                >
+                  {(manual.attended ? CHECKIN_REASONS : UNDO_REASONS).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Recorded in the event audit with your account and this reason.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button disabled={pending} onClick={() => void recordManual()}>
+                  {manual.attended ? "Confirm check-in" : "Confirm undo"}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() => setManual(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-left text-sm">
               <thead className="border-b bg-muted/40">
@@ -288,6 +392,7 @@ export function AttendanceManager({
                     "Registration",
                     "Attendance",
                     "Checked in",
+                    "Action",
                   ].map((x) => (
                     <th key={x} className="p-3 font-medium">
                       {x}
@@ -300,14 +405,45 @@ export function AttendanceManager({
                   <tr key={row.id} className="border-b last:border-0">
                     <td className="p-3" dir="auto">
                       {row.name}
+                      {!row.hasAccount && (
+                        <span className="block text-xs text-muted-foreground">
+                          Guest registration
+                        </span>
+                      )}
                     </td>
                     <td className="p-3">{row.email}</td>
                     <td className="p-3">{row.status}</td>
                     <td className="p-3">
-                      {row.attended ? "Attended" : "Not checked in"}
+                      {row.attended
+                        ? row.method === "manual"
+                          ? "Attended · manual"
+                          : row.method === "qr"
+                            ? "Attended · QR"
+                            : "Attended"
+                        : "Not checked in"}
                     </td>
                     <td className="whitespace-nowrap p-3">
                       {format(row.checkedInAt)}
+                    </td>
+                    <td className="p-3">
+                      {row.status === "confirmed" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={pending}
+                          onClick={() =>
+                            setManual({
+                              row,
+                              attended: !row.attended,
+                              reason: row.attended
+                                ? UNDO_REASONS[0][0]
+                                : CHECKIN_REASONS[0][0],
+                            })
+                          }
+                        >
+                          {row.attended ? "Undo" : "Check in"}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -322,15 +458,15 @@ export function AttendanceManager({
           <div className="flex gap-2">
             <Button
               variant="outline"
-              disabled={history.length < 2}
-              onClick={() => setHistory((h) => h.slice(0, -1))}
+              disabled={offset === 0}
+              onClick={() => setOffset((o) => Math.max(0, o - PAGE))}
             >
               Previous
             </Button>
             <Button
               variant="outline"
-              disabled={list.rows.length <= 50}
-              onClick={() => setHistory((h) => [...h, rows.at(-1)?.id ?? null])}
+              disabled={list.rows.length <= PAGE}
+              onClick={() => setOffset((o) => o + PAGE)}
             >
               Next
             </Button>

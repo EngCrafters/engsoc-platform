@@ -1,3 +1,4 @@
+import { logServerError } from "@/lib/api/log";
 import {
   memberPreflight,
   memberRequest,
@@ -21,7 +22,8 @@ export async function GET(request: Request, { params }: Context) {
       auth.requestId!,
       auth.cors!
     );
-  } catch {
+  } catch (error) {
+    logServerError("member_attendance_failed", error, auth.requestId);
     return problem("service-unavailable", auth.requestId!, {
       headers: auth.cors,
     });
@@ -56,7 +58,8 @@ export async function POST(request: Request, { params }: Context) {
       auth.requestId!,
       auth.cors!
     );
-  } catch {
+  } catch (error) {
+    logServerError("member_attendance_failed", error, auth.requestId);
     return problem("service-unavailable", auth.requestId!, {
       headers: auth.cors,
     });

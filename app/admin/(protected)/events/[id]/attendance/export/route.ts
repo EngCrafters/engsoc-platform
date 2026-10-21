@@ -31,7 +31,7 @@ export async function POST(
       id,
       form.get("filter")!,
       form.get("search")!,
-      null,
+      0,
       10000,
       true
     );
@@ -49,6 +49,7 @@ export async function POST(
         "Email",
         "Registration",
         "Attendance",
+        "Method",
         "Checked in (UTC)",
         "Registered (UTC)",
       ],
@@ -57,6 +58,7 @@ export async function POST(
         r.email,
         r.status,
         r.attended ? "attended" : "not checked in",
+        r.method ?? "",
         r.checkedInAt ?? "",
         r.registeredAt,
       ]),
