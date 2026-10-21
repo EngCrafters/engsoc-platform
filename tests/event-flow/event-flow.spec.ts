@@ -125,6 +125,9 @@ test("create/edit media → real member/waitlist registration → rotating QR �
       visitor.getByRole("link", { name: "Unsafe", exact: true })
     ).toHaveCount(0);
     expect(await visitor.evaluate(() => "xssExecuted" in window)).toBe(false);
+    // Production streaming briefly keeps a hidden copy of the page (React's
+    // `S:` container) until it is swapped in; count images only after that.
+    await expect(visitor.locator('div[hidden][id^="S:"]')).toHaveCount(0);
     const cover = visitor.getByAltText(
       "Synthetic event management flow · updated",
       { exact: true }
@@ -231,6 +234,29 @@ test("create/edit media → real member/waitlist registration → rotating QR �
       new RegExp(`^${WEB}/events/${id}/attendance#checkin=[a-f0-9]{64}$`)
     );
     expect(scan).not.toMatch(/@|essq_|Bearer|eyJ/);
+    // A second organizer screen shows a live code too and invalidates nothing:
+    // the code already scanned above is confirmed below.
+    const secondScreen = await managerContext.newPage();
+    await secondScreen.goto(`${CORE}/admin/events/${id}/attendance`);
+    const secondQr = await secondScreen
+      .getByAltText(/Attendance QR for/)
+      .getAttribute("src");
+    const secondRaw = await sharp(
+      Buffer.from(secondQr!.split(",")[1], "base64")
+    )
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    expect(
+      jsQR(
+        new Uint8ClampedArray(secondRaw.data),
+        secondRaw.info.width,
+        secondRaw.info.height
+      )?.data
+    ).toMatch(
+      new RegExp(`^${WEB}/events/${id}/attendance#checkin=[a-f0-9]{64}$`)
+    );
+    await secondScreen.close();
     const [before] =
       await db`SELECT attended FROM public.registrations WHERE id=${registered.id}`;
     expect(before.attended).toBe(false);
@@ -277,15 +303,41 @@ test("create/edit media → real member/waitlist registration → rotating QR �
     ).toBeDisabled();
     await admin.getByRole("button", { name: "Refresh", exact: true }).click();
     await expect(
-      admin.getByRole("cell", { name: "Attended", exact: true })
+      admin.getByRole("cell", { name: "Attended · QR", exact: true })
     ).toBeVisible();
     await admin
       .getByLabel("Search participants")
       .fill("event-member@example.test");
     await admin.getByRole("button", { name: "Refresh", exact: true }).click();
-    await expect(
-      admin.getByRole("row").filter({ hasText: "event-member@example.test" })
-    ).toHaveCount(1);
+    const memberRow = admin
+      .getByRole("row")
+      .filter({ hasText: "event-member@example.test" });
+    await expect(memberRow).toHaveCount(1);
+    await expect(memberRow).toContainText("Attended · QR");
+    // Organizer-assisted correction: undo, then check in again, each with a reason.
+    await memberRow.getByRole("button", { name: "Undo", exact: true }).click();
+    await admin
+      .getByRole("group", { name: "Manual attendance" })
+      .getByRole("button", { name: "Confirm undo", exact: true })
+      .click();
+    await expect(memberRow).toContainText("Not checked in");
+    await memberRow
+      .getByRole("button", { name: "Check in", exact: true })
+      .click();
+    await admin
+      .getByLabel("Reason", { exact: true })
+      .selectOption("organizer_verified");
+    await admin
+      .getByRole("group", { name: "Manual attendance" })
+      .getByRole("button", { name: "Confirm check-in", exact: true })
+      .click();
+    await expect(memberRow).toContainText("Attended · manual");
+    const manualAudit =
+      await db`SELECT action,changes->>'reason' AS reason FROM private.uc02_audit WHERE registration_id=${registered.id} AND action LIKE 'attendance.manual%' ORDER BY occurred_at`;
+    expect(manualAudit).toEqual([
+      { action: "attendance.manual_reverted", reason: "recorded_in_error" },
+      { action: "attendance.manual_confirmed", reason: "organizer_verified" },
+    ]);
     const download = admin.waitForEvent("download");
     await admin
       .getByRole("button", { name: "Export attendance CSV", exact: true })
