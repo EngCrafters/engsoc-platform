@@ -204,9 +204,10 @@ describe("admin authentication actions", () => {
   });
 
   it("rejects short passwords and mismatched confirmation before contacting Auth", async () => {
+    // One character under the 8-character minimum.
     const short = await resetPasswordAction(
       initialResetActionState,
-      resetForm("too short")
+      resetForm("abc1234")
     );
     expect(short).toMatchObject({ status: "error" });
     const mismatch = resetForm();

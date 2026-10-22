@@ -26,6 +26,22 @@ test("all event-management routes remain behind the same protected boundary", as
   await expect(page).toHaveURL(/\/admin\/login\?next=\/admin\/events$/);
 });
 
+test("membership review and ID cards are behind the protected boundary", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/admin/membership");
+  await expect(page).toHaveURL(/\/admin\/login\?next=\/admin\/events$/);
+  await page.goto("/admin/membership/00000000-0000-4000-8000-000000000000");
+  await expect(page).toHaveURL(/\/admin\/login\?next=\/admin\/events$/);
+  // The ID-card route answers for itself: no session, no document.
+  const document = await request.get(
+    "/admin/membership/00000000-0000-4000-8000-000000000000/document"
+  );
+  expect(document.status()).toBe(401);
+  expect(document.headers()["cache-control"]).toContain("no-store");
+});
+
 test("the account page is behind the same protected boundary", async ({
   page,
 }) => {

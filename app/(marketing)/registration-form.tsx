@@ -30,6 +30,7 @@ const ERROR_MESSAGES: Record<RegisterForEventError, string> = {
   invalid_intent: "Choose a valid registration option.",
   invalid_ip: "We couldn't verify this request. Try again.",
   invalid_input: "Check the form and try again.",
+  phone_required: "This event requires an international phone number.",
   server_error:
     "We couldn't confirm the result. Try again; retrying won't create another entry.",
   registration_available:
@@ -39,9 +40,11 @@ const ERROR_MESSAGES: Record<RegisterForEventError, string> = {
 export function RegistrationForm({
   eventId,
   availability,
+  phoneRequired = false,
 }: {
   eventId: string;
   availability: PublicEventAvailability;
+  phoneRequired?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(
     registerForEventAction,
@@ -117,6 +120,29 @@ export function RegistrationForm({
           className="h-10"
         />
       </FormField>
+      {phoneRequired || error === "phone_required" ? (
+        <FormField
+          htmlFor="attendeePhone"
+          label="International phone number"
+          required
+          error={
+            error === "phone_required"
+              ? ERROR_MESSAGES.phone_required
+              : undefined
+          }
+        >
+          <Input
+            id="attendeePhone"
+            name="attendeePhone"
+            type="tel"
+            autoComplete="tel"
+            dir="ltr"
+            maxLength={32}
+            placeholder="+968 9123 4567"
+            required
+          />
+        </FormField>
+      ) : null}
       <FormActions>
         <Button
           type="submit"

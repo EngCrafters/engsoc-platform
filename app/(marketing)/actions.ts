@@ -39,6 +39,7 @@ function hasUnexpectedDomainFields(formData: FormData) {
     "eventId",
     "attendeeName",
     "attendeeEmail",
+    "attendeePhone",
     "intent",
   ]);
   return [...formData.keys()].some(
@@ -59,7 +60,8 @@ export async function registerForEventAction(
     !attendeeName ||
     !attendeeEmail ||
     !intentValue ||
-    hasUnexpectedDomainFields(formData)
+    hasUnexpectedDomainFields(formData) ||
+    formData.getAll("attendeePhone").length > 1
   ) {
     return { status: "error", error: "invalid_input" };
   }
@@ -72,6 +74,9 @@ export async function registerForEventAction(
     attendeeEmail,
     intent,
     ipAddress,
+    ...(getSingleTextField(formData, "attendeePhone")
+      ? { attendeePhone: getSingleTextField(formData, "attendeePhone") }
+      : {}),
   });
 
   if (!result.ok) {

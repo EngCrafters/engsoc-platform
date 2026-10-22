@@ -46,7 +46,12 @@ describe("Technical Auth user directory and Auth admin audit", () => {
     });
     expect(byId.get(confirmed)?.last_sign_in_at).not.toBeNull();
 
-    for (const actor of [board, confirmed, randomUUID()]) {
+    // ADR 0024: Board Administration sees the directory too.
+    expect(
+      (await runtime`SELECT * FROM private.list_auth_directory(${board}::uuid)`)
+        .length
+    ).toBeGreaterThan(0);
+    for (const actor of [confirmed, randomUUID()]) {
       const denied = await runtime`
         SELECT * FROM private.list_auth_directory(${actor}::uuid)`;
       expect(denied).toHaveLength(0);
@@ -86,10 +91,15 @@ describe("Technical Auth user directory and Auth admin audit", () => {
       SELECT private.record_auth_admin_action(
         ${technical}::uuid, ${invited}::uuid, 'user.invited', 'invitation') AS result`;
     expect(ok[0].result.code).toBe("SUCCESS");
-    for (const actor of [board, confirmed]) {
+    // Board Administration records only invitations (ADR 0024).
+    for (const [actor, action] of [
+      [board, "user.created"],
+      [board, "user.password_admin_reset"],
+      [confirmed, "user.invited"],
+    ]) {
       const denied = await runtime<{ result: { code: string } }[]>`
         SELECT private.record_auth_admin_action(
-          ${actor}::uuid, ${invited}::uuid, 'user.invited', NULL) AS result`;
+          ${actor}::uuid, ${invited}::uuid, ${action}, NULL) AS result`;
       expect(denied[0].result.code).toBe("FORBIDDEN");
     }
     const missing = await runtime<{ result: { code: string } }[]>`

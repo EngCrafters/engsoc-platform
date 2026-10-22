@@ -19,6 +19,7 @@
 /supabase/.temp/
 
 # next.js
+/.next-event-flow/
 /.next/
 /out/
 

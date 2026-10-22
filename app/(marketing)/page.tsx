@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { plainDescription } from "@/lib/events/description";
+import { redirect } from "next/navigation";
+import { rootEmailLinkRedirect } from "@/lib/auth/callback";
 import { getPublicEventPage, type PublicEvent } from "@/lib/events";
 import { formatEventDate } from "@/lib/events/format";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +21,8 @@ export default async function MarketingHomePage({
   searchParams,
 }: PageProps<"/">) {
   const query = await searchParams;
+  const emailLink = rootEmailLinkRedirect(query);
+  if (emailLink) redirect(emailLink);
   const period = query.period === "past" ? "past" : "upcoming";
   const { events, nextCursor } = await getPublicEventPage({
     period,
@@ -79,7 +84,7 @@ export default async function MarketingHomePage({
                     {event.location ? ` · ${event.location}` : ""}
                   </p>
                   <p className="mt-3 line-clamp-3 text-sm text-foreground/80">
-                    {event.description}
+                    {plainDescription(event.description)}
                   </p>
                   <p className="mt-4 text-sm font-medium text-foreground">
                     {availabilityCopy(event)}

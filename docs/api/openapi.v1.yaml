@@ -22,6 +22,8 @@ tags:
     description: Published event reads for trusted servers.
   - name: Registration
     description: Anonymous registration and explicit waitlist requests.
+  - name: Membership
+    description: Society membership applications with SQU ID verification (ADR 0017).
 paths:
   /events:
     get:
@@ -145,6 +147,10 @@ paths:
                   type: string
                   format: email
                   maxLength: 254
+                attendeePhone:
+                  type: string
+                  maxLength: 32
+                  description: International phone; required when the event sets phoneRequired.
                 intent:
                   type: string
                   enum: [register, join_waitlist]
@@ -217,8 +223,658 @@ paths:
       responses:
         "204":
           description: Preflight response
+  /membership-applications:
+    post:
+      tags: [Membership]
+      summary: Apply for society membership
+      description: |
+        Public endpoint, like registration: no API key, no cookie. CORS is
+        restricted to exact allowed origins and Core rate-limits each client
+        address (five submissions an hour).
+
+        The application is stored as `pending_review` together with the SQU ID
+        card. Core validates every field and identifies the card by its file
+        signature (JPEG, PNG, WebP or PDF; at most 4 MiB). No field can set a
+        status, role, committee or reviewer. Society Affairs and Senior
+        Management review it in the Core dashboard; an approved applicant is
+        invited by email to set a password.
+
+        `statusToken` is returned once and is the only way to read the
+        application's status. Core stores only its SHA-256 hash.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                [
+                  fullName,
+                  email,
+                  universityId,
+                  academicYear,
+                  discipline,
+                  consent,
+                  consentVersion,
+                  idDocument,
+                ]
+              properties:
+                fullName: { type: string, minLength: 1, maxLength: 200 }
+                email:
+                  type: string
+                  maxLength: 254
+                  description: An SQU address (`…@squ.edu.om` or a subdomain of it).
+                universityId: { type: string, pattern: "^[0-9]{6,10}$" }
+                academicYear: { type: string, enum: ["1", "2", "3", "4", "5"] }
+                discipline:
+                  type: string
+                  enum:
+                    [
+                      mechanical,
+                      electrical,
+                      civil,
+                      petroleum,
+                      chemical,
+                      mechatronics,
+                      industrial,
+                    ]
+                interests:
+                  type: array
+                  maxItems: 4
+                  description: Repeat the field once per interest.
+                  items:
+                    type: string
+                    enum:
+                      [
+                        cad,
+                        simulation,
+                        embedded,
+                        robotics,
+                        structures,
+                        process,
+                        data,
+                        programming,
+                        power,
+                        reservoir,
+                        quality,
+                        management,
+                        sustainability,
+                        hse,
+                      ]
+                consent: { type: string, enum: ["true"] }
+                consentVersion: { type: string, enum: ["2026-10-v1"] }
+                idDocument:
+                  type: string
+                  format: binary
+                  description: Image (JPEG, PNG, WebP) or PDF of the SQU student ID card, ≤ 4 MiB.
+      responses:
+        "201":
+          description: Application stored as pending review
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status, statusToken]
+                    properties:
+                      status: { type: string, enum: [pending_review] }
+                      statusToken:
+                        { type: string, pattern: "^[A-Za-z0-9_-]{43}$" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: The same email or student ID already has an open or approved application (`reason` already-applied) or a membership (`reason` already-member).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "413":
+          description: Body exceeded 4.5 MB.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "415":
+          description: Content-Type was not multipart/form-data.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "422":
+          description: |
+            `errors[]` names each field: `code` is `required`, `invalid`,
+            `too-long`, `too-large`, `unsupported-type` or `unexpected-field`.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Membership]
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight response
+  /membership-applications/status:
+    post:
+      tags: [Membership]
+      summary: The applicant's own application status
+      description: |
+        The token travels in the body, never in a URL. The answer contains a
+        status and dates only. `pending_review` covers every stage before the
+        final decision; `activated` is true once the member account exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [statusToken]
+              properties:
+                statusToken: { type: string, pattern: "^[A-Za-z0-9_-]{43}$" }
+      responses:
+        "200":
+          description: The status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status, submittedAt, decidedAt, activated]
+                    properties:
+                      status:
+                        {
+                          type: string,
+                          enum: [pending_review, approved, rejected],
+                        }
+                      submittedAt: { type: string, format: date-time }
+                      decidedAt: { type: [string, "null"], format: date-time }
+                      activated: { type: boolean }
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Malformed token or unexpected field.
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Membership]
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight response
+  /health:
+    get:
+      operationId: getHealth
+      summary: The database answers and is at least as new as this code (ADR 0022)
+      description: For smoke tests and monitors. Discloses no versions or configuration.
+      security: []
+      responses:
+        "200":
+          description: Compatible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, enum: [ok] }
+        "503":
+          description: The database is older than this code (status schema-behind) or unavailable
+          content:
+            application/json:
+              schema: { type: object }
+  /me/membership:
+    get:
+      tags: [Membership]
+      summary: The signed-in visitor's own membership (ADR 0019)
+      description: |
+        For the public website's sign-in page. The visitor's Supabase Auth
+        access token goes in the Authorization header (never a URL, never a
+        cookie); Supabase Auth verifies it and the answer is about that
+        identity only. An application is linked only to a confirmed email.
+        Signing in grants nothing: `member` is null until reviewers approved
+        the application and it was activated. No note, reviewer, student ID or
+        document is returned.
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: The visitor's membership and latest application
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [emailConfirmed, member, application]
+                    properties:
+                      emailConfirmed: { type: boolean }
+                      member:
+                        type: [object, "null"]
+                        required: [status, since]
+                        properties:
+                          status: { type: string, enum: [member, graduate] }
+                          since: { type: string, format: date-time }
+                      application:
+                        type: [object, "null"]
+                        required: [status, submittedAt, decidedAt, activated]
+                        properties:
+                          status:
+                            type: string
+                            enum: [pending_review, verified, approved, rejected]
+                          submittedAt: { type: string, format: date-time }
+                          decidedAt:
+                            { type: [string, "null"], format: date-time }
+                          activated: { type: boolean }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Membership]
+      summary: CORS preflight (allows GET with Authorization)
+      responses:
+        "204":
+          description: Preflight response
+  /me/profile:
+    get:
+      operationId: getOwnProfile
+      summary: Read the confirmed member's own profile (ADR 0023)
+      description: |
+        Name, emails, student ID, academic details, interests, photo state,
+        membership activity and recent correction requests, with the profile
+        features Core currently allows. Private and never cached. A confirmed
+        SQU sign-in email that differs from the membership email is followed
+        here, audited as member.email_synced.
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OwnProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    patch:
+      operationId: updateOwnProfile
+      summary: Save the member's self-service fields
+      description: |
+        `{phone}` alone is the event-registration prompt (ADR 0020) and is
+        always accepted. Otherwise all four self-service fields are required,
+        and only while MEMBER_PROFILE_EDITING is not `disabled` (403
+        EDITING_DISABLED). Name, email and student ID are never accepted:
+        they change through POST /me/profile/changes.
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [phone]
+                  properties:
+                    phone:
+                      type: string
+                      maxLength: 32
+                      description: International phone with country code; normalized to E.164.
+                - type: object
+                  additionalProperties: false
+                  required: [phone, academicYear, discipline, interests]
+                  properties:
+                    phone:
+                      type: [string, "null"]
+                      maxLength: 32
+                      description: Empty or null clears it.
+                    academicYear: { type: integer, minimum: 1, maximum: 5 }
+                    discipline:
+                      type: string
+                      enum:
+                        [
+                          mechanical,
+                          electrical,
+                          civil,
+                          petroleum,
+                          chemical,
+                          mechatronics,
+                          industrial,
+                        ]
+                    interests:
+                      type: array
+                      maxItems: 4
+                      uniqueItems: true
+                      items: { type: string }
+      responses:
+        "200":
+          description: The saved profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/OwnProfile"
+                      - $ref: "#/components/schemas/MemberProfile"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: Invalid field; RFC 9457 errors with VALIDATION_ERROR and the field, or PHONE_REQUIRED.
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/profile/photo:
+    get:
+      operationId: getOwnPhoto
+      summary: The member's own photo, re-encoded by Core
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store 512×512 JPEG
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    put:
+      operationId: putOwnPhoto
+      summary: Replace the member's photo
+      description: |
+        The raw bytes of a JPEG or PNG of at most 3 MiB. Core checks the
+        signature, strips metadata, crops it to a 512×512 JPEG and stores it in
+        the private SUPABASE_S3_MEMBER_PHOTO_BUCKET; the replaced object is
+        deleted. Refused with 403 UPLOADS_DISABLED while MEMBER_PHOTO_UPLOADS
+        is `disabled`.
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [code, photoVersion]
+                    properties:
+                      code: { const: SUCCESS }
+                      photoVersion: { type: string, format: uuid }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { description: Larger than 3 MiB. }
+        "415": { description: Not image/jpeg or image/png. }
+        "422": { description: Not a readable JPEG or PNG. }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    delete:
+      operationId: deleteOwnPhoto
+      summary: Remove the member's photo (always allowed)
+      security: [{ memberSession: [] }]
+      responses:
+        "200": { description: Removed, or there was none }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (GET, PUT, DELETE with Authorization)
+      responses:
+        "204": { description: Preflight response }
+  /me/profile/changes:
+    post:
+      operationId: requestProfileCorrection
+      summary: Ask a membership reviewer to correct a verified field
+      description: |
+        Name and student ID were checked against the SQU ID card, so the
+        member cannot change them. A reviewer (Society Affairs, Board or
+        Technical, never the member themself) approves or rejects the request
+        in the dashboard. One pending request per field.
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [field, value]
+              properties:
+                field: { type: string, enum: [full_name, university_id] }
+                value:
+                  type: string
+                  maxLength: 200
+                  description: A name, or a student ID of 6–10 digits.
+      responses:
+        "201":
+          description: Requested; the profile with the pending request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OwnProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: errors code UNCHANGED (already the current value) or ALREADY_PENDING.
+        "422": { description: VALIDATION_ERROR }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/events:
+    get:
+      operationId: listOwnRegistrations
+      summary: The member's own registrations, newest event first
+      description: Guest registrations made with the member's confirmed email are linked first (ADR 0022).
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store list of at most 100
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [code, registrations]
+                    properties:
+                      code: { const: SUCCESS }
+                      registrations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            eventId: { type: string, format: uuid }
+                            title: { type: string }
+                            eventDate: { type: string, format: date-time }
+                            location: { type: [string, "null"] }
+                            status:
+                              { type: string, enum: [confirmed, waitlisted] }
+                            attended: { type: boolean }
+                            checkedInAt:
+                              { type: [string, "null"], format: date-time }
+                            method:
+                              {
+                                type: [string, "null"],
+                                enum: [qr, manual, null],
+                              }
+                            registeredAt: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/events/{eventId}/registrations:
+    parameters:
+      - {
+          name: eventId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    post:
+      operationId: registerOwnProfile
+      summary: Register with Core's verified profile and canonical seat/waitlist rules
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [intent]
+              properties:
+                intent: { type: string, enum: [register, join_waitlist] }
+      responses:
+        "201":
+          description: Registration accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, enum: [confirmed, waitlisted] }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Existing registration conflict reasons apply. }
+        "422": { description: Invalid fields or required profile phone. }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /me/events/{eventId}/attendance:
+    parameters:
+      - {
+          name: eventId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: getOwnAttendance
+      summary: Read own event eligibility; never records attendance
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private eligibility and attendance state; no challenge is exposed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { const: SUCCESS }
+                      profile: { $ref: "#/components/schemas/MemberProfile" }
+                      registration:
+                        type: [object, "null"]
+                        properties:
+                          status:
+                            { type: string, enum: [confirmed, waitlisted] }
+                          attended: { type: boolean }
+                          checkedInAt:
+                            { type: [string, "null"], format: date-time }
+                      checkinOpen: { type: boolean }
+                      closesAt: { type: [string, "null"], format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: confirmOwnAttendance
+      summary: Explicit idempotent check-in with an unexpired event challenge
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [challenge]
+              properties:
+                challenge: { type: string, pattern: "^[0-9a-f]{64}$" }
+      responses:
+        "200":
+          description: Recorded attendance or original result of an idempotent retry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { const: SUCCESS }
+                      checkedInAt: { type: string, format: date-time }
+                      alreadyAttended: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          {
+            description: "RFC 9457 errors code NOT_REGISTERED, WAITLISTED, CHECKIN_CLOSED, CHALLENGE_EXPIRED or INVALID_CHALLENGE.",
+          }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /events/{eventId}/image:
+    parameters:
+      - {
+          name: eventId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: getEventCover
+      summary: Sanitized cover image of a currently public event
+      security: []
+      responses:
+        "200":
+          description: JPEG or PNG; no private Storage URL or credentials
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+        "404": { description: No public event or cover. }
+        "503": { description: Storage or database unavailable. }
 components:
   securitySchemes:
+    memberSession:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        A Supabase Auth access token from the visitor's own sign-in in the
+        browser. Not an API client key; it identifies a person, not a server.
     clientKey:
       type: http
       scheme: bearer
@@ -231,6 +887,75 @@ components:
       description: Correlation id, echoed from a valid caller value or generated.
       schema: { type: string }
   schemas:
+    MemberProfile:
+      type: object
+      additionalProperties: false
+      required: [code, name, email, phone]
+      properties:
+        code: { const: SUCCESS }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: [string, "null"], description: Private E.164 phone. }
+    OwnProfile:
+      type: object
+      required:
+        [
+          code,
+          name,
+          email,
+          universityId,
+          phone,
+          hasPhoto,
+          status,
+          interests,
+          changeRequests,
+        ]
+      properties:
+        code: { const: SUCCESS }
+        name: { type: string }
+        email:
+          type: string
+          format: email
+          description: The verified SQU email the membership keeps.
+        signInEmail:
+          type: [string, "null"]
+          format: email
+          description: The Supabase Auth sign-in email.
+        universityId: { type: string }
+        academicYear: { type: [integer, "null"], minimum: 1, maximum: 5 }
+        discipline: { type: [string, "null"] }
+        interests: { type: array, items: { type: string }, maxItems: 4 }
+        phone: { type: [string, "null"], description: Private E.164 phone. }
+        hasPhoto: { type: boolean }
+        photoVersion: { type: [string, "null"] }
+        status: { type: string, enum: [member, graduate] }
+        memberSince: { type: string, format: date-time }
+        updatedAt: { type: [string, "null"], format: date-time }
+        application:
+          type: [object, "null"]
+          properties:
+            status: { type: string }
+            submittedAt: { type: string, format: date-time }
+            verifiedAt: { type: [string, "null"], format: date-time }
+            decidedAt: { type: [string, "null"], format: date-time }
+            activatedAt: { type: [string, "null"], format: date-time }
+        changeRequests:
+          type: array
+          description: Pending requests, and decisions of the last 30 days.
+          items:
+            type: object
+            properties:
+              field: { type: string, enum: [full_name, university_id] }
+              status: { type: string, enum: [pending, approved, rejected] }
+              requestedValue: { type: string }
+              requestedAt: { type: string, format: date-time }
+              decidedAt: { type: [string, "null"], format: date-time }
+        features:
+          type: object
+          description: Core's own switches (MEMBER_PROFILE_EDITING, MEMBER_PHOTO_UPLOADS). Core enforces them whatever a client shows.
+          properties:
+            profileEditing: { type: boolean }
+            photoUploads: { type: boolean }
     Event:
       type: object
       additionalProperties: false
@@ -259,6 +984,12 @@ components:
           type: string
           enum: [open, waitlist, closed]
           description: Derived by Core. Do not infer from anything else.
+          coverImageUrl:
+            type: [string, "null"]
+            description: Public image route relative to the Core origin, including its version query. Null without a cover.
+          phoneRequired:
+            type: boolean
+            default: false
     EventList:
       type: object
       additionalProperties: false
@@ -298,13 +1029,15 @@ components:
         requestId: { type: string }
         reason:
           type: string
-          description: Optional registration conflict detail, present only with code conflict (409). Unknown or absent reasons must use generic conflict handling.
+          description: Optional conflict detail, present only with code conflict (409). Registration uses the first five; membership applications the last two. Unknown or absent reasons must use generic conflict handling.
           enum:
             - already-registered
             - already-waitlisted
             - event-full
             - registration-closed
             - registration-available
+            - already-applied
+            - already-member
         errors:
           type: array
           items:

@@ -42,6 +42,21 @@ export const REGISTRATION_CONFLICT_REASONS = [
 export type RegistrationConflictReason =
   (typeof REGISTRATION_CONFLICT_REASONS)[number];
 
+/**
+ * Optional public detail for membership-application conflicts (ADR 0017). The
+ * UC-01 duplicate rule tells an applicant they already applied or are already a
+ * member, so naming it reveals nothing the form's own duplicate message does not.
+ */
+export const MEMBERSHIP_CONFLICT_REASONS = [
+  "already-applied",
+  "already-member",
+] as const;
+export type MembershipConflictReason =
+  (typeof MEMBERSHIP_CONFLICT_REASONS)[number];
+
+export type ConflictReason =
+  RegistrationConflictReason | MembershipConflictReason;
+
 type ProblemSpec = { status: number; title: string; type: string };
 
 const SPECS: Record<PublicErrorCode, ProblemSpec> = {
@@ -83,7 +98,7 @@ export type ProblemBody = {
   status: number;
   code: PublicErrorCode;
   requestId: string;
-  reason?: RegistrationConflictReason;
+  reason?: ConflictReason;
   /** Field-level detail for validation failures only. */
   errors?: { field: string; code: string }[];
 };
@@ -100,7 +115,7 @@ export function problem(
   options: {
     errors?: { field: string; code: string }[];
     headers?: Record<string, string>;
-    reason?: RegistrationConflictReason;
+    reason?: ConflictReason;
   } = {}
 ): Response {
   const spec = SPECS[code];

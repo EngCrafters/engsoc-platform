@@ -12,7 +12,7 @@ function clientFor({
 }: {
   userId?: string | null;
   grants?: Array<{ committee_id: string | null; access_level: string }>;
-  committees?: Array<{ id: string; name: string }>;
+  committees?: Array<{ id: string; name: string; slug?: string }>;
 } = {}) {
   const managerQuery = {
     select: () => ({
@@ -50,6 +50,28 @@ describe("manager authorization context", () => {
       accessLevel: "COMMITTEE_MANAGER",
       committees: [{ id: "events-id", name: "Events" }],
     });
+  });
+
+  it("carries each committee's stable slug for membership review", async () => {
+    const context = await resolveManagerContext(
+      clientFor({
+        grants: [{ committee_id: "sa-id", access_level: "COMMITTEE_MANAGER" }],
+        committees: [
+          {
+            id: "sa-id",
+            name: "Society Affairs Committee",
+            slug: "society-affairs",
+          },
+        ],
+      })
+    );
+    expect(context.kind === "manager" && context.committees).toEqual([
+      {
+        id: "sa-id",
+        name: "Society Affairs Committee",
+        slug: "society-affairs",
+      },
+    ]);
   });
 
   it("denies an authenticated user without an active grant", async () => {

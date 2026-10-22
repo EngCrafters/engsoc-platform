@@ -1,5 +1,88 @@
 # Current work - handoff state
 
+**CURRENT — administration and permanent deletion (October 22, 2026, Muscat):** ADR 0024 and
+forward migration `0032_administration` add a Society administration section for Board
+Administration and the Technical Team: an overview and permission matrix, committees
+(create, edit, archive, rosters, managers), members, and the accounts page opened to Board for
+Committee Managers. Events, projects, membership records and (Technical only) whole accounts can
+be deleted permanently after a preview, typed confirmation and, for people, password re-entry.
+Audit rows are kept; erased accounts are pseudonymized. `npm run test:admin-flow` drives it in
+the browser. 0032 is local only: not applied to staging or production. Nothing was pushed or
+deployed.
+
+**CURRENT — smart navbar and member profiles (October 21, 2026, Muscat):** ADR 0023 and forward
+migration `0031_member_profiles` give members a real `/profile`. The website's navbar follows the
+Supabase session: Join while signed out, and an avatar menu once signed in. An applicant gets the
+menu without member privileges.
+
+- **Edits.** Members edit their phone, year, discipline and interests, and upload or remove a
+  photo. Photos are re-encoded into a new private bucket, `SUPABASE_S3_MEMBER_PHOTO_BUCKET`.
+- **Corrections.** Name and student ID change only through a correction that a membership
+  reviewer decides on the dashboard.
+- **Feature switches.** `ESWebsite/config/site-features.json` now holds the page flags that
+  `content/site.ts` reads, plus the profile switches. Core enforces its own matching
+  `MEMBER_PHOTO_UPLOADS` and `MEMBER_PROFILE_EDITING`.
+- **Verification.** `npm run test:profile-flow` drives register → confirm → pending → approved →
+  profile → edit → photo → correction → refresh → sign out end to end on the local harness.
+
+Staging was migrated to 0031 on October 22 with the owner's authorization. The rollout followed
+the 0027–0030 plan:
+
+1. A schema comparison against a local replay and a rehearsal (9 of 9 checks).
+2. A backup, then 0031 in one transaction, then post-flight checks (7 of 7).
+3. A new private `member-photos` bucket.
+4. 13 of 13 end-to-end checks through the local apps with synthetic accounts, which were then
+   removed back to the exact baseline counts.
+
+Production is untouched. Deploying Core needs `SUPABASE_S3_MEMBER_PHOTO_BUCKET`. Nothing was
+pushed or deployed.
+
+**CURRENT — audit repairs (October 21, 2026, Muscat):** ADR 0022 and forward migration
+`0030_attendance_reliability_and_limits` fix the audit's confirmed defects locally.
+
+- **Check-in codes.** Codes are derived per minute in the database, so screens no longer
+  invalidate each other, and each code works for three minutes.
+- **Guest linking.** Guest registrations link to the member who confirmed that email.
+- **Manual attendance.** Organizers record or undo it with fixed reasons, audited.
+- **Rate limits.** Signed-in registration is limited per member, not per address. Guests and
+  applications allow 20 per address, and old IP attempts are purged.
+- **Release gate.** `npm run build` refuses, on Vercel production, a database older than the code
+  or a privileged runtime role. `GET /v1/health` reports schema compatibility.
+- **Diagnostics and descriptions.** Member API failures are logged with SQLSTATE only, and Core's
+  public pages render description links safely.
+
+Staging was migrated to 0030 on October 21 with the owner's authorization. The rollout covered a
+backup, a rehearsal, post-flight checks, the image buckets, a rotated restricted runtime role and
+16 of 16 end-to-end checks on staging (`docs/STAGING_ROLLOUT_0027_0030.md`). Production is
+untouched: it needs the same plan, each step approved separately. Nothing was pushed or deployed.
+
+**CURRENT — Projects and static page flags (October 21, 2026, Muscat):** The owner's
+correction removes all unfinished dashboard/API/database page controls. ESWebsite's
+existing `content/site.ts` is the sole developer-controlled flag list; Projects is
+active and the other unfinished modules retain their original Coming Soon views.
+ADR 0021 and `docs/api/PROJECTS.md` describe private member drafts/media, Society
+Affairs/Board/Technical review, explicit approval/publication, retained public
+snapshots during edits, private decision history and scoped authorization.
+Forward migration `0029_member_projects` follows 0027/0028 and remains unapplied
+to hosted environments. Disposable localhost migration tests were explicitly
+approved. Deployment also needs a distinct private project bucket and restricted
+runtime configuration. Existing branches, membership/event work and designs remain.
+No push, merge, hosted mutation or deployment was performed.
+
+**CURRENT — local event extension (October 21, 2026, Muscat):** The owner's event
+handoff is implemented on the existing local feature branches, preserving the
+membership commits. ADR 0020 and `docs/api/EVENT_ATTENDANCE.md` describe image
+uploads, safe links, private phones, profile registration, and scoped QR attendance.
+Local verification covers 558 Core tests, 97 website tests, both production builds,
+45 existing browser tests (one intentional skip), and the two-app event workflow.
+The event workflow uses real restricted PostgreSQL routines with synthetic local
+Auth/Storage adapters; it is not hosted Supabase verification. Staging was inspected
+read-only: its journal ends at 0026; 0027's function/column are absent. Apply neither
+0027 nor new 0028 without approval. Deployment also needs a separate private event
+bucket, matching website/CORS origins, and an `app_runtime` URL (the local configured
+URL currently logs in as postgres). No push, deployment or hosted mutation occurred.
+The dated handoffs below describe earlier releases.
+
 **CURRENT — pre-domain functional verification complete (October 19, 2026, Dubai):** This note supersedes
 the dated handoffs below. Work began at Core `15875f4`; the serving Core remains
 `https://engsoc-platform.vercel.app`. ADR 0016 separates Landing from Core.

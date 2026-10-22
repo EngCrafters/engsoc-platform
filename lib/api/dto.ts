@@ -24,6 +24,8 @@ export type EventDto = {
   location: string | null;
   committeeName: string;
   availability: PublicEvent["availability"];
+  coverImageUrl: string | null;
+  phoneRequired: boolean;
 };
 
 export type EventListDto = {
@@ -47,6 +49,8 @@ export function toEventDto(event: PublicEvent): EventDto {
     location: event.location,
     committeeName: event.committeeName,
     availability: event.availability,
+    coverImageUrl: event.coverImageUrl ?? null,
+    phoneRequired: event.phoneRequired ?? false,
   };
 }
 
@@ -83,6 +87,7 @@ export function publicCodeFor(
     case "invalid_event":
     case "invalid_input":
     case "invalid_intent":
+    case "phone_required":
       return "invalid-fields";
     case "event_not_found":
     case "event_not_published":

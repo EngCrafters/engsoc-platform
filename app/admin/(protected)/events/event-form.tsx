@@ -27,6 +27,7 @@ import {
 import { DURATION, EASE_OUT } from "@/lib/motion/variants";
 import type { EventLifecycleStatus } from "@/lib/admin-events/status";
 import { adminErrorMessage } from "@/lib/admin-errors";
+import { CoverInput } from "./cover-input";
 
 type EventValues = {
   id: string;
@@ -41,6 +42,8 @@ type EventValues = {
   approvedBy: string | null;
   confirmedCount: number;
   waitlistedCount: number;
+  coverImageKey?: string | null;
+  phoneRequired?: boolean;
 };
 
 function muscatDateTimeValue(value: string) {
@@ -68,8 +71,14 @@ export function EventForm({
   eventStatus?: EventLifecycleStatus;
 }) {
   const router = useRouter();
+  const failedSubmission = useRef(false);
   const [state, action, pending] = useActionState(
-    async (_: unknown, form: FormData) => saveEventAction(form),
+    async (_: unknown, form: FormData) => {
+      failedSubmission.current = false;
+      const result = await saveEventAction(form);
+      failedSubmission.current = result.code !== "SUCCESS";
+      return result;
+    },
     null
   );
   const [committeeId, setCommitteeId] = useState(committees[0]?.id ?? "");
@@ -95,6 +104,14 @@ export function EventForm({
     <form
       id="event-form"
       action={action}
+      onResetCapture={(event) => {
+        // Capture before form-control reset listeners so a failed image save
+        // also preserves controlled switches and their dependent inputs.
+        if (failedSubmission.current) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
       className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]"
       noValidate
     >
@@ -179,8 +196,20 @@ export function EventForm({
                 disabled={archived}
                 defaultValue={event?.description ?? ""}
                 className="min-h-32"
+                maxLength={10000}
+                dir="auto"
               />
+              <p className="text-xs text-muted-foreground">
+                Paste https:// links or use [Workshop
+                details](https://example.com). Paragraphs and line breaks are
+                preserved; HTML is displayed as text.
+              </p>
             </div>
+            <CoverInput
+              eventId={event?.id}
+              hasCover={Boolean(event?.coverImageKey)}
+              disabled={archived}
+            />
           </EventFormSection>
 
           <EventFormSection
@@ -249,6 +278,25 @@ export function EventForm({
             title="Registration settings"
             description="Decide whether this event has a capacity limit."
           >
+            <div className="grid gap-1.5">
+              <Label htmlFor="event-phone-required">
+                Phone Number for Registration
+              </Label>
+              <select
+                id="event-phone-required"
+                name="phoneRequired"
+                defaultValue={event?.phoneRequired ? "required" : "optional"}
+                disabled={archived}
+                className="h-10 rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="optional">Optional</option>
+                <option value="required">Required</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Members reuse their private profile phone. Missing required
+                numbers are saved before registration.
+              </p>
+            </div>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium">Limit capacity</p>

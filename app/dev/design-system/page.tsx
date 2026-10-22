@@ -108,7 +108,7 @@ export default function DesignSystemShowcasePage() {
         <FormField
           htmlFor="demo-password"
           label="Password"
-          description="At least 12 characters."
+          description="At least 8 characters."
         >
           <Input id="demo-password" type="password" className="h-10" />
         </FormField>

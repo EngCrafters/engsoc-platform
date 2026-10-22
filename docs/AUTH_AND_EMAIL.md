@@ -94,7 +94,18 @@ Supabase Dashboard, Authentication, URL Configuration:
 
 The default templates use `{{ .ConfirmationURL }}`. With the app's PKCE request
 that link only completes in the browser that asked for it. Use token-hash links
-instead, which complete on any device and do not depend on `{{ .RedirectTo }}`:
+instead, which complete on any device. They go to the redirect the request asked
+for, `{{ .RedirectTo }}`, which Supabase checks against the allow-list:
+
+- Core's own requests ask for `<origin>/auth/callback`;
+- the public website's member pages ask for `<site>/reset-password` (recovery)
+  and `<site>/login` (signup confirmation), per ADR 0019;
+- an email sent with no redirect, for example from the Dashboard, falls back to
+  the Site URL root, and Core's root forwards a well-formed link to
+  `/auth/callback`.
+
+A template that hardcodes `{{ .SiteURL }}/auth/callback` sends members to the
+admin reset page, so it must not be used once member sign-in is live.
 
 Recovery (subject: `Reset your Engineering Society password`):
 
@@ -102,8 +113,7 @@ Recovery (subject: `Reset your Engineering Society password`):
 <h2>Reset your password</h2>
 <p>Choose a new password for your Engineering Society account:</p>
 <p>
-  <a
-    href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery"
+  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery"
     >Reset password</a
   >
 </p>
@@ -114,10 +124,12 @@ Recovery (subject: `Reset your Engineering Society password`):
 
 Invite (`type=invite`), Confirm signup (`type=signup`) and Change email
 address (`type=email_change`) follow the same shape:
-`{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=<type>`.
+`{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=<type>`. Every redirect the
+apps request has no query string of its own, so appending `?token_hash=…` is
+safe.
 
-Rules: never hardcode a host (the `{{ .SiteURL }}` must stay the production
-origin), never point a template at the site root, and never put a password in a
+Rules: never hardcode a host, keep the Site URL at Core's production origin, keep
+the allow-list to the exact pages listed here, and never put a password in a
 template. The recovery link is single-use and expires; some mail scanners open
 links before the person does, which makes the link look expired. If that
 happens, request a new one.
@@ -150,7 +162,7 @@ the existing callback/fragment relay supports that route. Their actual inbox
 completion has not been re-proven in this closure pass. The examples in section 3
 are recommended templates, not a claim that every live template has been replaced.
 
-Auth now enforces 12 characters, matching application validation. Email confirmation
+Auth now enforces 8 characters, matching application validation. Email confirmation
 is enabled; JWT lifetime is 3600 seconds, refresh reuse interval 10 seconds, and
 session inactivity/timebox limits are unset. Leaked-password protection is disabled:
 the supported enable request returned HTTP 402 (Pro plan or above required). The
@@ -204,7 +216,7 @@ Committee Managers are denied by the route and by every server action.
   and Technical Team. An ordinary manager can never hold two committees.
 - **Passwords.** "Send reset email" mails the account's own address.
   "Set temporary password" calls `auth.admin.updateUserById`; the value is
-  validated (at least 12 characters, confirmed), applied once and discarded. It
+  validated (at least 8 characters, confirmed), applied once and discarded. It
   is not shown again, returned, logged, put in a URL or audited. It is
   unavailable for your own account (use the normal reset). Prefer a reset email
   whenever delivery works, and share a temporary password only privately and
@@ -291,3 +303,47 @@ No message exposes SQL, a stack trace, a provider error or a token.
   ask the person to change it on their account page.
 - **Reconcile production identities:** compare the directory with the agreed
   assignments; never create a duplicate account.
+
+## 9. Member accounts on the public website (ADR 0019)
+
+Applicants choose a password at registration and sign in on the public website
+(`/login`, `/forgot-password`, `/reset-password`). It is the same Supabase Auth
+project and the same identities as the admin dashboard; there is no second user
+store.
+
+- **Sign-up.** The website submits the application to Core first (no password in
+  that request), then calls Supabase Auth's own `signUp` with the password.
+  Supabase sends the confirmation email. Core never receives a password.
+- **Linking.** Core links an application to an identity only when the identity's
+  email is confirmed, or Core invited it. Activation of an unconfirmed
+  self-registered identity returns `EMAIL_UNCONFIRMED` and waits; the applicant's
+  first confirmed sign-in completes an activation reviewers already approved.
+  Applicants without an account still get the invitation.
+- **Status.** `GET /v1/me/membership` takes the visitor's access token as a Bearer
+  header and answers for that identity only. Signing in grants neither
+  membership nor administrative access.
+- **Policy.** The minimum is 8 characters, the owner's decision for the whole
+  project; Core's admin forms use the same constant.
+
+Owner configuration, per Supabase project (staging `wnrdgnmmcdedmilnzzsl`, then
+production):
+
+1. Authentication → Sign In / Providers → Email: public sign-up enabled, email
+   confirmation enabled. Staging was verified on 2026-10-20 through the public
+   settings endpoint; production is not yet verified.
+2. Minimum password length **8**: in the Email provider's settings (Authentication
+   → Sign In / Providers → Email), or, in older dashboards, under Authentication
+   → Settings → Password security. The docs above record 8, but the live project
+   setting must be changed to 8 by the owner.
+3. Authentication → URL Configuration → Redirect URLs: add `<site>/login` and
+   `<site>/reset-password` for each website origin. For production:
+   `https://essqu.com`, `https://www.essqu.com` and `https://essqu-web.vercel.app`.
+   For local development on staging only: `http://localhost:3001`. Keep the
+   existing Core entries.
+4. Authentication → Emails: the recovery and confirm-signup templates use the
+   `{{ .RedirectTo }}` token-hash shape in section 3. Confirmation emails count
+   against the 30-per-hour Auth email limit.
+5. The website needs `SUPABASE_URL` and `SUPABASE_ANON_KEY`: the same project's
+   URL and anon (publishable) key that Core has as `NEXT_PUBLIC_*`. They are
+   public by design, but are read on the server. Core's
+   `CORE_API_ALLOWED_ORIGINS` must list the website's origin.

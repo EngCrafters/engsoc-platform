@@ -4,7 +4,10 @@ import { useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminPreferencesProvider } from "@/components/admin/preferences";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import {
+  AdminSidebar,
+  type MembershipNavigation,
+} from "@/components/admin/admin-sidebar";
 import type { AccessLevel } from "@/lib/auth/manager";
 import {
   SettingsDialog,
@@ -17,6 +20,7 @@ export function AdminShell({
   userId,
   accessLevel,
   committees,
+  membership = null,
   logoutAction,
   children,
 }: {
@@ -24,6 +28,7 @@ export function AdminShell({
   userId: string;
   accessLevel: AccessLevel;
   committees: ReadonlyArray<{ id: string; name: string }>;
+  membership?: MembershipNavigation | null;
   logoutAction: () => void | Promise<void>;
   children: ReactNode;
 }) {
@@ -57,6 +62,7 @@ export function AdminShell({
             email={email}
             accessLevel={accessLevel}
             committees={committees}
+            membership={membership}
             logoutAction={logoutAction}
             onOpenSettings={openSettings}
           />

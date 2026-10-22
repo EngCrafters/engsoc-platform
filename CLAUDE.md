@@ -225,6 +225,18 @@ existing deep-dive doc (`/docs/UC-01_Deep_Dive.pdf`) is still accurate for
 when that work resumes, nothing in it needs to change because of this
 reordering.
 
+**UC-01 membership applications: started by explicit owner direction
+(October 20, 2026).** The owner's written request directs this work, which
+differs from the line above; the mismatch is recorded here rather than
+silently resolved. Registration goes through SQU ID verification,
+review and approval instead of the deep dive's direct creation (ADR 0017,
+`docs/UC-01_Membership_Applications.md`); ID cards go to private Supabase
+Storage (ADR 0018). It is on branch `feat/uc01-membership-applications` and is
+not deployed; `docs/UC-01_Staging_Rollout.md` is the prepared, unapplied
+staging plan. The approval policy
+and the other open decisions in ADR 0017 wait on the owner. UC-02 stays the
+active line until the owner moves it.
+
 ### How this line gets updated
 
 This "Currently active" line is the single source of truth for what should

@@ -108,7 +108,7 @@ describe("access lifecycle transactions", () => {
 
   it("rejects unauthorized, already-scoped, elevated, missing and stale replacements without changing either side", async () => {
     const f = await fixture();
-    expect(await replace(f, f.next, f.board)).toBe("FORBIDDEN");
+    // Board Administration may replace managers since ADR 0024 (tests/db/administration.test.ts).
     expect(await replace(f, f.next, f.other)).toBe("FORBIDDEN");
     expect(await replace(f, f.old)).toBe("VALIDATION_ERROR");
     expect(await replace(f, randomUUID())).toBe("USER_NOT_FOUND");

@@ -34,15 +34,22 @@ export default async function EventPage({
           </>
         }
         actions={
-          <Button asChild variant="outline">
-            <Link href={`/admin/events/${event.id}/registrations`}>
-              <Users aria-hidden="true" data-icon="inline-start" />
-              Registrations
-              <span className="text-muted-foreground tabular-nums">
-                {event.confirmedCount + event.waitlistedCount}
-              </span>
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/admin/events/${event.id}/attendance`}>
+                Attendance &amp; QR
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/admin/events/${event.id}/registrations`}>
+                <Users aria-hidden="true" data-icon="inline-start" />
+                Registrations
+                <span className="text-muted-foreground tabular-nums">
+                  {event.confirmedCount + event.waitlistedCount}
+                </span>
+              </Link>
+            </Button>
+          </div>
         }
       />
       <EventDetailTabs

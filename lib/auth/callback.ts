@@ -22,6 +22,25 @@ export function parseOtpType(value: string | null): CallbackOtpType | null {
 }
 
 /**
+ * Email templates build `{{ .RedirectTo }}?token_hash=…&type=…` (ADR 0019), so
+ * an email sent without a redirect (for example from the Supabase Dashboard)
+ * lands on the Site URL root. That one shape is forwarded to the callback,
+ * which verifies it; anything else on the root is ignored.
+ */
+export function rootEmailLinkRedirect(query: {
+  token_hash?: string | string[];
+  type?: string | string[];
+}): string | null {
+  const tokenHash =
+    typeof query.token_hash === "string" ? query.token_hash : null;
+  const type = parseOtpType(typeof query.type === "string" ? query.type : null);
+  if (!tokenHash || !type || !/^[A-Za-z0-9_-]{8,512}$/.test(tokenHash)) {
+    return null;
+  }
+  return `/auth/callback?${new URLSearchParams({ token_hash: tokenHash, type })}`;
+}
+
+/**
  * Where a verified Auth email link should land. Recovery and invitation links
  * always go to the password page; so does a PKCE `code` when this browser asked
  * for a recovery (the intent cookie) or the link carries the explicit
@@ -140,8 +159,12 @@ export const RECOVERY_EXPIRED_MESSAGE =
 export const PASSWORD_UPDATE_FAILED_MESSAGE =
   "The password could not be updated. Try again.";
 
-/** Minimum password policy shared by the reset page and the Technical fallback. */
-export const MIN_PASSWORD_LENGTH = 12;
+/**
+ * Minimum password policy shared by the reset page and the Technical fallback.
+ * It matches Supabase Auth's project setting (the owner's decision of
+ * 20 October 2026: 8 characters, for members and administrators alike).
+ */
+export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 1024;
 
 export function validateNewPassword(

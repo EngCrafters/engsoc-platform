@@ -87,6 +87,64 @@ Origin: https://essqu.com
 - Do **not** send an IP address. Core derives it. An extra field is rejected.
 - Success is `201` with `{ "data": { "status": "confirmed" | "waitlisted" } }`.
 
+## Membership application (browser, no API key)
+
+**Not deployed yet:** these endpoints arrive with migration 0025 (ADR 0017,
+[data contract](../UC-01_Membership_Applications.md)).
+
+```
+POST {CORE_API_BASE_URL}/membership-applications
+Content-Type: multipart/form-data
+Origin: https://essqu.com
+
+fullName, email, universityId, academicYear, discipline, interests (repeated, optional),
+consent=true, consentVersion=2026-10-v1, idDocument (file)
+```
+
+- No credentials, no cookie, no API key, no IP address. An extra field is rejected.
+- `email` must be an SQU address, `universityId` 6–10 digits, `academicYear` 1–5, `discipline`
+  and `interests` the website's own ids.
+- `idDocument` is JPEG, PNG, WebP or PDF, at most 4 MiB, recognised by its content. A PDF with
+  active content is refused. Re-encode photos in the browser so their metadata is never sent.
+- Success is `201` with `{ "data": { "status": "pending_review", "statusToken": "…" } }`. The
+  token is shown once. Keep it only in the applicant's own browser, never in a URL, a log or
+  analytics.
+- `409` carries `reason` `already-applied` or `already-member`. `429` carries
+  `Retry-After: 3600`. `413` means the file is too large.
+
+```
+POST {CORE_API_BASE_URL}/membership-applications/status
+Content-Type: application/json
+
+{ "statusToken": "…" }
+```
+
+Returns `{ "data": { "status": "pending_review" | "approved" | "rejected", "submittedAt",
+"decidedAt", "activated" } }`, or `404` for an unknown token. No internal state, reviewer or note
+is ever returned.
+
+## Member sign-in (browser, the visitor's own session)
+
+ADR 0019. The landing site signs members in with Supabase Auth, the same project as Core, from
+the browser. It needs that project's URL and anon (publishable) key, which are public by design
+(`SUPABASE_URL`, `SUPABASE_ANON_KEY`, read on the server and handed to the sign-in pages). It
+never needs the service-role key.
+
+- The registration request to Core never contains the password. After Core answers 201, the
+  browser calls Supabase `auth.signUp` with `emailRedirectTo: <site>/login`.
+- Recovery uses `auth.resetPasswordForEmail` with `redirectTo: <site>/reset-password`. Both
+  pages must be on the Supabase redirect allow-list (see `docs/AUTH_AND_EMAIL.md` section 9).
+
+```
+GET {CORE_API_BASE_URL}/me/membership
+Authorization: Bearer {the visitor's Supabase access token}
+Origin: https://essqu.com
+```
+
+Returns `{ "data": { "emailConfirmed", "member", "application" } }` for that identity only; `401` when
+the token is missing or rejected (sign the visitor out). No cookie is sent. Never put the token in
+a URL. Treat a signed-in visitor as a member only when `member` is not null.
+
 ## CORS
 
 Allowed production origins are exact matches:
@@ -170,3 +228,5 @@ registration tests run against a disposable database, and you should do the same
   Auth and `administrative_access`.
 - No event write endpoints.
 - No attendee data of any kind. The registration endpoint returns only a status.
+- No membership review, list or document endpoints. Applications are reviewed only in the
+  admin dashboard.
