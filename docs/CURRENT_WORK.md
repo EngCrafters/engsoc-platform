@@ -7,8 +7,20 @@ Administration and the Technical Team: an overview and permission matrix, commit
 Committee Managers. Events, projects, membership records and (Technical only) whole accounts can
 be deleted permanently after a preview, typed confirmation and, for people, password re-entry.
 Audit rows are kept; erased accounts are pseudonymized. `npm run test:admin-flow` drives it in
-the browser. 0032 is local only: not applied to staging or production. Nothing was pushed or
-deployed.
+the browser.
+
+Staging was migrated to 0032 on October 22 with the owner's authorization. The rollout followed
+the 0031 plan:
+
+1. A schema comparison against a local replay and a rehearsal (25 of 25 checks).
+2. A backup, then 0032 in one transaction, then post-flight checks (10 of 10, every existing row's
+   fingerprint unchanged).
+3. 12 of 12 end-to-end checks through the local dashboard with synthetic accounts, which were then
+   removed back to the exact baseline.
+
+Without `SUPABASE_SERVICE_ROLE_KEY` an account erasure stops at "pending" after removing the data,
+by design; production needs that key for complete erasure. Production is untouched. Its database
+must reach schema 32 before the release gate lets this code deploy.
 
 **CURRENT — smart navbar and member profiles (October 21, 2026, Muscat):** ADR 0023 and forward
 migration `0031_member_profiles` give members a real `/profile`. The website's navbar follows the

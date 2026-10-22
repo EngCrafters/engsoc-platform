@@ -115,9 +115,10 @@ describe("Technical user administration actions", () => {
     expect(mocks.changeAccess).not.toHaveBeenCalled();
   });
 
-  const deniedMessage = "This action is available only to the Technical Team.";
+  const deniedMessage =
+    "Your access level does not allow this change. Board Administration manages Committee Managers; the Technical Team manages every role.";
 
-  it.each(["BOARD_ADMIN", "COMMITTEE_MANAGER"])(
+  it.each(["COMMITTEE_MANAGER"])(
     "denies every operation to a %s and touches nothing",
     async (level) => {
       mocks.getManagerContext.mockResolvedValue(actor(level));
@@ -150,6 +151,75 @@ describe("Technical user administration actions", () => {
       expect(mocks.listUserAudit).not.toHaveBeenCalled();
     }
   );
+
+  it("lets Board Administration invite Committee Managers by email, and nothing more (ADR 0024)", async () => {
+    mocks.getManagerContext.mockResolvedValue(actor("BOARD_ADMIN"));
+    mocks.inviteAuthUser.mockResolvedValue({ code: "SUCCESS", userId: OTHER });
+    mocks.recordAuthAdminAction.mockResolvedValue({ code: "SUCCESS" });
+    mocks.changeAccess.mockResolvedValue({ code: "SUCCESS" });
+    const invited = await createUserAction(
+      initialUserActionState,
+      form({
+        email: "manager@example.test",
+        level: "COMMITTEE_MANAGER",
+        committeeId: FINANCE,
+        method: "invite",
+      })
+    );
+    expect(invited).toEqual({
+      status: "success",
+      message: "Invitation sent and access assigned.",
+    });
+    const refused: Record<string, string>[] = [
+      {
+        email: "x@example.test",
+        level: "BOARD_ADMIN",
+        committeeId: "",
+        method: "invite",
+      },
+      {
+        email: "x@example.test",
+        level: "TECHNICAL",
+        committeeId: "",
+        method: "invite",
+      },
+      {
+        email: "x@example.test",
+        level: "COMMITTEE_MANAGER",
+        committeeId: FINANCE,
+        method: "password",
+        password: "x".repeat(14),
+        confirmPassword: "x".repeat(14),
+      },
+      {
+        email: "x@example.test",
+        level: "NONE",
+        committeeId: "",
+        method: "no_email",
+      },
+    ];
+    for (const values of refused) {
+      expect(
+        await createUserAction(initialUserActionState, form(values))
+      ).toEqual({ status: "error", message: deniedMessage });
+    }
+    const credentials = await Promise.all([
+      sendResetEmailAction(initialUserActionState, form({ userId: OTHER })),
+      setTemporaryPasswordAction(
+        initialUserActionState,
+        form({
+          userId: OTHER,
+          password: "x".repeat(14),
+          confirmPassword: "x".repeat(14),
+        })
+      ),
+    ]);
+    for (const result of credentials)
+      expect(result).toEqual({ status: "error", message: deniedMessage });
+    expect(mocks.inviteAuthUser).toHaveBeenCalledOnce();
+    expect(mocks.sendPasswordResetEmail).not.toHaveBeenCalled();
+    expect(mocks.setTemporaryPassword).not.toHaveBeenCalled();
+  });
 
   it("denies an anonymous caller", async () => {
     mocks.getManagerContext.mockResolvedValue({ kind: "anonymous" });

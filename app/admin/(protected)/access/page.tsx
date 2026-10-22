@@ -1,4 +1,4 @@
-import { getManagerContext } from "@/lib/auth/manager";
+import { requireSenior } from "@/lib/administration/access";
 import {
   listAccess,
   listAccessAudit,
@@ -26,13 +26,19 @@ const auditLabels: Record<string, string> = {
   "technical.granted": "Technical access granted",
   "technical.revoked": "Technical access revoked",
   "access.revoked": "Legacy access revoked",
+  "access.suspended": "Access suspended",
+  "access.reactivated": "Access reactivated",
 };
 
 export default async function AccessPage() {
-  const actor = await getManagerContext();
-  if (actor.kind !== "manager" || actor.accessLevel !== "TECHNICAL") {
+  // Board Administration sees accounts and manages Committee Managers (ADR 0024).
+  const actor = await requireSenior();
+  if (!actor) {
     return (
-      <p role="alert">This action is available only to the Technical Team.</p>
+      <p role="alert">
+        Accounts and access are managed by Board Administration and the
+        Technical Team.
+      </p>
     );
   }
   const [rows, directory, audit] = await Promise.all([
@@ -59,6 +65,7 @@ export default async function AccessPage() {
             committeeId: grant.committee_id,
             committeeName: grant.committee_name,
             active: grant.active,
+            revocationKind: grant.revocation_kind,
           }
         : null,
     };
@@ -69,8 +76,12 @@ export default async function AccessPage() {
     <section aria-labelledby="access-title" className="space-y-6">
       <AdminPageHeader
         headingId="access-title"
-        title="Technical Administration"
-        description="Manage committee, Board Administration, and Technical Team access."
+        title="Accounts & access"
+        description={
+          actor.accessLevel === "TECHNICAL"
+            ? "Manage sign-in accounts and every access level: Committee Managers, Board Administration and the Technical Team."
+            : "Invite and manage Committee Managers. Board Administration and Technical Team access are managed by the Technical Team."
+        }
       />
       <Tabs defaultValue="users" className="gap-4">
         <TabsList variant="line">
@@ -80,8 +91,11 @@ export default async function AccessPage() {
         <TabsContent value="users">
           <UserDirectory
             users={users}
-            committees={[...actor.committees]}
+            committees={actor.committees.filter(
+              (committee) => !committee.archived
+            )}
             currentUserId={actor.userId}
+            actorLevel={actor.accessLevel}
             adminConfigured={Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}
           />
         </TabsContent>

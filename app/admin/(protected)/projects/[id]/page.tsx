@@ -6,6 +6,7 @@ import { UUID, type Localized } from "@/lib/projects/content";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ProjectReviewForm } from "@/components/admin/project-review-form";
+import { PermanentDeletionDialog } from "@/components/admin/permanent-deletion-dialog";
 function bilingual(value: Localized) {
   return (
     <>
@@ -254,6 +255,19 @@ export default async function ProjectDetail({
           ))}
         </ol>
       </section>
+      {manager.accessLevel !== "COMMITTEE_MANAGER" ? (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 p-6">
+          <div className="flex max-w-xl flex-col gap-1">
+            <h2 className="font-semibold">Delete permanently</h2>
+            <p className="text-sm text-muted-foreground">
+              Removes the project, its review history and images for good. A
+              published project must be unpublished first; the author keeps
+              their membership.
+            </p>
+          </div>
+          <PermanentDeletionDialog kind="project" id={p.id} />
+        </section>
+      ) : null}
     </section>
   );
 }

@@ -290,13 +290,27 @@ describe("object operations", () => {
     ).resolves.toBe(false);
   });
 
-  it("refuses to address anything outside the membership key space", async () => {
+  it("refuses to address anything outside the queued key space, without failing the run", async () => {
+    const fetchSpy = fakeFetch(() => new Response(null, { status: 204 }));
     await expect(
-      deleteDocumentObject(
-        config,
-        "../other-bucket/secret.pdf",
-        fakeFetch(() => new Response(null, { status: 204 })).impl
-      )
-    ).rejects.toThrow("Invalid document key.");
+      deleteDocumentObject(config, "../other-bucket/secret.pdf", fetchSpy.impl)
+    ).resolves.toBe(false);
+    expect(fetchSpy.calls).toHaveLength(0);
+  });
+
+  it("deletes the other kinds of queued file (0032)", async () => {
+    for (const queued of [
+      "event-covers/11111111-1111-4111-8111-111111111111.png",
+      "project-images/11111111-1111-4111-8111-111111111111.jpg",
+      "member-photos/11111111-1111-4111-8111-111111111111.jpg",
+    ]) {
+      await expect(
+        deleteDocumentObject(
+          config,
+          queued,
+          fakeFetch(() => new Response(null, { status: 204 })).impl
+        )
+      ).resolves.toBe(true);
+    }
   });
 });

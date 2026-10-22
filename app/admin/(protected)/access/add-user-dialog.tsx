@@ -43,16 +43,20 @@ export function AddUserDialog({
   open,
   onOpenChange,
   committees,
+  actorLevel,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   committees: Committee[];
+  /** Board Administration invites Committee Managers by email only (ADR 0024). */
+  actorLevel: AccessLevel;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
         <AddUserForm
           committees={committees}
+          technical={actorLevel === "TECHNICAL"}
           onClose={() => onOpenChange(false)}
         />
       ) : null}
@@ -62,9 +66,11 @@ export function AddUserDialog({
 
 function AddUserForm({
   committees,
+  technical,
   onClose,
 }: {
   committees: Committee[];
+  technical: boolean;
   onClose: () => void;
 }) {
   const [level, setLevel] = useState<AccessLevel | "NONE">("COMMITTEE_MANAGER");
@@ -131,8 +137,9 @@ function AddUserForm({
                 <SelectItem value="NONE">
                   None — sign-in account only
                 </SelectItem>
-                {(
-                  ["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const
+                {(technical
+                  ? (["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const)
+                  : (["COMMITTEE_MANAGER"] as const)
                 ).map((value) => (
                   <SelectItem key={value} value={value}>
                     {roleLabel(value)}
@@ -170,8 +177,14 @@ function AddUserForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="invite">Send invitation email</SelectItem>
-              <SelectItem value="no_email">Create without email</SelectItem>
-              <SelectItem value="password">Set temporary password</SelectItem>
+              {technical ? (
+                <>
+                  <SelectItem value="no_email">Create without email</SelectItem>
+                  <SelectItem value="password">
+                    Set temporary password
+                  </SelectItem>
+                </>
+              ) : null}
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">{METHOD_HELP[method]}</p>

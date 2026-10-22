@@ -32,7 +32,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PermanentDeletionDialog } from "@/components/admin/permanent-deletion-dialog";
+import type { AccessLevel } from "@/lib/auth/manager";
 import { AccessDialog, type AccessSelection } from "./access-dialog";
+import { SuspensionDialog, type SuspensionTarget } from "./suspension-dialog";
 import { AddUserDialog } from "./add-user-dialog";
 import { PasswordDialog } from "./password-dialog";
 import { UserDetailsSheet, type DetailAction } from "./user-details-sheet";
@@ -50,18 +53,22 @@ import {
 type Confirm = { kind: "reset" | "resend"; user: UserRecord };
 
 /**
- * The Technical user directory. Rows are Auth identities; the Role, Committee
- * and Access columns come from the separate application-access grant.
+ * The account directory. Rows are Auth identities; the Role, Committee and Access columns come
+ * from the separate application-access grant. Board Administration manages Committee Managers;
+ * the Technical Team every role, credentials and account deletion (ADR 0024). The menu mirrors
+ * those rules; the database enforces them.
  */
 export function UserDirectory({
   users,
   committees,
   currentUserId,
+  actorLevel,
   adminConfigured,
 }: {
   users: UserRecord[];
   committees: Committee[];
   currentUserId: string;
+  actorLevel: AccessLevel;
   /** False when the server has no Auth Admin key, so account creation is off. */
   adminConfigured: boolean;
 }) {
@@ -71,9 +78,19 @@ export function UserDirectory({
   const [access, setAccess] = useState<AccessSelection | null>(null);
   const [passwordFor, setPasswordFor] = useState<UserRecord | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [suspension, setSuspension] = useState<SuspensionTarget | null>(null);
+  const [erase, setErase] = useState<UserRecord | null>(null);
+  const technical = actorLevel === "TECHNICAL";
+  /** Board Administration acts only on accounts without senior access. */
+  const manageable = (user: UserRecord) =>
+    technical ||
+    !user.access ||
+    user.access.level === "COMMITTEE_MANAGER" ||
+    (!user.access.active && user.access.revocationKind !== "suspended");
   const [busy, startTransition] = useTransition();
 
   const closeAccess = useCallback(() => setAccess(null), []);
+  const closeSuspension = useCallback(() => setSuspension(null), []);
   const visible = users.filter((user) =>
     `${user.email} ${roleLabel(user.access?.active ? user.access.level : null)} ${scopeLabel(user)}`
       .toLowerCase()
@@ -192,28 +209,66 @@ export function UserDirectory({
                         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
                           Access
                         </DropdownMenuLabel>
-                        {!active ? (
+                        {isSelf || !manageable(user) ? (
+                          <DropdownMenuItem disabled>
+                            {isSelf
+                              ? "Your own access"
+                              : "Managed by the Technical Team"}
+                          </DropdownMenuItem>
+                        ) : null}
+                        {!isSelf &&
+                        manageable(user) &&
+                        !active &&
+                        user.access?.revocationKind === "suspended" ? (
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              setSuspension({
+                                userId: user.userId,
+                                email: user.email,
+                                suspend: false,
+                                role: roleLabel(level),
+                              })
+                            }
+                          >
+                            Reactivate access
+                          </DropdownMenuItem>
+                        ) : null}
+                        {!isSelf && manageable(user) && !active ? (
                           <DropdownMenuItem
                             onSelect={() => run("assign", user)}
                           >
                             Assign role
                           </DropdownMenuItem>
                         ) : null}
-                        {active && level === "COMMITTEE_MANAGER" ? (
+                        {!isSelf && manageable(user) && active ? (
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              setSuspension({
+                                userId: user.userId,
+                                email: user.email,
+                                suspend: true,
+                                role: roleLabel(level),
+                              })
+                            }
+                          >
+                            Suspend access
+                          </DropdownMenuItem>
+                        ) : null}
+                        {!isSelf && active && level === "COMMITTEE_MANAGER" ? (
                           <DropdownMenuItem
                             onSelect={() => run("replace", user)}
                           >
                             Replace manager
                           </DropdownMenuItem>
                         ) : null}
-                        {active && level === "COMMITTEE_MANAGER" ? (
+                        {!isSelf && active && level === "COMMITTEE_MANAGER" ? (
                           <DropdownMenuItem
                             onSelect={() => run("reassign", user)}
                           >
                             Reassign committee
                           </DropdownMenuItem>
                         ) : null}
-                        {active ? (
+                        {!isSelf && manageable(user) && active ? (
                           <DropdownMenuItem
                             variant="destructive"
                             onSelect={() => run("revoke", user)}
@@ -225,7 +280,7 @@ export function UserDirectory({
                                 : "Revoke manager access"}
                           </DropdownMenuItem>
                         ) : null}
-                        {adminConfigured ? (
+                        {technical && adminConfigured ? (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
@@ -250,6 +305,29 @@ export function UserDirectory({
                                 Set temporary password
                               </DropdownMenuItem>
                             ) : null}
+                          </>
+                        ) : null}
+                        {!technical &&
+                        adminConfigured &&
+                        (!user.emailConfirmed || user.invited) ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onSelect={() => run("resend", user)}
+                            >
+                              Resend invitation
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
+                        {technical && adminConfigured && !isSelf ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => setErase(user)}
+                            >
+                              Delete account permanently
+                            </DropdownMenuItem>
                           </>
                         ) : null}
                       </DropdownMenuContent>
@@ -278,18 +356,30 @@ export function UserDirectory({
         open={addOpen}
         onOpenChange={setAddOpen}
         committees={committees}
+        actorLevel={actorLevel}
       />
       <AccessDialog
         selection={access}
         committees={committees}
         users={users}
+        actorLevel={actorLevel}
         onClose={closeAccess}
       />
+      <SuspensionDialog target={suspension} onClose={closeSuspension} />
+      {erase ? (
+        <PermanentDeletionDialog
+          key={erase.userId}
+          kind="account"
+          id={erase.userId}
+          openOnMount
+          onClosed={() => setErase(null)}
+        />
+      ) : null}
       <PasswordDialog user={passwordFor} onClose={() => setPasswordFor(null)} />
       <UserDetailsSheet
         user={detail}
         isSelf={detail?.userId === currentUserId}
-        canAdminister={adminConfigured}
+        canAdminister={technical && adminConfigured}
         onClose={() => setDetail(null)}
         onAction={(action, user) => {
           setDetail(null);

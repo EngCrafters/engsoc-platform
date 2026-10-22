@@ -58,7 +58,27 @@ const identities: Person[] = [
     role: "COMMITTEE_MANAGER",
     committee: "society-affairs",
   },
+  // ADR 0024: senior administrators and an account the administration flow erases.
+  {
+    id: "91000000-0000-4000-8000-000000000006",
+    email: "board-admin@example.test",
+    name: "Synthetic Board Administrator",
+    role: "BOARD_ADMIN",
+  },
+  {
+    id: "91000000-0000-4000-8000-000000000007",
+    email: "technical-admin@example.test",
+    name: "Synthetic Technical Owner",
+    role: "TECHNICAL",
+  },
+  {
+    id: "91000000-0000-4000-8000-000000000008",
+    email: "erase-member@example.test",
+    name: "Synthetic Erasure Member",
+    role: "member",
+  },
 ];
+const serviceKey = "synthetic-service-role-key-for-local-tests";
 const password = "Synthetic-test-password-42!";
 const anon = "synthetic-public-anon-key-for-local-tests";
 
@@ -291,6 +311,63 @@ export default async function setup() {
         );
         return;
       }
+      // Auth Admin API (service role only): invitation and deletion, as GoTrue does them.
+      if (
+        url.pathname.startsWith("/auth/v1/admin/") ||
+        url.pathname === "/auth/v1/invite"
+      ) {
+        if (req.headers.authorization !== `Bearer ${serviceKey}`) {
+          json(res, { message: "Admin API needs the service role" }, 401);
+          return;
+        }
+        const target = /^\/auth\/v1\/admin\/users\/([0-9a-f-]{36})$/.exec(
+          url.pathname
+        )?.[1];
+        if (target && req.method === "DELETE") {
+          try {
+            await db`DELETE FROM auth.users WHERE id = ${target}`;
+          } catch {
+            // A database reference blocks deletion, exactly like the real service.
+            json(res, { code: 500, msg: "Database error deleting user" }, 500);
+            return;
+          }
+          const index = identities.findIndex((p) => p.id === target);
+          if (index >= 0) identities.splice(index, 1);
+          json(res, {});
+          return;
+        }
+        if (url.pathname === "/auth/v1/invite" && req.method === "POST") {
+          const email = String(
+            JSON.parse(bytes.toString()).email
+          ).toLowerCase();
+          if (identities.some((p) => p.email === email)) {
+            json(
+              res,
+              {
+                code: 422,
+                error_code: "email_exists",
+                msg: "A user with this email address has already been registered",
+              },
+              422
+            );
+            return;
+          }
+          const person: Person = {
+            id: randomUUID(),
+            email,
+            name: "",
+            role: "invited",
+            confirmed: false,
+          };
+          identities.push(person);
+          await db`INSERT INTO auth.users(id,email,invited_at) VALUES(${person.id},${email},now())`;
+          inbox.push({ to: email, type: "invite" });
+          json(res, user(person));
+          return;
+        }
+        json(res, { message: "Unknown synthetic admin route" }, 404);
+        return;
+      }
       if (url.pathname === "/auth/v1/logout") {
         res.writeHead(204);
         res.end();
@@ -312,8 +389,11 @@ export default async function setup() {
           return;
         }
         if (url.pathname.endsWith("committees")) {
+          // RLS as Supabase applies it: a manager sees their committee, global roles the catalog.
           const rows =
-            await db`SELECT c.id,c.name,c.slug FROM public.committees c JOIN public.administrative_access a ON a.committee_id=c.id WHERE a.user_id=${person.id} AND a.revoked_at IS NULL`;
+            await db`SELECT c.* FROM public.committees c WHERE c.slug IS NOT NULL AND EXISTS (
+              SELECT 1 FROM public.administrative_access a WHERE a.user_id=${person.id} AND a.revoked_at IS NULL
+                AND (a.access_level IN ('BOARD_ADMIN','TECHNICAL') OR a.committee_id = c.id)) ORDER BY c.name`;
           json(res, rows);
           return;
         }
@@ -391,6 +471,8 @@ export default async function setup() {
       await db`INSERT INTO auth.users(id,email,email_confirmed_at) VALUES(${person.id},${person.email},now())`;
       if (person.role === "member")
         await db`INSERT INTO public.members(id,full_name,email,university_id) VALUES(${person.id},${person.name},${person.email},${person.id})`;
+      else if (person.role === "BOARD_ADMIN" || person.role === "TECHNICAL")
+        await db`INSERT INTO public.administrative_access(user_id,access_level,granted_by) VALUES(${person.id},${person.role},${person.id})`;
       else {
         const [{ id }] =
           await db`SELECT id FROM public.committees WHERE slug=${person.committee!}`;
@@ -431,6 +513,7 @@ export default async function setup() {
     SUPABASE_S3_EVENT_BUCKET: "events-test",
     SUPABASE_S3_PROJECT_BUCKET: "projects-test",
     SUPABASE_S3_MEMBER_PHOTO_BUCKET: "photos-test",
+    SUPABASE_SERVICE_ROLE_KEY: serviceKey,
   };
   const webEnv = {
     ...baseEnv,

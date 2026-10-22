@@ -21,6 +21,8 @@ export type ManagerContext =
         id: string;
         name: string;
         slug?: string | null;
+        /** Archived committees keep their records but take no new events or managers. */
+        archived?: boolean;
       }>;
     };
 
@@ -78,15 +80,23 @@ export async function resolveManagerContext(
     throw new Error("Unable to verify committee authorization.");
   }
 
-  const query = supabase.from("committees").select("id, name, slug");
-  const { data: committees, error: committeesError } =
+  // `*` rather than named columns: `archived_at` exists from migration 0032 on (ADR 0024), and an
+  // archived committee is not offered for new events or assignments.
+  const query = supabase.from("committees").select("*");
+  const { data: rows, error: committeesError } =
     level === "COMMITTEE_MANAGER"
       ? await query.in("id", [access.committee_id!]).order("name")
       : await query.not("slug", "is", null).order("name");
 
-  if (committeesError || !committees) {
+  if (committeesError || !rows) {
     throw new Error("Unable to verify committee authorization.");
   }
+  const committees = rows as {
+    id: string;
+    name: string;
+    slug: string | null;
+    archived_at?: string | null;
+  }[];
   // A grant can be revoked between the two caller-scoped reads. Use only the
   // second query's still-authorized committees rather than surfacing stale
   // scope or treating a concurrent revocation as an application failure.
@@ -103,6 +113,7 @@ export async function resolveManagerContext(
       id: committee.id,
       name: committee.name,
       slug: committee.slug,
+      ...(committee.archived_at ? { archived: true } : {}),
     })),
   };
 }

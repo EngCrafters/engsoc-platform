@@ -11,6 +11,10 @@ export type AccessRow = {
   committee_id: string | null;
   committee_name: string | null;
   active: boolean;
+  /** Set only when inactive: a suspension can be reactivated, a revocation cannot (ADR 0024). */
+  revocation_kind: "revoked" | "suspended" | null;
+  granted_at: string;
+  revoked_at: string | null;
 };
 
 export async function listAccess(actorId: string) {

@@ -77,7 +77,7 @@ function consequence(
   return level === "TECHNICAL"
     ? "Grants full application authority, including managing Technical Team access."
     : level === "BOARD_ADMIN"
-      ? "Grants society-wide operational access to every committee. It cannot manage users."
+      ? "Grants society-wide operational access to every committee, and management of committees and Committee Managers. It cannot change Board or Technical access."
       : `A manager has exactly one committee. Grants access to ${committee?.name ?? "the selected committee"} only.`;
 }
 
@@ -86,11 +86,14 @@ export function AccessDialog({
   selection,
   committees,
   users,
+  actorLevel,
   onClose,
 }: {
   selection: AccessSelection | null;
   committees: Committee[];
   users: UserRecord[];
+  /** Board Administration offers the Committee Manager role only (ADR 0024). */
+  actorLevel: AccessLevel;
   onClose: () => void;
 }) {
   return (
@@ -104,6 +107,7 @@ export function AccessDialog({
           selection={selection}
           committees={committees}
           users={users}
+          technical={actorLevel === "TECHNICAL"}
           onClose={onClose}
         />
       ) : null}
@@ -115,15 +119,21 @@ function AccessForm({
   selection,
   committees,
   users,
+  technical,
   onClose,
 }: {
   selection: AccessSelection;
   committees: Committee[];
   users: UserRecord[];
+  technical: boolean;
   onClose: () => void;
 }) {
   const { operation, user } = selection;
-  const [level, setLevel] = useState<AccessLevel>(selection.level);
+  const [level, setLevel] = useState<AccessLevel>(
+    technical || selection.operation !== "grant"
+      ? selection.level
+      : "COMMITTEE_MANAGER"
+  );
   const [committeeId, setCommitteeId] = useState("");
   const [newUserId, setNewUserId] = useState("");
   const [state, action, pending] = useActionState(
@@ -223,8 +233,9 @@ function AccessForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(
-                  ["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const
+                {(technical
+                  ? (["COMMITTEE_MANAGER", "BOARD_ADMIN", "TECHNICAL"] as const)
+                  : (["COMMITTEE_MANAGER"] as const)
                 ).map((value) => (
                   <SelectItem key={value} value={value}>
                     {roleLabel(value)}

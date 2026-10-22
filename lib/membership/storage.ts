@@ -224,8 +224,19 @@ export function signRequest(input: {
 
 type Fetch = typeof fetch;
 
-function objectUrl(config: StorageConfig, key: string): URL {
-  if (!DOCUMENT_KEY_PATTERN.test(key)) throw new Error("Invalid document key.");
+/**
+ * What the deletion queue may hold (0032): ID cards, event covers, project images and member
+ * photos, matching the queue's own CHECK. Reads and uploads still accept ID cards only.
+ */
+export const QUEUED_KEY_PATTERN =
+  /^(membership-id-cards\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|pdf)|event-covers\/[0-9a-f-]{36}\.(jpg|png)|project-images\/[0-9a-f-]{36}\.(jpg|png)|member-photos\/[0-9a-f-]{36}\.jpg)$/;
+
+function objectUrl(
+  config: StorageConfig,
+  key: string,
+  pattern: RegExp = DOCUMENT_KEY_PATTERN
+): URL {
+  if (!pattern.test(key)) throw new Error("Invalid document key.");
   const base = config.endpoint.pathname.replace(/\/+$/, "");
   const path = [base, config.bucket, ...key.split("/")]
     .map((part, index) => (index === 0 ? part : encodeSegment(part)))
@@ -332,8 +343,9 @@ export async function deleteDocumentObject(
   key: string,
   fetchImpl: Fetch = fetch
 ): Promise<boolean> {
-  const url = objectUrl(config, key);
   try {
+    // Queued keys only; an unexpected one fails this item, never the whole queue run.
+    const url = objectUrl(config, key, QUEUED_KEY_PATTERN);
     const response = await fetchImpl(url, {
       method: "DELETE",
       headers: signed(config, "DELETE", url, EMPTY_PAYLOAD_SHA256),

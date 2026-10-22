@@ -52,14 +52,19 @@ describe("retained identities at the admin page boundary", () => {
     expect(html).not.toContain("PRIVATE ADMIN");
     expect(mocks.read).not.toHaveBeenCalled();
   });
-  it("denies the Technical page directly for retained identities and Board", async () => {
+  // Board Administration manages Committee Managers there since ADR 0024.
+  it("denies the accounts page directly for retained identities and Committee Managers", async () => {
     for (const context of [
       { kind: "unassigned", userId: "retained-user" },
-      { kind: "manager", userId: "board-user", accessLevel: "BOARD_ADMIN" },
+      {
+        kind: "manager",
+        userId: "manager-user",
+        accessLevel: "COMMITTEE_MANAGER",
+      },
     ]) {
       mocks.context.mockResolvedValue(context);
       expect(renderToStaticMarkup(await AccessPage())).toContain(
-        "only to the Technical Team"
+        "managed by Board Administration and the"
       );
     }
     expect(mocks.read).not.toHaveBeenCalled();

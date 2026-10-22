@@ -190,6 +190,57 @@ export async function sendPasswordResetEmail(
 }
 
 /**
+ * Deletes a sign-in identity permanently (ADR 0024). Called only after
+ * `erase_account` removed every database reference to it; the database then
+ * confirms the identity is gone before the erasure is closed. An identity that
+ * is already gone counts as deleted.
+ */
+export async function deleteAuthUser(userId: string): Promise<AuthAdminResult> {
+  const client = adminClient();
+  if (!client) return { code: "UNAVAILABLE" };
+  try {
+    const { error } = await client.auth.admin.deleteUser(userId, false);
+    if (!error || mapAuthAdminError(error) === "USER_NOT_FOUND") {
+      return { code: "SUCCESS" };
+    }
+    return { code: "UNAVAILABLE" };
+  } catch {
+    return { code: "UNAVAILABLE" };
+  }
+}
+
+/**
+ * Re-checks the signed-in administrator's own password before an irreversible
+ * deletion. A throwaway cookie-less session proves it and is signed out at
+ * once; the password is never stored, logged or returned.
+ */
+export async function confirmOwnPassword(
+  email: string,
+  password: string
+): Promise<"VALID" | "INVALID" | "UNAVAILABLE"> {
+  const config = publicConfig();
+  if (!config || !email || !password || password.length > 256) {
+    return config ? "INVALID" : "UNAVAILABLE";
+  }
+  const client = createClient(config.url, config.anonKey, { auth: STATELESS });
+  try {
+    const { data, error } = await client.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error || !data.session) {
+      return error && (error.status === 429 || (error.status ?? 0) >= 500)
+        ? "UNAVAILABLE"
+        : "INVALID";
+    }
+    await client.auth.signOut({ scope: "local" }).catch(() => null);
+    return "VALID";
+  } catch {
+    return "UNAVAILABLE";
+  }
+}
+
+/**
  * Sets a temporary password through the supported Admin API. The value is used
  * once and discarded; the result only says whether it worked.
  */

@@ -1,10 +1,13 @@
 import {
+  Building2,
   CalendarDays,
   CalendarPlus,
   CircleUserRound,
+  LayoutDashboard,
   Shield,
   UserCheck,
   FolderKanban,
+  Users,
 } from "lucide-react";
 
 export const adminNavigation = {
@@ -30,14 +33,27 @@ export const adminNavigation = {
   account: [
     { href: "/admin/account", label: "Account", icon: CircleUserRound },
   ],
-  technical: [
-    { href: "/admin/access", label: "Access management", icon: Shield },
+  /** Board Administration and the Technical Team (ADR 0024). */
+  administration: [
+    { href: "/admin/administration", label: "Overview", icon: LayoutDashboard },
+    {
+      href: "/admin/administration/committees",
+      label: "Committees",
+      icon: Building2,
+    },
+    { href: "/admin/administration/members", label: "Members", icon: Users },
+    { href: "/admin/access", label: "Accounts & access", icon: Shield },
   ],
 } as const;
 
 const EVENT_ID = "[0-9a-f-]+";
 
 export function isAdminNavActive(pathname: string, href: string) {
+  if (
+    href === "/admin/administration/committees" ||
+    href === "/admin/administration/members"
+  )
+    return pathname === href || pathname.startsWith(`${href}/`);
   if (href === "/admin/projects")
     return (
       pathname === "/admin/projects" || pathname.startsWith("/admin/projects/")
@@ -70,7 +86,29 @@ export function adminBreadcrumbs(pathname: string): AdminBreadcrumb[] {
       { label: "Project" },
     ];
   if (pathname === "/admin/access")
-    return [{ label: "Technical Administration" }];
+    return [
+      { label: "Administration", href: "/admin/administration" },
+      { label: "Accounts & access" },
+    ];
+  if (pathname === "/admin/administration")
+    return [{ label: "Administration" }];
+  for (const [section, label, item] of [
+    ["committees", "Committees", "Committee"],
+    ["members", "Members", "Member"],
+  ] as const) {
+    const base = `/admin/administration/${section}`;
+    if (pathname === base)
+      return [
+        { label: "Administration", href: "/admin/administration" },
+        { label },
+      ];
+    if (pathname.startsWith(`${base}/`))
+      return [
+        { label: "Administration", href: "/admin/administration" },
+        { label, href: base },
+        { label: item },
+      ];
+  }
   if (pathname === "/admin/membership")
     return [{ label: "Membership applications" }];
   if (new RegExp(`^/admin/membership/${EVENT_ID}$`, "i").test(pathname)) {

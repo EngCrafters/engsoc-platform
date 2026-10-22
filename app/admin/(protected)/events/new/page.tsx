@@ -12,7 +12,11 @@ export default async function NewEventPage() {
         title="Create an event"
         description="Start with a private draft, then review its details before publication."
       />
-      <EventForm committees={manager.committees} />
+      <EventForm
+        committees={manager.committees.filter(
+          (committee) => !committee.archived
+        )}
+      />
     </section>
   );
 }
