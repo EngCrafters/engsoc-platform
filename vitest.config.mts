@@ -37,6 +37,7 @@ export default defineConfig({
       "tests/event-flow/**",
       "tests/project-flow/**",
       "tests/profile-flow/**",
+      "tests/admin-flow/**",
       "tests/integration/**",
       "node_modules/**",
     ],
