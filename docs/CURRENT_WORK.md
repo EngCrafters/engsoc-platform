@@ -15,8 +15,17 @@ menu without member privileges.
 - **Verification.** `npm run test:profile-flow` drives register → confirm → pending → approved →
   profile → edit → photo → correction → refresh → sign out end to end on the local harness.
 
-0031 and the photo bucket are not applied to staging. Until they are, staging reports
-`schema-behind` and the profile endpoints answer 503. Nothing was pushed or deployed.
+Staging was migrated to 0031 on October 22 with the owner's authorization. The rollout followed
+the 0027–0030 plan:
+
+1. A schema comparison against a local replay and a rehearsal (9 of 9 checks).
+2. A backup, then 0031 in one transaction, then post-flight checks (7 of 7).
+3. A new private `member-photos` bucket.
+4. 13 of 13 end-to-end checks through the local apps with synthetic accounts, which were then
+   removed back to the exact baseline counts.
+
+Production is untouched. Deploying Core needs `SUPABASE_S3_MEMBER_PHOTO_BUCKET`. Nothing was
+pushed or deployed.
 
 **CURRENT — audit repairs (October 21, 2026, Muscat):** ADR 0022 and forward migration
 `0030_attendance_reliability_and_limits` fix the audit's confirmed defects locally.
