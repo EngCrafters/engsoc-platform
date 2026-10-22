@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getManagerContext } from "@/lib/auth/manager";
+import { requireSenior } from "@/lib/administration/access";
 import {
   changeAccess,
   listAuthDirectory,
@@ -30,13 +30,10 @@ function error(code: string): UserActionState {
   };
 }
 
-/** Every action starts here: authenticate, then require an active Technical user. */
+/** Credential tools (password reset, temporary password) stay with the Technical Team. */
 async function requireTechnical() {
-  const actor = await getManagerContext();
-  if (actor.kind !== "manager" || actor.accessLevel !== "TECHNICAL") {
-    return null;
-  }
-  return actor;
+  const actor = await requireSenior();
+  return actor?.accessLevel === "TECHNICAL" ? actor : null;
 }
 
 function text(form: FormData, field: string) {
@@ -119,7 +116,8 @@ export async function createUserAction(
   _previous: UserActionState,
   form: FormData
 ): Promise<UserActionState> {
-  const actor = await requireTechnical();
+  // Board Administration invites Committee Managers (or plain accounts) by email only (ADR 0024).
+  const actor = await requireSenior();
   if (!actor) return error("FORBIDDEN");
 
   const email = text(form, "email")?.toLowerCase() ?? "";
@@ -141,6 +139,12 @@ export async function createUserAction(
     (level !== "COMMITTEE_MANAGER" && committeeId !== "")
   ) {
     return error("INVALID_INPUT");
+  }
+  if (
+    actor.accessLevel === "BOARD_ADMIN" &&
+    ((level !== "NONE" && level !== "COMMITTEE_MANAGER") || method !== "invite")
+  ) {
+    return error("FORBIDDEN");
   }
   if (method === "password") {
     const problem = validateNewPassword(password, confirmation);
@@ -248,7 +252,7 @@ export async function resendInvitationAction(
   _previous: UserActionState,
   form: FormData
 ): Promise<UserActionState> {
-  const actor = await requireTechnical();
+  const actor = await requireSenior();
   if (!actor) return error("FORBIDDEN");
   const entry = await accountEmail(actor.userId, text(form, "userId") ?? "");
   if (!entry) return error("USER_NOT_FOUND");
@@ -322,13 +326,15 @@ const HISTORY_LABELS: Record<string, string> = {
   "user.invitation_resent": "Invitation sent again",
   "user.password_reset_sent": "Password-reset email requested",
   "user.password_admin_reset": "Password changed by an administrator",
+  "access.suspended": "Access suspended",
+  "access.reactivated": "Access reactivated",
 };
 
 /** History for one account. Contains labels and ids only, never secrets. */
 export async function getUserHistoryAction(
   userId: string
 ): Promise<UserHistoryItem[]> {
-  const actor = await requireTechnical();
+  const actor = await requireSenior();
   if (!actor || !isUuid(userId)) return [];
   const [rows, directory] = await Promise.all([
     listUserAudit(actor.userId, userId),

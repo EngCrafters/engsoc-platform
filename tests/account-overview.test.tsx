@@ -171,7 +171,9 @@ describe("admin sidebar identity and scope", () => {
 });
 
 describe("global administration navigation", () => {
-  function sidebar(accessLevel: "BOARD_ADMIN" | "TECHNICAL") {
+  function sidebar(
+    accessLevel: "BOARD_ADMIN" | "TECHNICAL" | "COMMITTEE_MANAGER"
+  ) {
     return renderToStaticMarkup(
       <TooltipProvider>
         <SidebarProvider>
@@ -187,17 +189,24 @@ describe("global administration navigation", () => {
     );
   }
 
-  it("shows Board global scope without Technical controls", () => {
+  it("shows Board global scope and the Administration section (ADR 0024)", () => {
     const html = sidebar("BOARD_ADMIN");
     expect(html).toContain("Board Administration");
     expect(html).toContain("All Committees");
-    expect(html).not.toContain('href="/admin/access"');
+    expect(html).toContain('href="/admin/administration"');
+    expect(html).toContain('href="/admin/access"');
   });
 
   it("separates Technical Administration and access management", () => {
     const html = sidebar("TECHNICAL");
     expect(html).toContain("Technical Administration");
     expect(html).toContain('href="/admin/access"');
+  });
+
+  it("keeps the Administration section from Committee Managers", () => {
+    const html = sidebar("COMMITTEE_MANAGER");
+    expect(html).not.toContain('href="/admin/administration"');
+    expect(html).not.toContain('href="/admin/access"');
   });
 });
 

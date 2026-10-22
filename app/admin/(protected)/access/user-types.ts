@@ -19,6 +19,7 @@ export type UserRecord = {
     committeeId: string | null;
     committeeName: string | null;
     active: boolean;
+    revocationKind?: "revoked" | "suspended" | null;
   } | null;
 };
 
@@ -74,7 +75,8 @@ export function auditStateLabel(
 
 export function accessStatus(user: UserRecord) {
   if (!user.access) return "No access";
-  return user.access.active ? "Active" : "Revoked";
+  if (user.access.active) return "Active";
+  return user.access.revocationKind === "suspended" ? "Suspended" : "Revoked";
 }
 
 export function authStatus(user: UserRecord) {

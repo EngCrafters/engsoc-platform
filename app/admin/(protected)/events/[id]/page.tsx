@@ -10,6 +10,7 @@ import { EventStatusBadge } from "@/components/admin/event-status-badge";
 import { Button } from "@/components/ui/button";
 import { EventForm } from "../event-form";
 import { LifecycleActions } from "../lifecycle-actions";
+import { PermanentDeletionDialog } from "@/components/admin/permanent-deletion-dialog";
 
 export default async function EventPage({
   params,
@@ -61,18 +62,34 @@ export default async function EventPage({
           />
         }
         lifecycle={
-          <LifecycleActions
-            eventId={event.id}
-            revision={event.revision}
-            status={event.status}
-            archived={Boolean(event.archivedAt)}
-            reviewRequired={event.reviewRequired}
-            isFlagger={event.flaggedBy === manager.userId}
-            canReview={manager.accessLevel !== "COMMITTEE_MANAGER"}
-            isApproved={event.approvedBy !== null}
-            isPast={status === "past"}
-            lifecycleStatus={status}
-          />
+          <div className="flex flex-col gap-6">
+            <LifecycleActions
+              eventId={event.id}
+              revision={event.revision}
+              status={event.status}
+              archived={Boolean(event.archivedAt)}
+              reviewRequired={event.reviewRequired}
+              isFlagger={event.flaggedBy === manager.userId}
+              canReview={manager.accessLevel !== "COMMITTEE_MANAGER"}
+              isApproved={event.approvedBy !== null}
+              isPast={status === "past"}
+              lifecycleStatus={status}
+            />
+            {manager.accessLevel !== "COMMITTEE_MANAGER" ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 p-4">
+                <div className="flex max-w-xl flex-col gap-1">
+                  <p className="text-sm font-medium">Delete permanently</p>
+                  <p className="text-sm text-muted-foreground">
+                    Removes the event, its registrations with their personal
+                    data, and its cover image for good. Only archived events or
+                    never-published drafts can be deleted; archiving stays the
+                    reversible option.
+                  </p>
+                </div>
+                <PermanentDeletionDialog kind="event" id={event.id} />
+              </div>
+            ) : null}
+          </div>
         }
       />
     </section>

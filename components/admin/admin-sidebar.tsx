@@ -333,12 +333,12 @@ export function AdminSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
-        {accessLevel === "TECHNICAL" ? (
+        {accessLevel !== "COMMITTEE_MANAGER" ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Technical Administration</SidebarGroupLabel>
+            <SidebarGroupLabel>Society administration</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu aria-label="Technical Administration">
-                {adminNavigation.technical.map((link) => (
+              <SidebarMenu aria-label="Society administration">
+                {adminNavigation.administration.map((link) => (
                   <NavLink key={link.href} {...link} />
                 ))}
               </SidebarMenu>

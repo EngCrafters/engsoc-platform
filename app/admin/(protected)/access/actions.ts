@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getManagerContext } from "@/lib/auth/manager";
+import { requireSenior } from "@/lib/administration/access";
 import { changeAccess, replaceManager } from "@/lib/access/server";
 import { ACCESS_ERROR_MESSAGES as MESSAGES } from "@/lib/access/messages";
 import { isUuid } from "@/lib/admin-events/types";
@@ -19,15 +19,17 @@ export async function changeAccessAction(
   _previous: AccessActionState,
   form: FormData
 ): Promise<AccessActionState> {
-  const actor = await getManagerContext();
-  if (actor.kind !== "manager" || actor.accessLevel !== "TECHNICAL") {
-    return { success: false, message: MESSAGES.FORBIDDEN };
-  }
+  // Technical Team for every role; Board Administration for Committee Managers only (ADR 0024).
+  const actor = await requireSenior();
+  if (!actor) return { success: false, message: MESSAGES.FORBIDDEN };
   const userId = field(form, "userId");
   const level = field(form, "level");
   const committeeId = field(form, "committeeId");
   const operation = field(form, "operation");
   const note = field(form, "note");
+  if (actor.accessLevel === "BOARD_ADMIN" && level !== "COMMITTEE_MANAGER") {
+    return { success: false, message: MESSAGES.FORBIDDEN };
+  }
   if (
     typeof userId !== "string" ||
     !isUuid(userId) ||
@@ -59,7 +61,7 @@ export async function changeAccessAction(
       operation,
       note: note || null,
     });
-    if (result.code === "SUCCESS") revalidatePath("/admin/access");
+    if (result.code === "SUCCESS") revalidatePath("/admin", "layout");
     return {
       success: result.code === "SUCCESS",
       message:
@@ -81,10 +83,8 @@ export async function replaceManagerAction(
   _previous: AccessActionState,
   form: FormData
 ): Promise<AccessActionState> {
-  const actor = await getManagerContext();
-  if (actor.kind !== "manager" || actor.accessLevel !== "TECHNICAL") {
-    return { success: false, message: MESSAGES.FORBIDDEN };
-  }
+  const actor = await requireSenior();
+  if (!actor) return { success: false, message: MESSAGES.FORBIDDEN };
   const oldUserId = field(form, "oldUserId");
   const newUserId = field(form, "newUserId");
   const committeeId = field(form, "committeeId");
@@ -113,7 +113,7 @@ export async function replaceManagerAction(
       committeeId,
       note: note || null,
     });
-    if (result.code === "SUCCESS") revalidatePath("/admin/access");
+    if (result.code === "SUCCESS") revalidatePath("/admin", "layout");
     return {
       success: result.code === "SUCCESS",
       message:

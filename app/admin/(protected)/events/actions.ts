@@ -98,7 +98,9 @@ export async function saveEventAction(form: FormData) {
     } catch {
       return { code: "SERVER_ERROR" };
     }
-  } else if (!manager.committees.some((c) => c.id === committeeId))
+  } else if (
+    !manager.committees.some((c) => c.id === committeeId && !c.archived)
+  )
     return { code: "NOT_FOUND" };
   const cover = form.get("cover");
   let uploadedKey: string | null = null;

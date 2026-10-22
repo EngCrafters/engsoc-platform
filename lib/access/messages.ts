@@ -8,7 +8,14 @@ export const ACCESS_ERROR_MESSAGES: Record<string, string> = {
   ACCESS_ALREADY_REVOKED: "This account no longer has administrative access.",
   ACCESS_CHANGED:
     "Access has changed. Refresh the user list before trying again.",
-  FORBIDDEN: "This action is available only to the Technical Team.",
+  FORBIDDEN:
+    "Your access level does not allow this change. Board Administration manages Committee Managers; the Technical Team manages every role.",
+  COMMITTEE_ARCHIVED:
+    "This committee is archived. Restore it before assigning managers.",
+  SELF_CHANGE: "You cannot change your own access.",
+  NOT_SUSPENDED:
+    "This access was revoked, not suspended. Assign a role again instead.",
+  ALREADY_INACTIVE: "This access is already inactive.",
   CONFLICT:
     "This user already has a different active access level. Revoke it before granting a new level.",
   ALREADY_ACTIVE: "This access is already active.",

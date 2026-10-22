@@ -97,7 +97,7 @@ describe("Technical access action", () => {
     expect(state.change).not.toHaveBeenCalled();
   });
 
-  it("rejects Board and Committee Manager calls before the runtime routine", async () => {
+  it("rejects Board escalation and Committee Manager calls before the runtime routine", async () => {
     for (const accessLevel of ["BOARD_ADMIN", "COMMITTEE_MANAGER"]) {
       state.context.mockResolvedValueOnce({
         kind: "manager",
@@ -109,10 +109,30 @@ describe("Technical access action", () => {
         form("grant", "BOARD_ADMIN", "")
       );
       expect(result.message).toBe(
-        "This action is available only to the Technical Team."
+        "Your access level does not allow this change. Board Administration manages Committee Managers; the Technical Team manages every role."
       );
     }
     expect(state.change).not.toHaveBeenCalled();
+  });
+
+  it("passes Board Administration's Committee Manager changes to the routine (ADR 0024)", async () => {
+    state.context.mockResolvedValueOnce({
+      kind: "manager",
+      userId: actor,
+      accessLevel: "BOARD_ADMIN",
+    });
+    const result = await changeAccessAction(
+      initial,
+      form("grant", "COMMITTEE_MANAGER")
+    );
+    expect(result.success).toBe(true);
+    expect(state.change).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: actor,
+        level: "COMMITTEE_MANAGER",
+        operation: "grant",
+      })
+    );
   });
 
   it("sends Technical ownership changes through the authorized server routine", async () => {
@@ -157,6 +177,6 @@ describe("Technical access action", () => {
       operation: "reassign",
       note: "approved change",
     });
-    expect(state.revalidate).toHaveBeenCalledWith("/admin/access");
+    expect(state.revalidate).toHaveBeenCalledWith("/admin", "layout");
   });
 });
