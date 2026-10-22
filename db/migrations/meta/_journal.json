@@ -225,6 +225,13 @@
       "when": 1792713600000,
       "tag": "0031_member_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792800000000,
+      "tag": "0032_administration",
+      "breakpoints": true
     }
   ]
 }

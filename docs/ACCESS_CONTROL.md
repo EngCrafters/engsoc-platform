@@ -1,22 +1,28 @@
 # Application access contract
 
-Status: accepted specification, extended October 7, 2026 by ADR 0014.
+Status: accepted specification, extended October 7, 2026 by ADR 0014 and
+October 22, 2026 by ADR 0024 (Administration section, permanent deletion).
 ADRs 0012/0013 retain the hierarchy and identity boundary. Current deployment,
 assignment and pilot evidence is in [CURRENT_WORK.md](CURRENT_WORK.md).
 
 ## Hierarchy
 
-| Action                                                 | Committee Manager | Board Administration | Technical Team                                |
-| ------------------------------------------------------ | ----------------- | -------------------- | --------------------------------------------- |
-| Own committee events, registrations, counts and export | Yes               | Yes                  | Yes                                           |
-| Other committee events, registrations and export       | No                | Yes                  | Yes                                           |
-| Global and per-committee counts                        | No                | Yes                  | Yes                                           |
-| Committee selector                                     | No                | Yes                  | Yes                                           |
-| Manage committee managers                              | No                | No                   | Yes                                           |
-| Manage Board Administration                            | No                | No                   | Yes                                           |
-| Manage Technical Team access                           | No                | No                   | Yes, with last-owner safeguard                |
-| Application technical controls                         | No                | No                   | Yes                                           |
-| Infrastructure, secrets, RLS, migrations               | No                | No                   | External technical maintenance procedure only |
+| Action                                                 | Committee Manager | Board Administration                      | Technical Team                                |
+| ------------------------------------------------------ | ----------------- | ----------------------------------------- | --------------------------------------------- |
+| Own committee events, registrations, counts and export | Yes               | Yes                                       | Yes                                           |
+| Other committee events, registrations and export       | No                | Yes                                       | Yes                                           |
+| Global and per-committee counts                        | No                | Yes                                       | Yes                                           |
+| Committee selector                                     | No                | Yes                                       | Yes                                           |
+| Administration section: committees, rosters, members   | No                | Yes                                       | Yes                                           |
+| Manage committee managers (incl. suspend, reactivate)  | No                | Yes, never on Board or Technical accounts | Yes                                           |
+| Invite accounts                                        | No                | Committee Managers, by email              | Any role                                      |
+| Manage Board Administration                            | No                | No                                        | Yes                                           |
+| Manage Technical Team access                           | No                | No                                        | Yes, with last-owner safeguard                |
+| Password reset email, temporary password               | No                | No                                        | Yes                                           |
+| Delete events, projects, membership records for good   | No                | Yes                                       | Yes                                           |
+| Delete a sign-in account completely                    | No                | No                                        | Yes                                           |
+| Application technical controls                         | No                | No                                        | Yes                                           |
+| Infrastructure, secrets, RLS, migrations               | No                | No                                        | External technical maintenance procedure only |
 
 `COMMITTEE_MANAGER` is exactly one Auth user to one committee ID. `BOARD_ADMIN`
 has global operational scope. `TECHNICAL` has full application scope. None of

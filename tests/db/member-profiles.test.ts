@@ -358,6 +358,6 @@ describe("member profiles (0031, real restricted roles)", () => {
     ).rejects.toMatchObject({ code: "42501" });
     expect(
       (await runtime`SELECT private.core_schema_version() AS v`)[0].v
-    ).toBe(31);
+    ).toBeGreaterThanOrEqual(31);
   });
 });

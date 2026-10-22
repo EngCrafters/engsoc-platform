@@ -1,5 +1,15 @@
 # Current work - handoff state
 
+**CURRENT — administration and permanent deletion (October 22, 2026, Muscat):** ADR 0024 and
+forward migration `0032_administration` add a Society administration section for Board
+Administration and the Technical Team: an overview and permission matrix, committees
+(create, edit, archive, rosters, managers), members, and the accounts page opened to Board for
+Committee Managers. Events, projects, membership records and (Technical only) whole accounts can
+be deleted permanently after a preview, typed confirmation and, for people, password re-entry.
+Audit rows are kept; erased accounts are pseudonymized. `npm run test:admin-flow` drives it in
+the browser. 0032 is local only: not applied to staging or production. Nothing was pushed or
+deployed.
+
 **CURRENT — smart navbar and member profiles (October 21, 2026, Muscat):** ADR 0023 and forward
 migration `0031_member_profiles` give members a real `/profile`. The website's navbar follows the
 Supabase session: Join while signed out, and an avatar menu once signed in. An applicant gets the
