@@ -147,15 +147,22 @@ describe("application access hierarchy", () => {
     const [technicalAudit] = await runtime<{ action: string }[]>`
       SELECT action FROM private.list_access_audit(${technical}::uuid) LIMIT 1`;
     expect(technicalAudit.action).toBe("manager.assigned");
+    // ADR 0024: Board Administration reads access history; managers still read nothing.
     const boardAudit = await runtime`
       SELECT * FROM private.list_access_audit(${board}::uuid)`;
-    expect(boardAudit).toHaveLength(0);
+    expect(boardAudit.length).toBeGreaterThan(0);
+    expect(
+      await runtime`SELECT * FROM private.list_access_audit(${manager}::uuid)`
+    ).toHaveLength(0);
     const users = await runtime<{ user_id: string }[]>`
       SELECT user_id FROM private.list_auth_users_for_access(${technical}::uuid)`;
     expect(users.map((row) => row.user_id)).toContain(manager);
-    const boardUsers = await runtime`
-      SELECT * FROM private.list_auth_users_for_access(${board}::uuid)`;
-    expect(boardUsers).toHaveLength(0);
+    const boardUsers = await runtime<{ user_id: string }[]>`
+      SELECT user_id FROM private.list_auth_users_for_access(${board}::uuid)`;
+    expect(boardUsers.map((row) => row.user_id)).toContain(manager);
+    expect(
+      await runtime`SELECT * FROM private.list_auth_users_for_access(${manager}::uuid)`
+    ).toHaveLength(0);
     const assignments = await runtime<
       { user_id: string; access_level: string }[]
     >`

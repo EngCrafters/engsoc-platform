@@ -38,15 +38,29 @@ export function isAllowedOrigin(origin: string | null): boolean {
   return allowedOrigins().includes(origin);
 }
 
+/**
+ * What a route lets the browser send. The default is the registration endpoints'
+ * (POST, no credential header); a route that reads with the visitor's own
+ * Supabase session (ADR 0019) allows GET and `Authorization`, never cookies.
+ */
+export type CorsPolicy = { methods: string; headers: string };
+const DEFAULT_POLICY: CorsPolicy = {
+  methods: "POST, OPTIONS",
+  headers: "Content-Type, X-Request-Id",
+};
+
 /** Headers for an allowed origin, or just `Vary` when it is not allowed. */
-export function corsHeaders(origin: string | null): Record<string, string> {
+export function corsHeaders(
+  origin: string | null,
+  policy: CorsPolicy = DEFAULT_POLICY
+): Record<string, string> {
   const base: Record<string, string> = { vary: "Origin" };
   if (!isAllowedOrigin(origin)) return base;
   return {
     ...base,
     "access-control-allow-origin": origin as string,
-    "access-control-allow-methods": "POST, OPTIONS",
-    "access-control-allow-headers": "Content-Type, X-Request-Id",
+    "access-control-allow-methods": policy.methods,
+    "access-control-allow-headers": policy.headers,
     "access-control-expose-headers": "X-Request-Id, Retry-After",
     "access-control-max-age": "600",
   };
@@ -59,12 +73,16 @@ export function corsHeaders(origin: string | null): Record<string, string> {
  * blocks the real request. Returning 403 here would tell a scanner which origins
  * are configured, and gains nothing.
  */
-export function preflight(request: Request, requestId: string): Response {
+export function preflight(
+  request: Request,
+  requestId: string,
+  policy: CorsPolicy = DEFAULT_POLICY
+): Response {
   const origin = request.headers.get("origin");
   return new Response(null, {
     status: 204,
     headers: {
-      ...corsHeaders(origin),
+      ...corsHeaders(origin, policy),
       "cache-control": "no-store",
       "x-request-id": requestId,
     },

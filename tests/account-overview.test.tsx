@@ -200,3 +200,35 @@ describe("global administration navigation", () => {
     expect(html).toContain('href="/admin/access"');
   });
 });
+
+describe("membership navigation", () => {
+  function sidebar(membership: { awaiting: number } | null) {
+    return renderToStaticMarkup(
+      <TooltipProvider>
+        <SidebarProvider>
+          <AdminSidebar
+            accessLevel="COMMITTEE_MANAGER"
+            email="society-affairs@example.test"
+            committees={[{ id: "sa-id", name: "Society Affairs Committee" }]}
+            membership={membership}
+            logoutAction={noop}
+            onOpenSettings={() => {}}
+          />
+        </SidebarProvider>
+      </TooltipProvider>
+    );
+  }
+
+  it("shows the section to a committee manager the database confirms as a reviewer", () => {
+    const html = sidebar({ awaiting: 4 });
+    expect(html).toContain('aria-label="Membership"');
+    expect(html).toContain('href="/admin/membership"');
+    expect(html).toContain("4 awaiting a decision");
+  });
+
+  it("hides it whenever the database has not confirmed reviewer access", () => {
+    const html = sidebar(null);
+    expect(html).not.toContain('href="/admin/membership"');
+    expect(html).toContain('href="/admin/events"');
+  });
+});

@@ -1,8 +1,95 @@
 # Current work - handoff state
 
-**CURRENT — pre-domain preparation (October 18, 2026):** This note supersedes
+**CURRENT — administration and permanent deletion (October 22, 2026, Muscat):** ADR 0024 and
+forward migration `0032_administration` add a Society administration section for Board
+Administration and the Technical Team: an overview and permission matrix, committees
+(create, edit, archive, rosters, managers), members, and the accounts page opened to Board for
+Committee Managers. Events, projects, membership records and (Technical only) whole accounts can
+be deleted permanently after a preview, typed confirmation and, for people, password re-entry.
+Audit rows are kept; erased accounts are pseudonymized. `npm run test:admin-flow` drives it in
+the browser. 0032 is local only: not applied to staging or production. Nothing was pushed or
+deployed.
+
+**CURRENT — smart navbar and member profiles (October 21, 2026, Muscat):** ADR 0023 and forward
+migration `0031_member_profiles` give members a real `/profile`. The website's navbar follows the
+Supabase session: Join while signed out, and an avatar menu once signed in. An applicant gets the
+menu without member privileges.
+
+- **Edits.** Members edit their phone, year, discipline and interests, and upload or remove a
+  photo. Photos are re-encoded into a new private bucket, `SUPABASE_S3_MEMBER_PHOTO_BUCKET`.
+- **Corrections.** Name and student ID change only through a correction that a membership
+  reviewer decides on the dashboard.
+- **Feature switches.** `ESWebsite/config/site-features.json` now holds the page flags that
+  `content/site.ts` reads, plus the profile switches. Core enforces its own matching
+  `MEMBER_PHOTO_UPLOADS` and `MEMBER_PROFILE_EDITING`.
+- **Verification.** `npm run test:profile-flow` drives register → confirm → pending → approved →
+  profile → edit → photo → correction → refresh → sign out end to end on the local harness.
+
+Staging was migrated to 0031 on October 22 with the owner's authorization. The rollout followed
+the 0027–0030 plan:
+
+1. A schema comparison against a local replay and a rehearsal (9 of 9 checks).
+2. A backup, then 0031 in one transaction, then post-flight checks (7 of 7).
+3. A new private `member-photos` bucket.
+4. 13 of 13 end-to-end checks through the local apps with synthetic accounts, which were then
+   removed back to the exact baseline counts.
+
+Production is untouched. Deploying Core needs `SUPABASE_S3_MEMBER_PHOTO_BUCKET`. Nothing was
+pushed or deployed.
+
+**CURRENT — audit repairs (October 21, 2026, Muscat):** ADR 0022 and forward migration
+`0030_attendance_reliability_and_limits` fix the audit's confirmed defects locally.
+
+- **Check-in codes.** Codes are derived per minute in the database, so screens no longer
+  invalidate each other, and each code works for three minutes.
+- **Guest linking.** Guest registrations link to the member who confirmed that email.
+- **Manual attendance.** Organizers record or undo it with fixed reasons, audited.
+- **Rate limits.** Signed-in registration is limited per member, not per address. Guests and
+  applications allow 20 per address, and old IP attempts are purged.
+- **Release gate.** `npm run build` refuses, on Vercel production, a database older than the code
+  or a privileged runtime role. `GET /v1/health` reports schema compatibility.
+- **Diagnostics and descriptions.** Member API failures are logged with SQLSTATE only, and Core's
+  public pages render description links safely.
+
+Staging was migrated to 0030 on October 21 with the owner's authorization. The rollout covered a
+backup, a rehearsal, post-flight checks, the image buckets, a rotated restricted runtime role and
+16 of 16 end-to-end checks on staging (`docs/STAGING_ROLLOUT_0027_0030.md`). Production is
+untouched: it needs the same plan, each step approved separately. Nothing was pushed or deployed.
+
+**CURRENT — Projects and static page flags (October 21, 2026, Muscat):** The owner's
+correction removes all unfinished dashboard/API/database page controls. ESWebsite's
+existing `content/site.ts` is the sole developer-controlled flag list; Projects is
+active and the other unfinished modules retain their original Coming Soon views.
+ADR 0021 and `docs/api/PROJECTS.md` describe private member drafts/media, Society
+Affairs/Board/Technical review, explicit approval/publication, retained public
+snapshots during edits, private decision history and scoped authorization.
+Forward migration `0029_member_projects` follows 0027/0028 and remains unapplied
+to hosted environments. Disposable localhost migration tests were explicitly
+approved. Deployment also needs a distinct private project bucket and restricted
+runtime configuration. Existing branches, membership/event work and designs remain.
+No push, merge, hosted mutation or deployment was performed.
+
+**CURRENT — local event extension (October 21, 2026, Muscat):** The owner's event
+handoff is implemented on the existing local feature branches, preserving the
+membership commits. ADR 0020 and `docs/api/EVENT_ATTENDANCE.md` describe image
+uploads, safe links, private phones, profile registration, and scoped QR attendance.
+Local verification covers 558 Core tests, 97 website tests, both production builds,
+45 existing browser tests (one intentional skip), and the two-app event workflow.
+The event workflow uses real restricted PostgreSQL routines with synthetic local
+Auth/Storage adapters; it is not hosted Supabase verification. Staging was inspected
+read-only: its journal ends at 0026; 0027's function/column are absent. Apply neither
+0027 nor new 0028 without approval. Deployment also needs a separate private event
+bucket, matching website/CORS origins, and an `app_runtime` URL (the local configured
+URL currently logs in as postgres). No push, deployment or hosted mutation occurred.
+The dated handoffs below describe earlier releases.
+
+**CURRENT — pre-domain functional verification complete (October 19, 2026, Dubai):** This note supersedes
 the dated handoffs below. Work began at Core `15875f4`; the serving Core remains
 `https://engsoc-platform.vercel.app`. ADR 0016 separates Landing from Core.
+Core main `6e71995` passed GitHub CI `39160613952` and reached Vercel deployment
+`https://engsoc-platform-59x8jkk42-eng-crafters.vercel.app`. Core deployment ID is `dpl_F5pTn1aWz6rudnq9nyTy5J9pgVeH`.
+Staging includes runtime fixes `25c433d` and the CI-only
+shared-fixture assertion correction `4ca9f82`.
 The private GitHub repository `EngCrafters/essqu-web` preserves Landing source
 `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0` and is connected to the separate
 Vercel project `essqu-web` (`prj_yXxcM8AlVAuARpepUJMUAo4N20AL`). GitHub reports
@@ -11,18 +98,70 @@ the `EngCrafters` namespace as type **User**, not Organization.
 Staging `wnrdgnmmcdedmilnzzsl` has migration `0024_api_clients` applied through
 Supabase MCP. Read-only invariants passed: forced RLS with the routine-owner
 SELECT policy, runtime routine execution, no anon/authenticated/PUBLIC execution,
-zero runtime table grants, and five existing registrations retained. Staging API
-client provisioning, serving deployment and live cross-project verification are
-still in progress; do not describe them as passed until their evidence is recorded.
+zero runtime table grants, and five existing registrations retained. Staging
+clients and the restricted runtime are provisioned. Core and Landing serve their
+explicit staging aliases. Full live run `7e31d8dd-bea1-4c25-9edc-6d83b93fc046`
+passed read authentication/scope and exact DTO, visibility, precise upcoming/past
+pagination, CORS and validation, all five conflict reasons, confirmed/waitlist and
+duplicate outcomes, capacity-one concurrency (201/409, exactly one confirmed),
+and real 429 with Retry-After 600. A real Landing browser registration returned
+201 with credential-free exact payload, request-ID echo and no automatic retry.
+Four anonymous success audit outcomes reconciled. Cleanup left zero fixtures and
+retained the five existing staging registrations. Landing English/Arabic
+desktop/mobile QA and CI passed.
 
-Production `rbeyqrfypowyocmnmvwu` still lacks migration 0024 and retains seven
-registrations. All ten application tables have forced RLS, `app_runtime` has no
-table grants and is NOBYPASSRLS. Production DDL remains held for a verified
-managed recovery path. The Supabase organization is Free; authenticated backup
+Production `rbeyqrfypowyocmnmvwu` has migration `0024_api_clients`, version
+`20261018200028` (October 18 UTC; completion October 19 Dubai), applied through
+MCP after all seven prechecks and the successful live matrix. All eleven
+application tables (ten prior plus registry) have forced RLS. The registry owner,
+owner SELECT policy, verifier owner/SECURITY DEFINER/search path and execution
+grants passed postflight. `app_runtime` has zero direct and effective table
+privileges and is NOBYPASSRLS; anon/authenticated/PUBLIC cannot execute the verifier.
+Seven registrations retained the exact pre/post fingerprint
+`d6768a9e715e9e9fb4a43f63b5616214`; `register_for_event` retained fingerprint
+`54ffeccd2ed187f21f420be46e95c17f`. Bogus API reads changed from 503 to 401.
+Production client `ESSQU Landing Production` is active with production-only
+`events:read`, installed as a Landing Production Secret. Live reads passed
+401/403/200, existing public detail 200, and immediate canary revocation 401.
+Landing production is Ready at `https://essqu-web.vercel.app`, deployment
+`essqu-obivj77wp-eng-crafters.vercel.app`, merge
+`8f5c0bffb0cf431c98777bc3d6111f014dd3db7b`, CI `39161420446` passed.
+Landing deployment ID is `dpl_4Kj8rku9wS9iUUKdTwCHsaRcPU8M`.
+Final actual-secret browser verification passed for English/Arabic on desktop/mobile: 16
+main-route responses plus four details were 200; one upcoming/two past events,
+correct direction and no overflow. The exact private key was compared in memory
+against 358 loaded HTML/RSC/JS responses plus URLs/headers/storage/cookies with
+zero violations; 20 canceled-prefetch bodies were separately unreadable, with no
+pending scans. Four registration POSTs were aborted before network with exact
+credential-free payload and request ID, generic failure guidance and no retry
+within 1.2 seconds. No production registration was written. The real browser
+confirmed-201 flow is proven on staging. The owner explicitly accepted the lack of a
+verified managed backup **only for unchanged additive migration 0024**, after
+successful live staging and concurrency checks. That prerequisite passed;
+the waiver does not authorize other DDL, existing-row DML, a local dump/PII export,
+a subscription upgrade or domain/Auth changes. The owner confirmed keeping
+Landing under the GitHub User namespace `EngCrafters`.
+The Supabase organization is Free; authenticated backup
 inspection returned `backups: null`, empty `physical_backup_data`,
 `pitr_enabled: false`, and `walg_enabled: true`. WAL archiving alone does not
-establish a usable backup or restoration path. No production migration, API
-client or attendee mutation is authorized by this status note.
+establish a usable backup or restoration path. No backup is claimed. Production
+0024 was applied under this narrow waiver; API-client provisioning is a separate
+scoped operation, and no production attendee mutation was used for verification.
+
+Independent review found 0024 byte-identical at `15875f4` and `1eac4db`:
+SHA-256 `cab56a820213bf11bca3f72d0581ed3505b509de8886e66837446c81b5de5479`.
+It creates only registry objects and touches no existing rows. Its final checks
+cover only registry runtime table grants, runtime execution and PUBLIC execution;
+pre/post checks must separately verify RLS, ownership, other execution grants and
+existing data counts. The SQL has no explicit transaction wrapper; the completed
+MCP application sent `BEGIN;`, the unchanged reviewed 0024 file, and `COMMIT;`
+in one request, with no other DDL or migration. This makes atomicity explicit
+without assuming undocumented backend transaction behavior.
+
+Pre-domain functionality is complete. Fresh real-credential login/logout and
+emailed recovery/reset were not repeated; existing leaked-password protection
+and development-only advisory follow-ups remain deferred. No backup was created
+and the waiver does not extend to future DDL.
 
 Custom domains and DNS are untouched. Auth origins and host enforcement remain
 unchanged. The current release checklist is
@@ -31,7 +170,7 @@ unchanged. The current release checklist is
 production migration and credential procedure.
 
 Final local gates for the updated runtime source passed: format, lint, migration
-consistency, types, 398 unit/database tests across 40 files, and webpack build.
+consistency, types, 421 unit/database tests across 44 files, and webpack build.
 The browser suite passed 43 tests with one intentional skip against the updated
 runtime source; the missing pinned Chromium executable was installed before that
 successful rerun. Later script/test additions require their own relevant checks.

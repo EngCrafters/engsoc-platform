@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EventDescription } from "@/components/event-description";
 import { notFound } from "next/navigation";
 import { getPublicEvent } from "@/lib/events";
 import { formatEventDate } from "@/lib/events/format";
@@ -47,7 +48,7 @@ export default async function PublicEventPage({
       </header>
       <section className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
         <h2>About this event</h2>
-        <p className="whitespace-pre-wrap">{event.description}</p>
+        <EventDescription text={event.description} />
       </section>
       <section
         aria-labelledby="registration-heading"
@@ -71,6 +72,7 @@ export default async function PublicEventPage({
           <RegistrationForm
             eventId={event.id}
             availability={event.availability}
+            phoneRequired={event.phoneRequired}
           />
         </div>
       </section>

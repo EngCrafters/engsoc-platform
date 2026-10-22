@@ -75,6 +75,51 @@ export const authUsers = authSchema.table("users", {
 // PostgREST. See UC-02_Data_and_Security.md section 5.
 export const privateSchema = pgSchema("private");
 
+// ADR 0020/0022: forced RLS, executor-only policy. No runtime/browser table grants.
+// A missing row means closed. The secret never leaves the database: routines
+// derive each minute's check-in code from it, so every organizer screen shows
+// the same code; replacing the secret revokes all outstanding codes.
+export const eventCheckinSessions = privateSchema.table(
+  "event_checkin_sessions",
+  {
+    eventId: uuid("event_id")
+      .primaryKey()
+      .references(() => events.id),
+    isOpen: boolean("is_open").notNull().default(false),
+    closesAt: timestamp("closes_at", { withTimezone: true }),
+    codeSecret: text("code_secret"),
+  },
+  (table) => [
+    check(
+      "event_checkin_sessions_open_check",
+      sql`NOT ${table.isOpen} OR (${table.closesAt} IS NOT NULL AND ${table.codeSecret} IS NOT NULL)`
+    ),
+    check(
+      "event_checkin_sessions_code_secret_check",
+      sql`${table.codeSecret} IS NULL OR ${table.codeSecret} ~ '^[0-9a-f]{64}$'`
+    ),
+  ]
+);
+
+// ADR 0022: the signed-in registration limiter (per member, ten minutes).
+// Executor-only, forced RLS; rows older than an hour are purged as they age.
+export const memberRegistrationAttempts = privateSchema.table(
+  "member_registration_attempts",
+  {
+    memberId: uuid("member_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+  },
+  (table) => [
+    index("member_registration_attempts_member_idx").on(
+      table.memberId,
+      table.createdAt
+    ),
+    index("member_registration_attempts_created_idx").on(table.createdAt),
+  ]
+);
+
 // ---------------------------------------------------------------------------
 // Member — the central record. Every other table connects back to this one.
 // See UC-01. Open decisions on email domain restriction, university_id
@@ -85,18 +130,35 @@ export const privateSchema = pgSchema("private");
 // id matches auth.users.id from Supabase Auth (one-to-one), so login and
 // profile stay linked without a separate foreign key table.
 // ---------------------------------------------------------------------------
-export const members = pgTable("members", {
-  id: uuid("id").primaryKey(), // = auth.users.id
-  fullName: text("full_name").notNull(),
-  email: text("email").notNull().unique(), // compared case-insensitively in app code
-  universityId: text("university_id").notNull().unique(),
-  year: integer("year"),
-  major: text("major"),
-  status: memberStatus("status").notNull().default("member"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const members = pgTable(
+  "members",
+  {
+    id: uuid("id").primaryKey(), // = auth.users.id
+    fullName: text("full_name").notNull(),
+    email: text("email").notNull().unique(), // compared case-insensitively in app code
+    universityId: text("university_id").notNull().unique(),
+    year: integer("year"),
+    major: text("major"),
+    status: memberStatus("status").notNull().default("member"),
+    // ADR 0020: private E.164 phone; own-profile routines only, no browser grants.
+    phone: text("phone"),
+    // ADR 0023: changed only through own-profile routines, never a browser grant.
+    // The photo is a key in the private member-photo bucket, served to its owner
+    // alone; interests are at most four of the website's skill ids.
+    photoKey: text("photo_key"),
+    interests: text("interests").array(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "members_phone_check",
+      sql`${table.phone} IS NULL OR ${table.phone} ~ '^\\+[1-9][0-9]{6,14}$'`
+    ),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // Committee — who is allowed to publish events. Backs role-based access
@@ -181,6 +243,8 @@ export const events = pgTable(
     description: text("description"),
     eventDate: timestamp("event_date", { withTimezone: true }).notNull(),
     location: text("location"),
+    coverImageKey: text("cover_image_key"),
+    phoneRequired: boolean("phone_required").notNull().default(false),
     committeeId: uuid("committee_id")
       .notNull()
       .references(() => committees.id),
@@ -208,6 +272,10 @@ export const events = pgTable(
       .where(
         sql`${table.archivedAt} IS NULL AND ${table.status} IN ('published','full')`
       ),
+    check(
+      "events_cover_key_check",
+      sql`${table.coverImageKey} IS NULL OR ${table.coverImageKey} ~ '^event-covers/[0-9a-f-]{36}\\.(jpg|png)$'`
+    ),
     check(
       "events_title_bounds",
       sql`${table.title} = btrim(${table.title}) AND char_length(${table.title}) BETWEEN 1 AND 200`
@@ -278,25 +346,46 @@ export const registrations = pgTable(
       .references(() => events.id),
     attendeeName: text("attendee_name").notNull(),
     attendeeEmail: text("attendee_email").notNull(),
+    attendeePhone: text("attendee_phone"), // private guest phone; no public projection
     status: registrationStatus("status").notNull().default("confirmed"), // NEW (M2)
     supersededBy: uuid("superseded_by").references(
       (): AnyPgColumn => registrations.id
     ), // NEW (M2): self-FK, preserves legacy duplicates without deleting rows
     attended: boolean("attended").notNull().default(false),
     checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+    // ADR 0022: how attendance was recorded: the member's QR scan or an
+    // organizer (audited with a fixed reason). Null when not attended.
+    checkinMethod: text("checkin_method"),
     registeredAt: timestamp("registered_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
+    check(
+      "registrations_checkin_method_check",
+      sql`${table.checkinMethod} IS NULL OR ${table.checkinMethod} IN ('qr', 'manual')`
+    ),
+    check(
+      "registrations_checkin_method_attended_check",
+      sql`${table.checkinMethod} IS NULL OR ${table.attended}`
+    ),
     uniqueIndex("registrations_active_event_email_idx")
       .on(table.eventId, table.attendeeEmail)
       .where(sql`${table.status} IN ('confirmed','waitlisted')`),
+    uniqueIndex("registrations_active_event_member_idx")
+      .on(table.eventId, table.memberId)
+      .where(
+        sql`${table.memberId} IS NOT NULL AND ${table.status} IN ('confirmed','waitlisted')`
+      ),
     index("registrations_event_status_fifo_idx").on(
       table.eventId,
       table.status,
       table.registeredAt,
       table.id
+    ),
+    check(
+      "registrations_attendee_phone_check",
+      sql`${table.attendeePhone} IS NULL OR ${table.attendeePhone} ~ '^\\+[1-9][0-9]{6,14}$'`
     ),
     check(
       "registrations_superseded_consistency",
@@ -356,6 +445,114 @@ export const archiveItems = pgTable("archive_items", {
     .defaultNow(),
 });
 
+// ADR 0021: private working projects and immutable public snapshots. All tables
+// below have FORCE RLS with a routine-owner-only policy; no raw browser/runtime
+// table grants. Members see only their own records; Society Affairs and existing
+// Board/Technical review them. Public routines return only published snapshots.
+// archive_items is the historical file archive stub, not a second project source.
+export const projects = privateSchema.table(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id),
+    committeeId: uuid("committee_id")
+      .notNull()
+      .references(() => committees.id),
+    content: jsonb("content").notNull().default({}),
+    revision: integer("revision").notNull().default(1),
+    status: text("status").notNull().default("draft"),
+    approvedRevision: integer("approved_revision"),
+    publishedRevision: integer("published_revision"),
+    publishedContent: jsonb("published_content"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("projects_member_updated_idx").on(
+      t.memberId,
+      t.updatedAt.desc(),
+      t.id
+    ),
+    index("projects_status_updated_idx").on(t.status, t.updatedAt.desc(), t.id),
+    check("projects_revision_check", sql`${t.revision}>0`),
+    check(
+      "projects_status_check",
+      sql`${t.status} IN ('draft','submitted','under_review','approved','rejected','changes_requested')`
+    ),
+    check(
+      "projects_check",
+      sql`(${t.publishedRevision} IS NULL)=(${t.publishedContent} IS NULL)`
+    ),
+    check(
+      "projects_check1",
+      sql`${t.approvedRevision} IS NULL OR (${t.status}='approved' AND ${t.approvedRevision}=${t.revision})`
+    ),
+    check(
+      "projects_content_check",
+      sql`octet_length(${t.content}::text)<=65536`
+    ),
+    check(
+      "projects_published_content_check",
+      sql`${t.publishedContent} IS NULL OR octet_length(${t.publishedContent}::text)<=65536`
+    ),
+  ]
+);
+export const projectMedia = privateSchema.table(
+  "project_media",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id),
+    objectKey: text("object_key").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("project_media_project_idx").on(t.projectId),
+    check(
+      "project_media_object_key_check",
+      sql`${t.objectKey} ~ '^project-images/[0-9a-f-]{36}\\.(jpg|png)$'`
+    ),
+  ]
+);
+export const projectHistory = privateSchema.table(
+  "project_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => authUsers.id),
+    revision: integer("revision").notNull(),
+    action: text("action").notNull(),
+    feedback: text("feedback"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("project_history_project_idx").on(t.projectId, t.occurredAt, t.id),
+    check(
+      "project_history_feedback_check",
+      sql`char_length(${t.feedback})<=2000`
+    ),
+    check(
+      "project_history_action_check",
+      sql`${t.action} IN ('created','saved','submitted','under_review','approved','rejected','changes_requested','published','unpublished','media_added','media_removed')`
+    ),
+  ]
+);
+
 // ---------------------------------------------------------------------------
 // Registration attempt — abuse protection for the public registration form,
 // nothing else. Not part of the ER diagram's domain model (it doesn't
@@ -382,6 +579,8 @@ export const registrationAttempts = pgTable(
       table.ipAddress,
       table.createdAt
     ),
+    // ADR 0022: the limiter purges attempts older than an hour as they age.
+    index("registration_attempts_created_idx").on(table.createdAt),
   ]
 );
 

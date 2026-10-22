@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Check, KeyRound, LogOut, Wrench, X } from "lucide-react";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/callback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -291,7 +292,7 @@ export function AccountSecuritySection({
       </SettingRow>
       <SettingRow
         title="Sign out"
-        description="Use a unique password of at least 12 characters, and sign out on shared devices. If you lose inbox access or committee access changes, contact platform maintenance."
+        description={`Use a unique password of at least ${MIN_PASSWORD_LENGTH} characters, and sign out on shared devices. If you lose inbox access or committee access changes, contact platform maintenance.`}
       >
         <form action={logoutAction}>
           <Button type="submit" variant="secondary">

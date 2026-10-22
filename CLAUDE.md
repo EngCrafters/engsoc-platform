@@ -65,10 +65,12 @@ it:
   Board or Technical user reviews when review is required.
 
 The UC-02 specification freeze passed at commit `9c5b733` and CI verified it.
-The authentication/access-control milestone is complete. The current task is a
-repository and production hardening pass before any landing-page migration.
+The authentication/access-control milestone and pre-domain API release are
+complete. Core API v1 and the independently maintained Landing are integrated
+through their Vercel URLs. Custom-domain cutover is deferred by the owner.
 Earlier UC-02 milestones were implemented in dependency order; use
-`docs/CURRENT_WORK.md` for current evidence and remaining verification.
+`docs/CURRENT_WORK.md` and `docs/api/PRE_DOMAIN_RELEASE_REPORT.md` for current
+evidence, existing limitations and the later domain-cutover checklist.
 
 ## How we work
 
@@ -222,6 +224,18 @@ last commit, next exact task) — read it first when resuming this work.
 existing deep-dive doc (`/docs/UC-01_Deep_Dive.pdf`) is still accurate for
 when that work resumes, nothing in it needs to change because of this
 reordering.
+
+**UC-01 membership applications: started by explicit owner direction
+(October 20, 2026).** The owner's written request directs this work, which
+differs from the line above; the mismatch is recorded here rather than
+silently resolved. Registration goes through SQU ID verification,
+review and approval instead of the deep dive's direct creation (ADR 0017,
+`docs/UC-01_Membership_Applications.md`); ID cards go to private Supabase
+Storage (ADR 0018). It is on branch `feat/uc01-membership-applications` and is
+not deployed; `docs/UC-01_Staging_Rollout.md` is the prepared, unapplied
+staging plan. The approval policy
+and the other open decisions in ADR 0017 wait on the owner. UC-02 stays the
+active line until the owner moves it.
 
 ### How this line gets updated
 

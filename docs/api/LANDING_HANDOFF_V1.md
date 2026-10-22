@@ -5,28 +5,36 @@ Planned API: https://api.essqu.com
 Planned admin: https://admin.essqu.com
 API version: **v1**
 
-**Pre-domain status (October 18, 2026):** These hostnames have not been attached
+**Pre-domain status (October 19, 2026, Dubai):** These hostnames have not been attached
 or cut over. Core currently serves at `https://engsoc-platform.vercel.app`.
 The private `EngCrafters/essqu-web` repository preserves source
 `17bdcc4244f608a5b3ec8361db470ec1ae32a8c0` and is Git-connected to the separate
 Vercel `essqu-web` project. `EngCrafters` is a GitHub User namespace.
-Staging has migration 0024; staging provisioning and live integration checks
-remain pending. Production has no migration 0024 or production read credential;
-production DDL awaits a verified managed recovery path. Consult
+Staging full live HTTP/browser integration and cleanup passed. Production migration
+0024 is applied as version `20261018200028`, with all postflight checks passed
+and seven existing registrations preserved. Production `events:read` client installation and live API reads passed; Landing
+is Ready at `https://essqu-web.vercel.app`. Final production browser integration and actual-secret checks passed. The owner
+waived backup readiness for exact additive 0024 only; no backup or PII export
+has been established. Consult
 [current work](../CURRENT_WORK.md) and the
 [custom-domain checklist](CUSTOM_DOMAIN_CUTOVER_RUNBOOK.md) before configuring
 a consumer. Do not point Landing at an unverified API or copy a production key
 into staging.
+
+Pre-domain functionality is verified. Existing fresh authenticated Auth pilots,
+leaked-password protection and development-tool advisory follow-ups remain
+deferred; see the release report for exact limitations.
 
 The contract is `docs/api/openapi.v1.yaml`. This page is the practical
 companion: how to call it, and what you must not do.
 
 ## Environment variables the landing site needs
 
-| Variable              | Scope           | Purpose                         |
-| --------------------- | --------------- | ------------------------------- |
-| `CORE_API_BASE_URL`   | server          | e.g. `https://api.essqu.com/v1` |
-| `CORE_EVENTS_API_KEY` | **server only** | bearer token for `events:read`  |
+| Variable                        | Scope           | Purpose                                                             |
+| ------------------------------- | --------------- | ------------------------------------------------------------------- |
+| `CORE_API_BASE_URL`             | server          | e.g. `https://api.essqu.com/v1`                                     |
+| `CORE_EVENTS_API_KEY`           | **server only** | bearer token for `events:read`                                      |
+| `NEXT_PUBLIC_CORE_API_BASE_URL` | browser         | Registration URL; switch with server base URL during domain cutover |
 
 That is the complete list. The landing site must **never** need
 `DATABASE_URL`, `APP_RUNTIME_DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, or any
@@ -78,6 +86,64 @@ Origin: https://essqu.com
 - `intent` is `register` (default) or `join_waitlist`.
 - Do **not** send an IP address. Core derives it. An extra field is rejected.
 - Success is `201` with `{ "data": { "status": "confirmed" | "waitlisted" } }`.
+
+## Membership application (browser, no API key)
+
+**Not deployed yet:** these endpoints arrive with migration 0025 (ADR 0017,
+[data contract](../UC-01_Membership_Applications.md)).
+
+```
+POST {CORE_API_BASE_URL}/membership-applications
+Content-Type: multipart/form-data
+Origin: https://essqu.com
+
+fullName, email, universityId, academicYear, discipline, interests (repeated, optional),
+consent=true, consentVersion=2026-10-v1, idDocument (file)
+```
+
+- No credentials, no cookie, no API key, no IP address. An extra field is rejected.
+- `email` must be an SQU address, `universityId` 6–10 digits, `academicYear` 1–5, `discipline`
+  and `interests` the website's own ids.
+- `idDocument` is JPEG, PNG, WebP or PDF, at most 4 MiB, recognised by its content. A PDF with
+  active content is refused. Re-encode photos in the browser so their metadata is never sent.
+- Success is `201` with `{ "data": { "status": "pending_review", "statusToken": "…" } }`. The
+  token is shown once. Keep it only in the applicant's own browser, never in a URL, a log or
+  analytics.
+- `409` carries `reason` `already-applied` or `already-member`. `429` carries
+  `Retry-After: 3600`. `413` means the file is too large.
+
+```
+POST {CORE_API_BASE_URL}/membership-applications/status
+Content-Type: application/json
+
+{ "statusToken": "…" }
+```
+
+Returns `{ "data": { "status": "pending_review" | "approved" | "rejected", "submittedAt",
+"decidedAt", "activated" } }`, or `404` for an unknown token. No internal state, reviewer or note
+is ever returned.
+
+## Member sign-in (browser, the visitor's own session)
+
+ADR 0019. The landing site signs members in with Supabase Auth, the same project as Core, from
+the browser. It needs that project's URL and anon (publishable) key, which are public by design
+(`SUPABASE_URL`, `SUPABASE_ANON_KEY`, read on the server and handed to the sign-in pages). It
+never needs the service-role key.
+
+- The registration request to Core never contains the password. After Core answers 201, the
+  browser calls Supabase `auth.signUp` with `emailRedirectTo: <site>/login`.
+- Recovery uses `auth.resetPasswordForEmail` with `redirectTo: <site>/reset-password`. Both
+  pages must be on the Supabase redirect allow-list (see `docs/AUTH_AND_EMAIL.md` section 9).
+
+```
+GET {CORE_API_BASE_URL}/me/membership
+Authorization: Bearer {the visitor's Supabase access token}
+Origin: https://essqu.com
+```
+
+Returns `{ "data": { "emailConfirmed", "member", "application" } }` for that identity only; `401` when
+the token is missing or rejected (sign the visitor out). No cookie is sent. Never put the token in
+a URL. Treat a signed-in visitor as a member only when `member` is not null.
 
 ## CORS
 
@@ -162,3 +228,5 @@ registration tests run against a disposable database, and you should do the same
   Auth and `administrative_access`.
 - No event write endpoints.
 - No attendee data of any kind. The registration endpoint returns only a status.
+- No membership review, list or document endpoints. Applications are reviewed only in the
+  admin dashboard.

@@ -176,6 +176,62 @@
       "when": 1791442800000,
       "tag": "0024_api_clients",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791529200000,
+      "tag": "0025_membership_applications",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791615600000,
+      "tag": "0026_membership_document_storage",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791702000000,
+      "tag": "0027_membership_member_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791788400000,
+      "tag": "0028_event_media_and_attendance",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792540800000,
+      "tag": "0029_member_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792627200000,
+      "tag": "0030_attendance_reliability_and_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792713600000,
+      "tag": "0031_member_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792800000000,
+      "tag": "0032_administration",
+      "breakpoints": true
     }
   ]
 }

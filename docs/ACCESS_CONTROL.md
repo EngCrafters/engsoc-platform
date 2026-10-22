@@ -1,22 +1,28 @@
 # Application access contract
 
-Status: accepted specification, extended October 7, 2026 by ADR 0014.
+Status: accepted specification, extended October 7, 2026 by ADR 0014 and
+October 22, 2026 by ADR 0024 (Administration section, permanent deletion).
 ADRs 0012/0013 retain the hierarchy and identity boundary. Current deployment,
 assignment and pilot evidence is in [CURRENT_WORK.md](CURRENT_WORK.md).
 
 ## Hierarchy
 
-| Action                                                 | Committee Manager | Board Administration | Technical Team                                |
-| ------------------------------------------------------ | ----------------- | -------------------- | --------------------------------------------- |
-| Own committee events, registrations, counts and export | Yes               | Yes                  | Yes                                           |
-| Other committee events, registrations and export       | No                | Yes                  | Yes                                           |
-| Global and per-committee counts                        | No                | Yes                  | Yes                                           |
-| Committee selector                                     | No                | Yes                  | Yes                                           |
-| Manage committee managers                              | No                | No                   | Yes                                           |
-| Manage Board Administration                            | No                | No                   | Yes                                           |
-| Manage Technical Team access                           | No                | No                   | Yes, with last-owner safeguard                |
-| Application technical controls                         | No                | No                   | Yes                                           |
-| Infrastructure, secrets, RLS, migrations               | No                | No                   | External technical maintenance procedure only |
+| Action                                                 | Committee Manager | Board Administration                      | Technical Team                                |
+| ------------------------------------------------------ | ----------------- | ----------------------------------------- | --------------------------------------------- |
+| Own committee events, registrations, counts and export | Yes               | Yes                                       | Yes                                           |
+| Other committee events, registrations and export       | No                | Yes                                       | Yes                                           |
+| Global and per-committee counts                        | No                | Yes                                       | Yes                                           |
+| Committee selector                                     | No                | Yes                                       | Yes                                           |
+| Administration section: committees, rosters, members   | No                | Yes                                       | Yes                                           |
+| Manage committee managers (incl. suspend, reactivate)  | No                | Yes, never on Board or Technical accounts | Yes                                           |
+| Invite accounts                                        | No                | Committee Managers, by email              | Any role                                      |
+| Manage Board Administration                            | No                | No                                        | Yes                                           |
+| Manage Technical Team access                           | No                | No                                        | Yes, with last-owner safeguard                |
+| Password reset email, temporary password               | No                | No                                        | Yes                                           |
+| Delete events, projects, membership records for good   | No                | Yes                                       | Yes                                           |
+| Delete a sign-in account completely                    | No                | No                                        | Yes                                           |
+| Application technical controls                         | No                | No                                        | Yes                                           |
+| Infrastructure, secrets, RLS, migrations               | No                | No                                        | External technical maintenance procedure only |
 
 `COMMITTEE_MANAGER` is exactly one Auth user to one committee ID. `BOARD_ADMIN`
 has global operational scope. `TECHNICAL` has full application scope. None of
@@ -199,6 +205,42 @@ Approval applies only to the current revision. Rejection leaves the event as a
 review-required draft, clears approval, increments revision and writes audit;
 it needs no new status or rejection table. Approval and rejection audit records
 include actor, event, committee, prior and resulting review state and time.
+
+## Membership applications (ADR 0017)
+
+Membership review is the one place where a committee manager's authority depends on which
+committee they manage. It is computed from live access on every call:
+
+| Access                                                           | Membership authority           |
+| ---------------------------------------------------------------- | ------------------------------ |
+| `COMMITTEE_MANAGER` of the committee with slug `society-affairs` | Society Affairs reviewer       |
+| `BOARD_ADMIN`                                                    | Senior Management reviewer     |
+| `TECHNICAL`                                                      | Senior Management reviewer     |
+| Any other manager, or no active access                           | None; the section is not shown |
+
+All reviewers can list and open applications, view the ID card (audited), verify, reject and
+activate an approved application. Final approval follows the recorded policy: under `two_step`
+only a Senior Management reviewer other than the verifier approves; under `single_step` any
+reviewer approves; while the policy is unset, approval and activation are refused. Only
+Technical records the policy. Nobody reviews an application with their own Auth email.
+Activation creates a `members` row and, when needed, sends the standard Auth invitation. It never
+creates `administrative_access`.
+
+Applicants may hold their own Auth account (ADR 0019). An account confers nothing by itself: it
+is a member only once the database activated an approved application, and it never has
+`administrative_access` unless a Technical user grants it at `/admin/access`. Core links an
+application only to a confirmed email.
+
+The Society Affairs committee is identified by slug, never by display name. A title in the
+society's organisational chart grants nothing: a reviewer exists only after a grant at
+`/admin/access`.
+
+A database that cannot answer, for example one without migration 0025, never grants access. The
+three reviewer roles see the section marked as needing setup, which opens an explanation only;
+every other manager still sees nothing. The ID card is reachable only through the authenticated,
+audited document route: the private Storage bucket has no public or signed URL and no Storage
+policies (ADR 0018). Full contract:
+[UC-01_Membership_Applications.md](UC-01_Membership_Applications.md).
 
 ## Acceptance and rollout
 

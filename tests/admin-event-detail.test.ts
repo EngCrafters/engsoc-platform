@@ -51,6 +51,8 @@ describe("getAdminEvent", () => {
       approvedBy: null,
       confirmedCount: 4,
       waitlistedCount: 1,
+      coverImageKey: null,
+      phoneRequired: false,
     });
     expect(state.execute).toHaveBeenCalledTimes(1);
   });

@@ -7,7 +7,10 @@ import {
 } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { createAuthServerClient } from "@/lib/auth/server";
-import { RECOVERY_EXPIRED_MESSAGE } from "@/lib/auth/callback";
+import {
+  MIN_PASSWORD_LENGTH,
+  RECOVERY_EXPIRED_MESSAGE,
+} from "@/lib/auth/callback";
 import { ResetForm } from "./reset-form";
 
 export const dynamic = "force-dynamic";
@@ -50,8 +53,9 @@ export default async function ResetPasswordPage() {
       titleId="reset-title"
     >
       <p className="text-center text-sm text-muted-foreground">
-        Use a password with at least 12 characters. This changes your sign-in
-        password only; your committee access stays exactly as it was.
+        Use a password with at least {MIN_PASSWORD_LENGTH} characters. This
+        changes your sign-in password only; your committee access stays exactly
+        as it was.
       </p>
       <ResetForm />
     </AuthShell>

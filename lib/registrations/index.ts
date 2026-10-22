@@ -5,6 +5,7 @@ export * from "./types";
 import { isIP } from "node:net";
 import { registerThroughRoutine } from "./db";
 import type { RegisterForEventInput, RegisterForEventResult } from "./types";
+import { normalizePhone } from "@/lib/event-management/phone";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_PATTERN =
@@ -17,6 +18,11 @@ export async function registerForEvent(
   const attendeeName = input.attendeeName.trim();
   const attendeeEmail = input.attendeeEmail.trim().toLowerCase();
   const intent = input.intent ?? "register";
+  const attendeePhone = input.attendeePhone
+    ? normalizePhone(input.attendeePhone)
+    : undefined;
+  if (input.attendeePhone && !attendeePhone)
+    return { ok: false, error: "phone_required" };
 
   if (
     attendeeName.length === 0 ||
@@ -49,6 +55,7 @@ export async function registerForEvent(
       attendeeEmail,
       intent,
       ipAddress: input.ipAddress,
+      ...(attendeePhone ? { attendeePhone } : {}),
     });
     switch (result.code) {
       case "SUCCESS":
@@ -71,6 +78,8 @@ export async function registerForEvent(
         return { ok: false, error: "rate_limited" };
       case "VALIDATION_ERROR":
         return { ok: false, error: "invalid_input" };
+      case "PHONE_REQUIRED":
+        return { ok: false, error: "phone_required" };
       default:
         return { ok: false, error: "server_error" };
     }
