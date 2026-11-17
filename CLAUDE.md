@@ -283,3 +283,9 @@ Rules:
   the policy before assuming the data is missing.** This is the most
   common failure mode with RLS, silent, not an error, easy to mistake for
   a data problem when it's actually a permissions one.
+
+## Developer documentation
+
+The developer manual starts at `docs/README.md` (setup, architecture, API, database,
+permissions, operations, integration with the public website). Update the documents listed
+in `docs/maintenance.md` in the same change as the code they describe.

@@ -5,6 +5,10 @@ attendance, certificates, the project/magazine archive, and the graduate
 network, all living on the same permanent data instead of scattered forms,
 chat groups, and Drive folders.
 
+**Developer documentation:** start at [`docs/README.md`](docs/README.md) for setup,
+architecture, the API, database and permission references, operations and the system
+integration guide.
+
 Start here, in order:
 
 1. **`docs/Idea_and_Requirements_Document.pdf`** — the idea, why it matters,
