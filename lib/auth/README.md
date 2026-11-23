@@ -3,8 +3,14 @@
 `server.ts` creates a fresh cookie-backed Supabase client for every request.
 It uses only the public API key and the current user's session, so access
 queries remain subject to Supabase RLS. `manager.ts` verifies identity with
-Supabase Auth and then reads the active `administrative_access` row on every
-request; it never authorizes from user metadata or a cached role claim.
+Supabase Auth and then calls `private.get_dashboard_access` once per request
+(ADR 0027): every permission the person holds, with its scope, from their
+personal level, their committee (Committee Managers) and their active
+appointments. It never authorizes from user metadata or a cached role claim.
+`permissions.ts` holds the catalog keys, `can`, `canAny` and `committeesFor`,
+which pages, actions and navigation use; the database re-checks every
+operation. `recovery.ts` maps the database's `LAST_RECOVERY_ACCOUNT` guard to
+a result code.
 
 `paths.ts` allows post-auth redirects only to internal `/admin` paths. Session
 refresh is performed by the root `proxy.ts` before `/admin` and `/auth` routes
@@ -28,9 +34,10 @@ Tests: `tests/auth-callback.test.ts`, `tests/auth-callback-route.test.ts`,
 
 ## Authority model
 
-`getManagerContext` resolves the signed-in email, user id and explicit access
-level. Committee Managers have one committee ID; Board Administration and
-Technical Team have global application scope. `Technical Team` in the catalog
+`getManagerContext` resolves the signed-in email, user id, the personal level
+(display only) and the permissions. Committee Managers' level permissions cover
+their committee; Board Administration and Technical Team hold theirs
+society-wide. `Technical Team` in the catalog
 is a normal committee and its name grants no authority. An active Technical
 user can transfer Technical ownership at `/admin/access`; the external
 `app_maintenance` routine is reserved for bootstrap and recovery. See ADR 0012,

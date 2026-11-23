@@ -9,6 +9,7 @@ import {
   getMembershipApplication,
   processMembershipStorageDeletions,
   reviewMembershipApplication,
+  setMembershipAccountActivation,
   setMembershipApprovalPolicy,
 } from "@/lib/membership/server";
 
@@ -134,6 +135,28 @@ export async function activateMembershipAction(
   }
 }
 
+/**
+ * The account activation setting (ADR 0030). The routine checks the same permission as the
+ * approval policy (settings.membership_policy) and audits the change.
+ */
+export async function setAccountActivationAction(
+  _previous: MembershipActionState,
+  form: FormData
+): Promise<MembershipActionState> {
+  const manager = await getManagerContext();
+  if (manager.kind !== "manager") return { code: "AUTH_REQUIRED" };
+  const mode = one(form, "accountActivation");
+  if (mode !== "email_confirmation" && mode !== "immediate")
+    return { code: "VALIDATION_ERROR" };
+  try {
+    const result = await setMembershipAccountActivation(manager.userId, mode);
+    revalidatePath("/admin/membership");
+    return { code: result.code };
+  } catch {
+    return { code: "SERVER_ERROR" };
+  }
+}
+
 export async function setMembershipPolicyAction(
   _previous: MembershipActionState,
   form: FormData
@@ -141,7 +164,12 @@ export async function setMembershipPolicyAction(
   const manager = await getManagerContext();
   if (manager.kind !== "manager") return { code: "AUTH_REQUIRED" };
   const policy = one(form, "policy");
-  if (policy !== "two_step" && policy !== "single_step" && policy !== "unset")
+  if (
+    policy !== "two_step" &&
+    policy !== "single_step" &&
+    policy !== "automatic" &&
+    policy !== "unset"
+  )
     return { code: "VALIDATION_ERROR" };
   try {
     const result = await setMembershipApprovalPolicy(manager.userId, policy);

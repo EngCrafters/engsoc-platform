@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarPlus, CalendarRange } from "lucide-react";
 import { getManagerContext } from "@/lib/auth/manager";
+import { can, canAny } from "@/lib/auth/permissions";
 import { countAdminEvents, listAdminEvents } from "@/lib/admin-events/server";
 import {
   decodeAdminEventCursor,
@@ -26,6 +27,9 @@ export default async function AdminEventsPage({
   const query = await searchParams;
   const manager = await getManagerContext();
   if (manager.kind !== "manager") return null;
+  if (!canAny(manager, "events.view"))
+    return <p role="alert">Events need the View events permission.</p>;
+  const allCommittees = can(manager, "events.view");
   const filter = parseAdminEventFilter(single(query.status));
   const requestedCommittee = single(query.committee);
   const committeeId =
@@ -33,9 +37,8 @@ export default async function AdminEventsPage({
       ? requestedCommittee
       : null;
   if (
-    manager.accessLevel === "COMMITTEE_MANAGER" &&
     committeeId &&
-    committeeId !== manager.committees[0]?.id
+    !manager.committees.some((committee) => committee.id === committeeId)
   ) {
     return (
       <p role="alert">You don’t have permission to manage this committee.</p>
@@ -65,23 +68,25 @@ export default async function AdminEventsPage({
         title="Events"
         headingId="admin-events-title"
         description={
-          manager.accessLevel === "COMMITTEE_MANAGER"
-            ? "Plan, publish, and manage your committee events."
-            : "View and manage events across all committees."
+          allCommittees
+            ? "View and manage events across all committees."
+            : "Plan, publish, and manage your committee events."
         }
         actions={
-          <Button asChild>
-            <Link href="/admin/events/new">
-              <CalendarPlus aria-hidden="true" data-icon="inline-start" />
-              Create event
-            </Link>
-          </Button>
+          canAny(manager, "events.create") ? (
+            <Button asChild>
+              <Link href="/admin/events/new">
+                <CalendarPlus aria-hidden="true" data-icon="inline-start" />
+                Create event
+              </Link>
+            </Button>
+          ) : null
         }
       />
       {counts.total > 0 ? <EventSummaryStats counts={counts} /> : null}
       <EventListFilters
         committees={manager.committees}
-        globalScope={manager.accessLevel !== "COMMITTEE_MANAGER"}
+        globalScope={allCommittees}
         committeeId={committeeId}
         filter={filter}
       >

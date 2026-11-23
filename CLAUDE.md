@@ -24,6 +24,34 @@ Every member, event, and project is a permanent record. Full explanation:
 - Use case numbers are catalog IDs from the requirements document, not a
   mandated build sequence. Don't assume UC-01 must be built before UC-02
   just because of the numbering, check this section for the real order.
+- **Development Cycle 2** (owner request, 2026-11-17): expanded membership
+  categories, optional SQU student verification, and committee teams with
+  Chief / Assistant Chief appointments. Decision record
+  `docs/adr/0025-expanded-membership-verification-and-leadership.md`; summary
+  `docs/development-cycle-2.md`. Migrations 0033 and 0034 (committee-level
+  leadership and the request switch, ADR 0026) were applied to staging on
+  2026-11-20 with the owner's authorization; production, and deploying, need
+  the owner's approval. Nobody is SQU-verified automatically.
+- **Dashboard improvements** (owner request, 2026-11-22): configurable committee
+  and team permissions (ADR 0027, migration 0035) and the Email Centre (ADR
+  0028, migration 0036). Every protected operation needs a named permission;
+  personal levels keep their meaning through a fixed mapping, and approved
+  Chiefs and Assistant Chiefs receive their committee's or team's permissions.
+  Email sending stays off until the owner chooses a provider and sender address.
+  Summary: `docs/permissions-and-email-centre.md`. Migrations 0035 and 0036
+  were applied to staging on 2026-11-22 with the owner's authorization;
+  production, and deploying, need the owner's approval.
+- **Automatic membership approval** (owner request, 2026-11-22): ADR 0029,
+  migration 0037. A valid registration is approved at once (policy
+  `automatic`); the member record still waits for a confirmed email, and
+  registration grants no access. Applied to staging on 2026-11-22 with the
+  owner's authorization; production, and deploying, need the owner's approval.
+- **Account activation setting** (owner request, 2026-11-23): ADR 0030,
+  migration 0038. Email confirmation (default) or immediate accounts created
+  by Core with the Auth Admin API; separate from the approval policy. Applied
+  to staging on 2026-11-23 with the owner's authorization; production, and
+  deploying, need the owner's approval. Migration 0039 (same day, staging)
+  lets Board Administration change both membership settings.
 
 ## Current build decision: event registration without member accounts
 
@@ -283,3 +311,9 @@ Rules:
   the policy before assuming the data is missing.** This is the most
   common failure mode with RLS, silent, not an error, easy to mistake for
   a data problem when it's actually a permissions one.
+
+## Developer documentation
+
+The developer manual starts at `docs/README.md` (setup, architecture, API, database,
+permissions, operations, integration with the public website). Update the documents listed
+in `docs/maintenance.md` in the same change as the code they describe.

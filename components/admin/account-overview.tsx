@@ -7,19 +7,17 @@ import {
   AccountSecuritySection,
 } from "@/components/admin/account-sections";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AccessLevel } from "@/lib/auth/manager";
+import type { AccountAccessView } from "@/lib/auth/permissions";
 
 export function AccountOverview({
   email,
   userId,
-  accessLevel = "COMMITTEE_MANAGER",
-  committees,
+  view,
   logoutAction,
 }: {
   email: string | null;
   userId: string;
-  accessLevel?: AccessLevel;
-  committees: ReadonlyArray<{ id: string; name: string }>;
+  view: AccountAccessView;
   logoutAction: () => void | Promise<void>;
 }) {
   return (
@@ -27,7 +25,7 @@ export function AccountOverview({
       <AdminPageHeader
         title="Account"
         headingId="account-title"
-        description="Your sign-in identity, committee access and security options."
+        description="Your sign-in identity, dashboard permissions and security options."
       />
       <Tabs defaultValue="profile" className="gap-6">
         <TabsList variant="line">
@@ -36,15 +34,10 @@ export function AccountOverview({
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="max-w-3xl">
-          <AccountProfileSection
-            email={email}
-            userId={userId}
-            accessLevel={accessLevel}
-            committees={committees}
-          />
+          <AccountProfileSection email={email} userId={userId} view={view} />
         </TabsContent>
         <TabsContent value="permissions" className="max-w-3xl">
-          <AccountPermissionsSection accessLevel={accessLevel} />
+          <AccountPermissionsSection view={view} />
         </TabsContent>
         <TabsContent value="security" className="max-w-3xl">
           <AccountSecuritySection logoutAction={logoutAction} />

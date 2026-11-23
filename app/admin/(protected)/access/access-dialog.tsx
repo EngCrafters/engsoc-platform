@@ -28,7 +28,12 @@ import {
   replaceManagerAction,
   type AccessActionState,
 } from "./actions";
-import { roleLabel, type Committee, type UserRecord } from "./user-types";
+import {
+  roleLabel,
+  type Committee,
+  type UserRecord,
+  type AccountRights,
+} from "./user-types";
 
 export type AccessSelection = {
   operation: "grant" | "reassign" | "revoke" | "replace";
@@ -86,14 +91,14 @@ export function AccessDialog({
   selection,
   committees,
   users,
-  actorLevel,
+  rights,
   onClose,
 }: {
   selection: AccessSelection | null;
   committees: Committee[];
   users: UserRecord[];
-  /** Board Administration offers the Committee Manager role only (ADR 0024). */
-  actorLevel: AccessLevel;
+  /** Without administrator-level rights only the Committee Manager role is offered. */
+  rights: AccountRights;
   onClose: () => void;
 }) {
   return (
@@ -107,7 +112,7 @@ export function AccessDialog({
           selection={selection}
           committees={committees}
           users={users}
-          technical={actorLevel === "TECHNICAL"}
+          technical={rights.adminLevels}
           onClose={onClose}
         />
       ) : null}

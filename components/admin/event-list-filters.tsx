@@ -102,7 +102,7 @@ export function EventListFilters({
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="all">
-                    {globalScope ? "All Committees" : "My Committee"}
+                    {globalScope ? "All Committees" : "All my committees"}
                   </SelectItem>
                   {committees.map((committee) => (
                     <SelectItem key={committee.id} value={committee.id}>

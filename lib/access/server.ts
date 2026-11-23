@@ -3,6 +3,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import type { AccessLevel } from "@/lib/auth/manager";
+import { withRecoveryGuard } from "@/lib/auth/recovery";
 
 export type AccessRow = {
   user_id: string;
@@ -51,7 +52,7 @@ export async function changeAccess(input: {
   operation: "grant" | "reassign" | "revoke";
   note: string | null;
 }) {
-  const rows =
+  const rows = await withRecoveryGuard(async () =>
     input.level === "TECHNICAL"
       ? await db.execute<{ result: { code: string } }>(sql`
           SELECT private.change_technical_access(
@@ -66,7 +67,9 @@ export async function changeAccess(input: {
       ${input.committeeId}::uuid, ${input.operation}::text,
       ${input.note}::text
     ) AS result
-  `);
+  `)
+  );
+  if (!Array.isArray(rows)) return rows;
   return rows[0]?.result ?? { code: "UNAVAILABLE" };
 }
 

@@ -154,8 +154,7 @@ export function SettingsDialog({
   restoreFocus,
   email,
   userId,
-  accessLevel = "COMMITTEE_MANAGER",
-  committees,
+  view,
   logoutAction,
 }: {
   open: boolean;
@@ -165,8 +164,7 @@ export function SettingsDialog({
   restoreFocus: () => void;
   email: string | null;
   userId: string;
-  accessLevel?: import("@/lib/auth/manager").AccessLevel;
-  committees: ReadonlyArray<{ id: string; name: string }>;
+  view: import("@/lib/auth/permissions").AccountAccessView;
   logoutAction: () => void | Promise<void>;
 }) {
   const current = sections.find((item) => item.id === section) ?? sections[0];
@@ -252,8 +250,7 @@ export function SettingsDialog({
                   idPrefix="settings-account"
                   email={email}
                   userId={userId}
-                  accessLevel={accessLevel}
-                  committees={committees}
+                  view={view}
                 />
               ) : null}
               {section === "security" ? (

@@ -30,10 +30,7 @@ export default async function Projects({
   }
   if (data.code !== "SUCCESS")
     return (
-      <p role="alert">
-        Projects are reviewed by Society Affairs, Board Administration and
-        Technical Team only.
-      </p>
+      <p role="alert">Project review needs the View projects permission.</p>
     );
   const url = (n: number) =>
     `/admin/projects?${new URLSearchParams({ q: query.q || "", status: query.status || "all", offset: String(n) })}`;

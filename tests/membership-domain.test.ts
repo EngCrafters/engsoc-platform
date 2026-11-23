@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/membership/db", () => ({
   submitThroughRoutine: vi.fn(),
+  optionsThroughRoutine: vi.fn(),
   statusThroughRoutine: vi.fn(),
 }));
 
@@ -13,6 +14,7 @@ const {
   isStatusToken,
   validateApplication,
 } = await import("@/lib/membership");
+type RawApplication = import("@/lib/membership").RawApplication;
 
 const bytes = (...parts: (number[] | string)[]) =>
   new Uint8Array(
@@ -25,19 +27,52 @@ const PNG = bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], "png");
 const WEBP = bytes("RIFF", [0, 0, 0, 0], "WEBPVP8 ");
 const PDF = bytes("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF");
 
-const valid = {
+// The categories and institutions the database publishes (migration 0033), as Core reads them.
+const OPTIONS = {
+  categories: [
+    {
+      id: "university_student",
+      label: { en: "University Student", ar: "طالب جامعي" },
+      institution: "required" as const,
+      academicYear: true,
+    },
+    {
+      id: "graduate",
+      label: { en: "Graduate / Alumni", ar: "خرّيج" },
+      institution: "optional" as const,
+      academicYear: false,
+    },
+    {
+      id: "industry_professional",
+      label: { en: "Industry Professional", ar: "مهني" },
+      institution: "none" as const,
+      academicYear: false,
+    },
+  ],
+  institutions: [
+    {
+      id: "squ",
+      name: { en: "Sultan Qaboos University (SQU)", ar: "جامعة السلطان قابوس" },
+      country: "OM",
+    },
+    { id: "utas", name: { en: "UTAS", ar: "جامعة التقنية" }, country: "OM" },
+  ],
+};
+
+const valid: RawApplication = {
   fullName: "Aisha Al-Hinai",
-  email: "s123456@student.squ.edu.om",
-  universityId: "123456",
+  email: "aisha.alhinai@gmail.com",
+  category: "university_student",
+  institution: "utas",
+  institutionName: null,
   academicYear: "2",
   discipline: "civil",
   interests: ["cad", "data"],
   consent: "true",
-  consentVersion: "2026-10-v1",
-  document: PNG,
+  consentVersion: "2026-11-v2",
 };
 
-describe("SQU ID card content checks", () => {
+describe("SQU ID card content checks (registration and SQU verification evidence)", () => {
   it("identifies files by their signature, not their name or declared type", () => {
     expect(sniffDocumentType(JPEG)).toBe("image/jpeg");
     expect(sniffDocumentType(PNG)).toBe("image/png");
@@ -91,75 +126,127 @@ describe("SQU ID card content checks", () => {
 });
 
 describe("application validation", () => {
-  it("accepts the website form and normalises it", () => {
-    const result = validateApplication({
-      ...valid,
+  const check = (raw: Partial<RawApplication>) =>
+    validateApplication({ ...valid, ...raw }, OPTIONS);
+
+  it("accepts the website form with any email domain and normalises it", () => {
+    const result = check({
       fullName: "  Aisha Al-Hinai ",
-      email: " S123456@SQU.EDU.OM ",
+      email: " Aisha.AlHinai@Gmail.COM ",
     });
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       ok: true,
       value: {
         fullName: "Aisha Al-Hinai",
-        email: "s123456@squ.edu.om",
+        email: "aisha.alhinai@gmail.com",
+        category: "university_student",
+        institutionId: "utas",
+        institutionName: null,
         academicYear: 2,
-        document: { mediaType: "image/png" },
+        discipline: "civil",
+        interests: ["cad", "data"],
+        consentVersion: "2026-11-v2",
       },
     });
   });
 
   it("accepts Arabic names, apostrophes and hyphens (UC-01)", () => {
     for (const fullName of ["عائشة بنت سالم", "Ma'mun Al-Rawahi"]) {
-      expect(validateApplication({ ...valid, fullName }).ok).toBe(true);
+      expect(check({ fullName }).ok).toBe(true);
     }
   });
 
-  it("names every field that needs attention", () => {
-    const result = validateApplication({
-      fullName: " ",
-      email: "someone@gmail.com",
-      universityId: "12a4",
-      academicYear: "7",
-      discipline: "aerospace",
-      interests: ["cad", "cad"],
-      consent: null,
-      consentVersion: null,
-      document: bytes("GIF89a"),
+  it("asks students for an institution and a year, with a typed name for an unlisted university", () => {
+    expect(check({ institution: null })).toMatchObject({
+      ok: false,
+      errors: [{ field: "institution", code: "required" }],
     });
+    expect(check({ academicYear: null })).toMatchObject({
+      ok: false,
+      errors: [{ field: "academicYear", code: "required" }],
+    });
+    expect(check({ institution: "mit" })).toMatchObject({
+      ok: false,
+      errors: [{ field: "institution", code: "invalid" }],
+    });
+    expect(check({ institution: "other" })).toMatchObject({
+      ok: false,
+      errors: [{ field: "institutionName", code: "required" }],
+    });
+    expect(
+      check({ institution: "other", institutionName: "  ETH Zürich  " })
+    ).toMatchObject({
+      ok: true,
+      value: { institutionId: null, institutionName: "ETH Zürich" },
+    });
+  });
+
+  it("drops details a category does not collect instead of failing on them", () => {
+    // A professional who first picked "student" leaves a year and a university behind.
+    expect(
+      check({
+        category: "industry_professional",
+        institution: "other",
+        institutionName: "X",
+        academicYear: "9",
+      })
+    ).toMatchObject({
+      ok: true,
+      value: { institutionId: null, institutionName: null, academicYear: null },
+    });
+    expect(
+      check({ category: "graduate", institution: null, academicYear: "3" })
+    ).toMatchObject({
+      ok: true,
+      value: { institutionId: null, academicYear: null },
+    });
+    expect(check({ category: "graduate", institution: "squ" })).toMatchObject({
+      ok: true,
+      value: { institutionId: "squ" },
+    });
+  });
+
+  it("names every field that needs attention", () => {
+    const result = validateApplication(
+      {
+        fullName: " ",
+        email: "not-an-email",
+        category: "astronaut",
+        institution: null,
+        institutionName: null,
+        academicYear: null,
+        discipline: "aerospace",
+        interests: ["cad", "cad"],
+        consent: null,
+        consentVersion: null,
+      },
+      OPTIONS
+    );
     expect(result).toEqual({
       ok: false,
       errors: [
         { field: "fullName", code: "required" },
         { field: "email", code: "invalid" },
-        { field: "universityId", code: "invalid" },
-        { field: "academicYear", code: "invalid" },
+        { field: "category", code: "invalid" },
         { field: "discipline", code: "invalid" },
         { field: "interests", code: "invalid" },
         { field: "consent", code: "required" },
-        { field: "idDocument", code: "unsupported-type" },
       ],
     });
   });
 
-  it("rejects look-alike domains, too many interests and unknown consent wordings", () => {
+  it("rejects malformed addresses, too many interests and unknown consent wordings", () => {
+    for (const email of ["x@localhost", "two@@at.example", "space d@x.example"])
+      expect(check({ email })).toMatchObject({ ok: false });
     expect(
-      validateApplication({ ...valid, email: "x@squ.edu.om.evil.example" })
+      check({ interests: ["cad", "data", "power", "hse", "quality"] })
     ).toMatchObject({ ok: false });
-    expect(
-      validateApplication({ ...valid, email: "x@notsqu.edu.om" })
-    ).toMatchObject({ ok: false });
-    expect(
-      validateApplication({
-        ...valid,
-        interests: ["cad", "data", "power", "hse", "quality"],
-      })
-    ).toMatchObject({ ok: false });
-    expect(
-      validateApplication({ ...valid, consentVersion: "prototype" })
-    ).toMatchObject({
+    expect(check({ consentVersion: "prototype" })).toMatchObject({
       ok: false,
       errors: [{ field: "consent", code: "invalid" }],
     });
+    // The previous website's wording stays valid during a release.
+    expect(check({ consentVersion: "2026-10-v1" }).ok).toBe(true);
   });
 });
 

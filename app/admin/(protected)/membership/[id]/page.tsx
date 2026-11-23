@@ -6,11 +6,7 @@ import {
   getMembershipApplication,
   listMembershipHistory,
 } from "@/lib/membership/server";
-import {
-  disciplineLabel,
-  interestLabel,
-  REVIEWER_LABELS,
-} from "@/lib/membership/labels";
+import { disciplineLabel, interestLabel } from "@/lib/membership/labels";
 import { formatEventDate } from "@/lib/events/format";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { MembershipStatusBadge } from "@/components/admin/membership-status-badge";
@@ -69,14 +65,15 @@ export default async function MembershipApplicationPage({
   if (result.code === "FORBIDDEN") {
     return (
       <p role="alert">
-        Membership applications are reviewed by Society Affairs and Senior
-        Management only.
+        Membership applications need the View applications permission.
       </p>
     );
   }
   if (result.code !== "SUCCESS") notFound();
   const { application: app, reviewer, policy, ownApplication } = result;
   const history = await listMembershipHistory(manager.userId, id);
+  // Only applications made with the earlier SQU-only form carried an ID card (ADR 0025).
+  const showCard = Boolean(app.document || app.documentDeletedAt);
 
   return (
     <section
@@ -86,7 +83,7 @@ export default async function MembershipApplicationPage({
       <AdminPageHeader
         headingId="membership-application-title"
         title={app.fullName}
-        description="Check the details against the SQU ID card before deciding."
+        description="Check the submitted details before deciding. SQU student status is verified separately, from the member's profile."
         context={
           <>
             <MembershipStatusBadge status={app.status} />
@@ -102,24 +99,54 @@ export default async function MembershipApplicationPage({
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+      <div
+        className={
+          showCard
+            ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]"
+            : "grid gap-6"
+        }
+      >
         <Card>
           <CardHeader>
             <CardTitle>Applicant</CardTitle>
-            <CardDescription>As submitted on the website.</CardDescription>
+            <CardDescription>
+              As submitted on the website. No ID card is collected at
+              registration.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="flex flex-col gap-3">
               <Field label="Full name">{app.fullName}</Field>
-              <Field label="SQU email">
+              <Field label="Email">
                 <span dir="ltr">{app.email}</span>
               </Field>
-              <Field label="Student ID">
-                <span dir="ltr" className="tabular-nums">
-                  {app.universityId}
-                </span>
+              <Field label="Category">
+                {app.categoryLabel?.en ?? "Not recorded"}
               </Field>
-              <Field label="Academic year">Year {app.academicYear}</Field>
+              {app.institution || app.institutionName ? (
+                <Field
+                  label={
+                    app.category === "graduate" ? "Alma mater" : "Institution"
+                  }
+                >
+                  {app.institution?.en ?? app.institutionName}
+                  {app.institutionName ? (
+                    <span className="block text-xs text-muted-foreground">
+                      Typed by the applicant (not in the list)
+                    </span>
+                  ) : null}
+                </Field>
+              ) : null}
+              {app.universityId ? (
+                <Field label="Student ID">
+                  <span dir="ltr" className="tabular-nums">
+                    {app.universityId}
+                  </span>
+                </Field>
+              ) : null}
+              {app.academicYear ? (
+                <Field label="Academic year">Year {app.academicYear}</Field>
+              ) : null}
               <Field label="Discipline">
                 {disciplineLabel(app.discipline)}
               </Field>
@@ -136,41 +163,45 @@ export default async function MembershipApplicationPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>SQU ID card</CardTitle>
-            <CardDescription>
-              Evidence for manual review only. Deleted at the final decision.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {ownApplication ? (
-              <p className="text-sm text-muted-foreground">
-                Not available for your own application.
-              </p>
-            ) : app.document ? (
-              <DocumentViewer
-                applicationId={app.id}
-                mediaType={app.document.mediaType}
-                byteSize={app.document.byteSize}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {app.documentDeletedAt
-                  ? `Deleted ${when(app.documentDeletedAt)}, after the decision.`
-                  : "No document is stored."}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {showCard ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>SQU ID card</CardTitle>
+              <CardDescription>
+                Evidence for manual review only. Deleted at the final decision.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {ownApplication ? (
+                <p className="text-sm text-muted-foreground">
+                  Not available for your own application.
+                </p>
+              ) : app.document ? (
+                <DocumentViewer
+                  applicationId={app.id}
+                  mediaType={app.document.mediaType}
+                  byteSize={app.document.byteSize}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {app.documentDeletedAt
+                    ? `Deleted ${when(app.documentDeletedAt)}, after the decision.`
+                    : "No document is stored."}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Review</CardTitle>
           <CardDescription>
-            You review as {REVIEWER_LABELS[reviewer]}. Membership grants no
-            committee or administrative access.
+            {reviewer === "senior"
+              ? "You can also give final approval."
+              : "Final approval under the two-step policy needs the Final approval permission."}{" "}
+            Membership grants no committee or administrative access.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
@@ -184,7 +215,16 @@ export default async function MembershipApplicationPage({
               <Field
                 label={app.status === "approved" ? "Approved" : "Rejected"}
               >
-                {when(app.decidedAt)} by {app.decidedByEmail ?? "a reviewer"}
+                {app.autoApproved
+                  ? `${when(app.decidedAt)}, automatically at registration`
+                  : `${when(app.decidedAt)} by ${app.decidedByEmail ?? "a reviewer"}`}
+              </Field>
+            ) : null}
+            {app.accountUnverified ? (
+              <Field label="Account">
+                Created at registration without email verification (immediate
+                activation). The address was not proven to belong to the
+                registrant.
               </Field>
             ) : null}
             {app.decisionNote ? (

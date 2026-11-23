@@ -1,6 +1,8 @@
 /** One safe sentence per routine result (ADR 0024). Never SQL, stack or identifiers. */
 export const ADMINISTRATION_MESSAGES: Record<string, string> = {
-  FORBIDDEN: "Your access level does not allow this.",
+  FORBIDDEN: "Your permissions do not allow this.",
+  LAST_RECOVERY_ACCOUNT:
+    "This would leave no account able to manage permissions and administrator access. Give that access to someone else first.",
   VALIDATION_ERROR: "Check the details and try again.",
   NOT_FOUND: "This record no longer exists. Refresh the page.",
   NAME_TAKEN: "Another committee already uses this name.",

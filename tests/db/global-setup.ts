@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -171,6 +171,35 @@ async function applyMigrations(
         await sql`INSERT INTO private.uc02_audit
           (committee_id, event_id, actor_kind, action, changes)
           VALUES (${legacyId}, ${legacyEvent}, 'migration', 'history.imported', '{}')`;
+      }
+      if (migration === "0033_membership_verification_leadership.sql") {
+        // Records from the SQU-only era, to prove 0033's backfill rules (ADR 0025): SQU
+        // addresses gain a category, anything else stays unrecorded, nobody becomes verified.
+        const tag = randomUUID().slice(0, 8);
+        const student = randomUUID();
+        const graduate = randomUUID();
+        const other = randomUUID();
+        const application = randomUUID();
+        process.env.UC02_TEST_LEGACY_STUDENT_ID = student;
+        process.env.UC02_TEST_LEGACY_GRADUATE_ID = graduate;
+        process.env.UC02_TEST_LEGACY_OTHER_ID = other;
+        process.env.UC02_TEST_LEGACY_APPLICATION_ID = application;
+        await sql`INSERT INTO auth.users (id, email, email_confirmed_at) VALUES
+          (${student}, ${`legacy-${tag}@squ.edu.om`}, now()),
+          (${graduate}, ${`graduate-${tag}@squ.edu.om`}, now()),
+          (${other}, ${`fixture-${tag}@example.test`}, now())`;
+        await sql`INSERT INTO public.members (id, full_name, email, university_id, year, major, status) VALUES
+          (${student}, 'Legacy Student', ${`legacy-${tag}@squ.edu.om`}, '20190123', 3, 'civil', 'member'),
+          (${graduate}, 'Legacy Graduate', ${`graduate-${tag}@squ.edu.om`}, '20150123', 5, 'electrical', 'graduate'),
+          (${other}, 'Legacy Fixture', ${`fixture-${tag}@example.test`}, '20170123', 2, 'mechanical', 'member')`;
+        await sql`INSERT INTO private.membership_applications
+          (id, full_name, email, university_id, academic_year, discipline, consent_version, status_token_hash)
+          VALUES (${application}, 'Legacy Applicant', ${`applicant-${tag}@squ.edu.om`}, '20200123', 1,
+            'chemical', '2026-10-v1', ${randomBytes(32).toString("hex")})`;
+        const card = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+        await sql`INSERT INTO private.membership_documents (application_id, media_type, byte_size, sha256, content)
+          VALUES (${application}, 'image/jpeg', ${card.length},
+            ${createHash("sha256").update(card).digest("hex")}, ${card})`;
       }
       await sql.unsafe(
         await readFile(join(migrationDirectory, migration), "utf8")

@@ -120,18 +120,25 @@ describe("member profiles (0031, real restricted roles)", () => {
     });
   });
 
-  it("follows a confirmed SQU sign-in email change, and nothing else", async () => {
+  // ADR 0025 lifted the SQU-only rule: any confirmed address follows, unless another member has it.
+  it("follows a confirmed sign-in email change of any domain, never onto another member's address", async () => {
     const m = await member();
     const next = `changed${m.studentId}@squ.edu.om`;
     await admin`UPDATE auth.users SET email=${next} WHERE id=${m.id}`;
     expect((await call("get_own_profile", [m.id])).email).toBe(next);
-    await admin`UPDATE auth.users SET email=${`personal${m.studentId}@gmail.com`} WHERE id=${m.id}`;
+    const personal = `personal${m.studentId}@gmail.com`;
+    await admin`UPDATE auth.users SET email=${personal} WHERE id=${m.id}`;
+    expect((await call("get_own_profile", [m.id])).email).toBe(personal);
+    // Another member whose sign-in moved away still holds their membership address.
+    const other = await member();
+    await admin`UPDATE auth.users SET email=${`moved${other.studentId}@example.test`} WHERE id=${other.id}`;
+    await admin`UPDATE auth.users SET email=${other.email} WHERE id=${m.id}`;
     const profile = await call("get_own_profile", [m.id]);
-    expect(profile.email).toBe(next);
-    expect(profile.signInEmail).toBe(`personal${m.studentId}@gmail.com`);
+    expect(profile.email).toBe(personal);
+    expect(profile.signInEmail).toBe(other.email);
     const [{ n }] =
       await admin`SELECT count(*)::int AS n FROM private.uc02_audit WHERE actor_user_id=${m.id} AND action='member.email_synced'`;
-    expect(n).toBe(1);
+    expect(n).toBe(2);
   });
 
   it("keeps one private photo key per member and hands back the previous one for deletion", async () => {

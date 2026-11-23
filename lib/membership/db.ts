@@ -1,90 +1,89 @@
-// Server-only access to the public membership routines (migrations 0025 and
-// 0026). The runtime role has no table privileges; everything goes through
+// Server-only access to the public membership routines (migrations 0025–0027
+// and 0033). The runtime role has no table privileges; everything goes through
 // these calls.
 
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { MembershipOptions } from "./types";
 
-type RoutineResult = { code: string; field?: string; applicationId?: string };
+type RoutineResult = {
+  code: string;
+  field?: string;
+  applicationId?: string;
+  status?: string;
+  accountActivation?: string;
+};
 
+type ImmediateAccountRoutine = {
+  code: string;
+  userId?: string;
+  email?: string;
+  applicationId?: string;
+  member?: boolean;
+};
+
+/** ADR 0030: what Core may do for this application's immediate account (CREATE or LINK). */
+export async function beginImmediateAccountThroughRoutine(
+  statusTokenHash: string
+): Promise<ImmediateAccountRoutine> {
+  const rows = await db.execute<{ result: ImmediateAccountRoutine }>(
+    sql`SELECT private.begin_immediate_account(${statusTokenHash}) AS result`
+  );
+  return rows[0]?.result ?? { code: "SERVER_ERROR" };
+}
+
+/** ADR 0030: links the account Core created and, if approved, writes the member record. */
+export async function completeImmediateAccountThroughRoutine(
+  statusTokenHash: string,
+  userId: string
+): Promise<ImmediateAccountRoutine> {
+  const rows = await db.execute<{ result: ImmediateAccountRoutine }>(
+    sql`SELECT private.complete_immediate_account(${statusTokenHash}, ${userId}::uuid) AS result`
+  );
+  return rows[0]?.result ?? { code: "SERVER_ERROR" };
+}
+
+/**
+ * The expanded application (migration 0033, ADR 0025): no student ID and no
+ * document. The category decides which details the routine accepts.
+ */
 export async function submitThroughRoutine(input: {
   fullName: string;
   email: string;
-  universityId: string;
-  academicYear: number;
+  category: string;
+  institutionId: string | null;
+  institutionName: string | null;
+  academicYear: number | null;
   discipline: string;
   interests: string[];
   consentVersion: string;
   statusTokenHash: string;
-  mediaType: string;
-  sha256: string;
-  content: Buffer;
   ipAddress: string;
 }): Promise<RoutineResult> {
   const interests = `{${input.interests.join(",")}}`;
   const rows = await db.execute<{ result: RoutineResult }>(sql`
-    SELECT private.submit_membership_application(
-      ${input.fullName}, ${input.email}, ${input.universityId},
-      ${input.academicYear}::integer, ${input.discipline}, ${interests}::text[],
-      ${input.consentVersion}, ${input.statusTokenHash}, ${input.mediaType},
-      ${input.sha256}, ${input.content}::bytea, ${input.ipAddress}::inet
+    SELECT private.submit_membership_application_v2(
+      ${input.fullName}, ${input.email}, ${input.category}, ${input.institutionId},
+      ${input.institutionName}, ${input.academicYear}::integer, ${input.discipline},
+      ${interests}::text[], ${input.consentVersion}, ${input.statusTokenHash},
+      ${input.ipAddress}::inet
     ) AS result
   `);
   return rows[0]?.result ?? { code: "SERVER_ERROR" };
 }
 
-// The Storage path (migration 0026): begin, upload in Core, then submit the reference.
-
-export async function beginSubmissionThroughRoutine(input: {
-  email: string;
-  universityId: string;
-  ipAddress: string;
-}): Promise<RoutineResult> {
-  const rows = await db.execute<{ result: RoutineResult }>(sql`
-    SELECT private.begin_membership_submission(
-      ${input.email}, ${input.universityId}, ${input.ipAddress}::inet
-    ) AS result
-  `);
+export async function optionsThroughRoutine(): Promise<{
+  code: string;
+  categories?: MembershipOptions["categories"];
+  institutions?: MembershipOptions["institutions"];
+  consentVersion?: string;
+  approval?: string;
+  accountActivation?: string;
+}> {
+  const rows = await db.execute<{ result: { code: string } }>(
+    sql`SELECT private.get_membership_options() AS result`
+  );
   return rows[0]?.result ?? { code: "SERVER_ERROR" };
-}
-
-export async function submitStoredThroughRoutine(input: {
-  fullName: string;
-  email: string;
-  universityId: string;
-  academicYear: number;
-  discipline: string;
-  interests: string[];
-  consentVersion: string;
-  statusTokenHash: string;
-  mediaType: string;
-  sha256: string;
-  byteSize: number;
-  storageBucket: string;
-  storageKey: string;
-  ipAddress: string;
-}): Promise<RoutineResult> {
-  const interests = `{${input.interests.join(",")}}`;
-  const rows = await db.execute<{ result: RoutineResult }>(sql`
-    SELECT private.submit_stored_membership_application(
-      ${input.fullName}, ${input.email}, ${input.universityId},
-      ${input.academicYear}::integer, ${input.discipline}, ${interests}::text[],
-      ${input.consentVersion}, ${input.statusTokenHash}, ${input.mediaType},
-      ${input.sha256}, ${input.byteSize}::integer, ${input.storageBucket},
-      ${input.storageKey}, ${input.ipAddress}::inet
-    ) AS result
-  `);
-  return rows[0]?.result ?? { code: "SERVER_ERROR" };
-}
-
-export async function queueAbandonedUploadThroughRoutine(
-  storageBucket: string,
-  storageKey: string
-): Promise<string> {
-  const rows = await db.execute<{ result: { code: string } }>(sql`
-    SELECT private.queue_abandoned_membership_upload(${storageBucket}, ${storageKey}) AS result
-  `);
-  return rows[0]?.result?.code ?? "SERVER_ERROR";
 }
 
 export async function claimStorageDeletionsThroughRoutine(

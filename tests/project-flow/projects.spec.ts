@@ -12,7 +12,8 @@ async function login(page: Page, email: string, admin = false) {
     admin ? `${CORE}/admin/login` : `${WEB}/login?next=%2Fprojects%2Fsubmit`
   );
   await page
-    .getByLabel(admin ? "Email address" : "University email", { exact: true })
+    // Both sign-in pages say "Email address" (the website since Core ADR 0025).
+    .getByLabel("Email address", { exact: true })
     .fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -186,7 +187,11 @@ test("member draft and images → changes requested → reviewed publication →
       )
       .toBe(200);
     const publicPage = await reviewer.newPage();
+    // The harness runs `next dev`: compiling the project page on the first click can reload the
+    // list underneath the navigation. Compile it first, then load the list and follow the link.
+    await reviewer.request.get(`${WEB}/projects/${id}`);
     await publicPage.goto(`${WEB}/projects`);
+    await publicPage.waitForLoadState("networkidle");
     await expect(
       publicPage
         .getByRole("heading", {

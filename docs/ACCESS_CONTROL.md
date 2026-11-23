@@ -1,7 +1,11 @@
 # Application access contract
 
-Status: accepted specification, extended October 7, 2026 by ADR 0014 and
-October 22, 2026 by ADR 0024 (Administration section, permanent deletion).
+Status: accepted specification, extended October 7, 2026 by ADR 0014,
+October 22, 2026 by ADR 0024 (Administration section, permanent deletion), and
+November 22, 2026 by ADR 0027: every operation now requires a named permission;
+the levels below keep their meaning through a fixed mapping, and committees and
+teams can be given permissions their leaders receive. The current rules are in
+[Roles and permissions](reference/roles-and-permissions.md).
 ADRs 0012/0013 retain the hierarchy and identity boundary. Current deployment,
 assignment and pilot evidence is in [CURRENT_WORK.md](CURRENT_WORK.md).
 

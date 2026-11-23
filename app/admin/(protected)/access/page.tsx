@@ -1,4 +1,5 @@
-import { requireSenior } from "@/lib/administration/access";
+import { requirePermission } from "@/lib/administration/access";
+import { can } from "@/lib/auth/permissions";
 import {
   listAccess,
   listAccessAudit,
@@ -31,16 +32,21 @@ const auditLabels: Record<string, string> = {
 };
 
 export default async function AccessPage() {
-  // Board Administration sees accounts and manages Committee Managers (ADR 0024).
-  const actor = await requireSenior();
+  // Seeing accounts needs accounts.view; each control below needs its own permission (ADR 0027).
+  const actor = await requirePermission("accounts.view");
   if (!actor) {
     return (
       <p role="alert">
-        Accounts and access are managed by Board Administration and the
-        Technical Team.
+        Accounts and access are available to people with the View accounts
+        permission.
       </p>
     );
   }
+  const rights = {
+    adminLevels: can(actor, "accounts.admin_levels"),
+    credentials: can(actor, "accounts.credentials"),
+    erase: can(actor, "accounts.erase"),
+  };
   const [rows, directory, audit] = await Promise.all([
     listAccess(actor.userId),
     listAuthDirectory(actor.userId),
@@ -78,9 +84,11 @@ export default async function AccessPage() {
         headingId="access-title"
         title="Accounts & access"
         description={
-          actor.accessLevel === "TECHNICAL"
-            ? "Manage sign-in accounts and every access level: Committee Managers, Board Administration and the Technical Team."
-            : "Invite and manage Committee Managers. Board Administration and Technical Team access are managed by the Technical Team."
+          rights.adminLevels
+            ? "Manage sign-in accounts and every personal access level: Committee Managers, Board Administration and the Technical Team. Committee and team permissions are set under Administration → Permissions."
+            : can(actor, "accounts.manage")
+              ? "Invite and manage Committee Managers. Board Administration and Technical Team access are managed by people with the Manage administrator access permission."
+              : "Sign-in accounts and the access history. Changing access needs the Manage committee access permission."
         }
       />
       <Tabs defaultValue="users" className="gap-4">
@@ -91,11 +99,11 @@ export default async function AccessPage() {
         <TabsContent value="users">
           <UserDirectory
             users={users}
-            committees={actor.committees.filter(
+            committees={actor.allCommittees.filter(
               (committee) => !committee.archived
             )}
             currentUserId={actor.userId}
-            actorLevel={actor.accessLevel}
+            rights={rights}
             adminConfigured={Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}
           />
         </TabsContent>
@@ -133,10 +141,13 @@ export default async function AccessPage() {
                       {emailOf(entry.target_user_id) ?? entry.target_user_id}
                     </TableCell>
                     <TableCell>
-                      {auditStateLabel(entry.previous_state, actor.committees)}
+                      {auditStateLabel(
+                        entry.previous_state,
+                        actor.allCommittees
+                      )}
                     </TableCell>
                     <TableCell>
-                      {auditStateLabel(entry.new_state, actor.committees)}
+                      {auditStateLabel(entry.new_state, actor.allCommittees)}
                     </TableCell>
                     <TableCell>{entry.note ?? "—"}</TableCell>
                   </TableRow>

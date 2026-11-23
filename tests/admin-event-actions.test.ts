@@ -8,7 +8,15 @@ const state = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("../lib/auth/manager", () => ({ getManagerContext: state.manager }));
+vi.mock("../lib/auth/manager", async () => {
+  const { withAccess } = await import("./support/manager-fixture");
+  return {
+    getManagerContext: async (...args: unknown[]) =>
+      withAccess(
+        await (state.manager as (...a: unknown[]) => unknown)(...args)
+      ),
+  };
+});
 vi.mock("../lib/admin-events/server", () => ({
   writeAdminEvent: state.writeAdminEvent,
   writeLifecycleEvent: state.writeLifecycleEvent,

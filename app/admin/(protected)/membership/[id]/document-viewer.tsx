@@ -13,13 +13,18 @@ export function DocumentViewer({
   applicationId,
   mediaType,
   byteSize,
+  href = `/admin/membership/${applicationId}/document`,
+  subject = "application",
 }: {
   applicationId: string;
   mediaType: string;
   byteSize: number;
+  /** The authenticated, audited route that serves the document. */
+  href?: string;
+  /** What the history belongs to, for the audit note. */
+  subject?: string;
 }) {
   const [shown, setShown] = useState(false);
-  const href = `/admin/membership/${applicationId}/document`;
   const size =
     byteSize >= 1024 * 1024
       ? `${(byteSize / 1024 / 1024).toFixed(1)} MB`
@@ -30,7 +35,7 @@ export function DocumentViewer({
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
         {pdf ? "PDF" : mediaType.replace("image/", "").toUpperCase() + " image"}{" "}
-        · {size}. Each view is recorded in the application&apos;s history.
+        · {size}. Each view is recorded in the {subject}&apos;s history.
       </p>
       {pdf ? (
         <Button asChild variant="outline" className="self-start">

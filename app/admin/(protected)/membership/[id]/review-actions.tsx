@@ -200,9 +200,7 @@ export function ReviewActions(props: Props) {
     return (
       <Alert>
         <AlertTitle>This is your own application</AlertTitle>
-        <AlertDescription>
-          Another reviewer must review it. Its ID card is not available to you.
-        </AlertDescription>
+        <AlertDescription>Another reviewer must review it.</AlertDescription>
       </Alert>
     );
   }
@@ -229,7 +227,7 @@ export function ReviewActions(props: Props) {
               icon={ScanSearch}
               label="Mark as verified"
               title="Mark this application as verified?"
-              description="Confirm the name, student ID and photo on the SQU ID card match the application. Verification alone grants nothing."
+              description="Confirm the submitted details are complete and plausible. Verification alone grants nothing, and it is not SQU student verification."
               disabled={pending}
             />
           ) : null}
@@ -238,7 +236,7 @@ export function ReviewActions(props: Props) {
             icon={BadgeCheck}
             label="Approve and invite"
             title="Approve this membership?"
-            description="The ID card is deleted and the applicant receives an email invitation to set their password. Membership grants no administrative access."
+            description="The applicant receives an email invitation to set their password (any ID card from the earlier form is deleted). Membership grants no administrative access."
             disabled={pending || Boolean(approveBlock)}
             hint={approveBlock}
             primary
@@ -254,7 +252,7 @@ export function ReviewActions(props: Props) {
             icon={CircleSlash}
             label="Reject"
             title="Reject this application?"
-            description="The ID card is deleted. The applicant sees that the application was not approved and may apply again. The note stays internal."
+            description="The applicant sees that the application was not approved and may apply again (any ID card from the earlier form is deleted). The note stays internal."
             disabled={pending}
             destructive
           >

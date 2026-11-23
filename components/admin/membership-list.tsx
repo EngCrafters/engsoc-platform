@@ -35,11 +35,15 @@ function Row({ item }: { item: MembershipListItem }) {
         </p>
       </TableCell>
       <TableCell className={`${cell} hidden whitespace-normal lg:table-cell`}>
-        <p className="tabular-nums" dir="ltr">
-          {item.universityId}
-        </p>
+        <p>{item.categoryLabel ?? "Not recorded"}</p>
         <p className="max-w-56 truncate text-xs text-muted-foreground">
-          {disciplineLabel(item.discipline)} · Year {item.academicYear}
+          {[
+            item.institution,
+            disciplineLabel(item.discipline),
+            item.academicYear ? `Year ${item.academicYear}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
       </TableCell>
       <TableCell className={`${cell} hidden md:table-cell`}>
@@ -83,7 +87,7 @@ export function MembershipList({ items }: { items: MembershipListItem[] }) {
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead>Applicant</TableHead>
-            <TableHead className="hidden lg:table-cell">Student ID</TableHead>
+            <TableHead className="hidden lg:table-cell">Category</TableHead>
             <TableHead className="hidden md:table-cell">Submitted</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="w-px">

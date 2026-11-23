@@ -1,10 +1,12 @@
 import {
+  membershipOptions,
   submitMembershipApplication,
   validateApplication,
   type RawApplication,
 } from "@/lib/membership";
 import { resolveClientIp } from "@/lib/client-ip/server";
 import { corsHeaders, isAllowedOrigin, preflight } from "@/lib/api/cors";
+import { logServerError } from "@/lib/api/log";
 import {
   json,
   problem,
@@ -15,27 +17,38 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * UC-01 membership application (ADR 0017). Public, like event registration:
- * no API key, no cookie, exact-origin CORS, per-IP rate limit in the database.
- * The applicant sends the website's form fields and one SQU ID card file; Core
- * validates every field and the file's content, and stores the application as
- * `pending_review`. Nothing sent here can choose a status, role or reviewer.
+ * UC-01 membership application (ADRs 0017 and 0025). Public, like event
+ * registration: no API key, no cookie, exact-origin CORS, per-IP rate limit in
+ * the database. The applicant sends the website's form fields; the category
+ * decides which details apply, and Core validates every field before the
+ * database validates it again. No document is uploaded here (SQU student
+ * verification is a separate, signed-in flow). Nothing sent here can choose a
+ * status, role or reviewer: under the automatic policy (ADR 0029) the database
+ * approves a valid application itself, and `status` reports that.
  */
 
 const NO_STORE = "no-store";
 const SCALAR_FIELDS = [
   "fullName",
   "email",
-  "universityId",
+  "category",
+  "institution",
+  "institutionName",
   "academicYear",
   "discipline",
   "consent",
   "consentVersion",
 ] as const;
+/**
+ * The previous website's SQU-only form, accepted for one release (ADR 0025):
+ * it is treated as a University Student at SQU, and its student ID and ID card
+ * are read only to be discarded, never stored.
+ */
+const LEGACY_FIELDS = ["universityId", "idDocument"] as const;
 const ALLOWED_KEYS = new Set<string>([
   ...SCALAR_FIELDS,
+  ...LEGACY_FIELDS,
   "interests",
-  "idDocument",
 ]);
 
 export function OPTIONS(request: Request): Response {
@@ -74,14 +87,8 @@ export async function POST(request: Request): Promise<Response> {
   };
   const malformed: string[] = SCALAR_FIELDS.filter((key) => scalar(key).bad);
   const interestValues = form.getAll("interests");
-  const documents = form.getAll("idDocument");
   if (interestValues.some((value) => typeof value !== "string"))
     malformed.push("interests");
-  if (
-    documents.length > 1 ||
-    (documents.length === 1 && typeof documents[0] === "string")
-  )
-    malformed.push("idDocument");
   if (malformed.length > 0) {
     return problem("invalid-fields", requestId, {
       headers: cors,
@@ -89,19 +96,28 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const file = documents[0] as File | undefined;
+  const legacy =
+    !form.has("category") && LEGACY_FIELDS.some((key) => form.has(key));
   const raw: RawApplication = {
     fullName: scalar("fullName").value,
     email: scalar("email").value,
-    universityId: scalar("universityId").value,
+    category: legacy ? "university_student" : scalar("category").value,
+    institution: legacy ? "squ" : scalar("institution").value,
+    institutionName: legacy ? null : scalar("institutionName").value,
     academicYear: scalar("academicYear").value,
     discipline: scalar("discipline").value,
     interests: interestValues as string[],
     consent: scalar("consent").value,
     consentVersion: scalar("consentVersion").value,
-    document: file ? new Uint8Array(await file.arrayBuffer()) : null,
   };
-  const validation = validateApplication(raw);
+  let options;
+  try {
+    options = await membershipOptions();
+  } catch (error) {
+    logServerError("membership_options_failed", error, requestId);
+    return problem("service-unavailable", requestId, { headers: cors });
+  }
+  const validation = validateApplication(raw, options);
   if (!validation.ok) {
     return problem("invalid-fields", requestId, {
       headers: cors,
@@ -118,7 +134,13 @@ export async function POST(request: Request): Promise<Response> {
   const result = await submitMembershipApplication(validation.value, ip.ip);
   if (result.ok) {
     return json(
-      { data: { status: "pending_review", statusToken: result.statusToken } },
+      {
+        data: {
+          status: result.status,
+          statusToken: result.statusToken,
+          accountActivation: result.accountActivation,
+        },
+      },
       { status: 201, requestId, cacheControl: NO_STORE, headers: cors }
     );
   }

@@ -13,6 +13,13 @@ import { classifyAuthEmailError } from "@/lib/auth/callback";
  * called only from Technical-only server actions that have already verified
  * the caller; none of them returns a password, token, hash or link.
  *
+ * One exception, decided in ADR 0030: under immediate account activation the
+ * public account endpoint creates a registrant's account
+ * (`createImmediateAccount`) and returns one sign-in token hash
+ * (`createSignInTokenHash`) to the browser that registered, after the
+ * database has checked the application's status token, its mode, its age and
+ * that the account is the one Core reserved and has never signed in.
+ *
  * The service-role key is read only in this file and never leaves the server.
  */
 
@@ -156,6 +163,61 @@ export async function createAuthUserWithoutPassword(
     });
     if (error) return { code: mapAuthAdminError(error) };
     return { code: "SUCCESS", userId: data.user?.id };
+  } catch {
+    return { code: "UNAVAILABLE" };
+  }
+}
+
+/** Whether this server can administer Auth users (the service-role key is set). */
+export function canAdministerAuth(): boolean {
+  return adminClient() !== null;
+}
+
+/**
+ * Creates a registrant's account under immediate activation (ADR 0030): the ID
+ * the database reserved, no password and no email. The Admin API marks the
+ * address confirmed; it was NOT verified, which the database records.
+ */
+export async function createImmediateAccount(input: {
+  id: string;
+  email: string;
+  applicationId: string;
+}): Promise<AuthAdminResult> {
+  const client = adminClient();
+  if (!client) return { code: "UNAVAILABLE" };
+  if (!isPlausibleEmail(input.email)) return { code: "INVALID_INPUT" };
+  try {
+    const { data, error } = await client.auth.admin.createUser({
+      id: input.id,
+      email: input.email,
+      email_confirm: true,
+      app_metadata: { essqu_registration: input.applicationId },
+    });
+    if (error) return { code: mapAuthAdminError(error) };
+    return { code: "SUCCESS", userId: data.user?.id };
+  } catch {
+    return { code: "UNAVAILABLE" };
+  }
+}
+
+/**
+ * A one-time sign-in token for an account `createImmediateAccount` made: the
+ * hashed token of a magic link. Generating it sends no email. It is returned to
+ * the registering browser once and never stored or logged.
+ */
+export async function createSignInTokenHash(
+  email: string
+): Promise<{ code: AuthAdminCode; tokenHash?: string }> {
+  const client = adminClient();
+  if (!client) return { code: "UNAVAILABLE" };
+  try {
+    const { data, error } = await client.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+    });
+    if (error) return { code: mapAuthAdminError(error) };
+    const tokenHash = data.properties?.hashed_token;
+    return tokenHash ? { code: "SUCCESS", tokenHash } : { code: "UNAVAILABLE" };
   } catch {
     return { code: "UNAVAILABLE" };
   }

@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   activate: vi.fn(),
   detail: vi.fn(),
   setPolicy: vi.fn(),
+  setActivation: vi.fn(),
   invite: vi.fn(),
   revalidatePath: vi.fn(),
   after: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock("../lib/membership/server", () => ({
   activateMembership: state.activate,
   getMembershipApplication: state.detail,
   setMembershipApprovalPolicy: state.setPolicy,
+  setMembershipAccountActivation: state.setActivation,
   processMembershipStorageDeletions: state.deletions,
 }));
 vi.mock("../lib/auth/admin", () => ({ inviteAuthUser: state.invite }));
@@ -28,6 +30,7 @@ const {
   reviewMembershipAction,
   activateMembershipAction,
   setMembershipPolicyAction,
+  setAccountActivationAction,
 } = await import("../app/admin/(protected)/membership/actions");
 
 const APPLICATION = "33333333-3333-4333-8333-333333333333";
@@ -220,5 +223,33 @@ describe("membership review actions", () => {
     expect(await setMembershipPolicyAction(null, form)).toEqual({
       code: "VALIDATION_ERROR",
     });
+  });
+
+  it("passes the account activation mode (ADR 0030) to its routine, and nothing else", async () => {
+    state.setActivation.mockResolvedValue({ code: "SUCCESS" });
+    const form = new FormData();
+    form.set("accountActivation", "immediate");
+    expect(await setAccountActivationAction(null, form)).toEqual({
+      code: "SUCCESS",
+    });
+    expect(state.setActivation).toHaveBeenCalledWith(
+      manager.userId,
+      "immediate"
+    );
+    form.set("accountActivation", "skip-verification");
+    expect(await setAccountActivationAction(null, form)).toEqual({
+      code: "VALIDATION_ERROR",
+    });
+    expect(state.setActivation).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes the automatic policy (ADR 0029) to the same routine", async () => {
+    state.setPolicy.mockResolvedValue({ code: "SUCCESS", policy: "automatic" });
+    const form = new FormData();
+    form.set("policy", "automatic");
+    expect(await setMembershipPolicyAction(null, form)).toEqual({
+      code: "SUCCESS",
+    });
+    expect(state.setPolicy).toHaveBeenCalledWith(manager.userId, "automatic");
   });
 });

@@ -59,4 +59,35 @@ describe("admin navigation", () => {
       { label: "Application" },
     ]);
   });
+
+  it("gives the SQU and leadership queues their own entries and trails (ADRs 0025, 0026)", () => {
+    for (const [path, entry] of [
+      ["/admin/membership/verifications", "/admin/membership/verifications"],
+      [
+        `/admin/membership/verifications/${id}`,
+        "/admin/membership/verifications",
+      ],
+      ["/admin/membership/leadership", "/admin/membership/leadership"],
+      [`/admin/membership/leadership/${id}`, "/admin/membership/leadership"],
+    ]) {
+      expect(isAdminNavActive(path, entry), path).toBe(true);
+      // Only the queue's own entry is highlighted, not Applications.
+      expect(isAdminNavActive(path, "/admin/membership"), path).toBe(false);
+    }
+    expect(
+      isAdminNavActive(
+        `/admin/membership/verifications/${id}/document`,
+        "/admin/membership/verifications"
+      )
+    ).toBe(false);
+    expect(adminBreadcrumbs("/admin/membership/leadership")).toEqual([
+      { label: "Membership", href: "/admin/membership" },
+      { label: "Leadership" },
+    ]);
+    expect(adminBreadcrumbs(`/admin/membership/verifications/${id}`)).toEqual([
+      { label: "Membership", href: "/admin/membership" },
+      { label: "SQU verification", href: "/admin/membership/verifications" },
+      { label: "Request" },
+    ]);
+  });
 });

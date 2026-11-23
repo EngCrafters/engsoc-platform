@@ -232,6 +232,55 @@
       "when": 1792800000000,
       "tag": "0032_administration",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792886400000,
+      "tag": "0033_membership_verification_leadership",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792972800000,
+      "tag": "0034_committee_leadership",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793059200000,
+      "tag": "0035_configurable_permissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793145600000,
+      "tag": "0036_email_centre",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793232000000,
+      "tag": "0037_automatic_membership_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793318400000,
+      "tag": "0038_account_activation_setting",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793404800000,
+      "tag": "0039_board_membership_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -1,63 +1,65 @@
-// Public entry point for UC-01 membership applications (ADRs 0017 and 0018).
+// Public entry point for UC-01 membership applications (ADRs 0017 and 0025).
 //
 // The transport (app/v1/membership-applications) hands this module raw form
 // values; this module decides whether they are a valid application and passes
 // them to the canonical routine, which validates everything again. Nothing a
 // caller sends can choose a status, reviewer, role, committee or storage key.
+// Registration carries no document (ADR 0025): SQU student verification is a
+// separate, signed-in flow (lib/verification).
 
 export * from "./types";
 
 import { createHash, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
 import { logServerError } from "@/lib/api/log";
-import { checkDocument } from "./document";
 import {
-  beginSubmissionThroughRoutine,
-  queueAbandonedUploadThroughRoutine,
+  createImmediateAccount,
+  createSignInTokenHash,
+} from "@/lib/auth/admin";
+import {
+  beginImmediateAccountThroughRoutine,
+  completeImmediateAccountThroughRoutine,
+  optionsThroughRoutine,
   ownMembershipThroughRoutine,
   statusThroughRoutine,
-  submitStoredThroughRoutine,
   submitThroughRoutine,
 } from "./db";
-import {
-  currentDocumentStorage,
-  deleteDocumentObject,
-  newDocumentKey,
-  putDocumentObject,
-  type StorageConfig,
-} from "./storage";
 import {
   CONSENT_VERSIONS,
   MAX_INTERESTS,
   MEMBERSHIP_DISCIPLINES,
   MEMBERSHIP_INTERESTS,
+  OTHER_INSTITUTION,
+  type AccountActivation,
   type ApplicantStatus,
   type ApplicationField,
   type ApplicationStatus,
   type ApplicationStatusResult,
-  type DocumentMediaType,
   type FieldCode,
   type MembershipApplicationInput,
   type MembershipDiscipline,
   type MembershipInterest,
+  type MembershipOptions,
   type SubmitMembershipResult,
 } from "./types";
 
 export { checkDocument, sniffDocumentType } from "./document";
 
 const CONTROL = /[\u0000-\u001f\u007f]/;
-const SQU_EMAIL = /^[^\s@]+@([a-z0-9-]+\.)*squ\.edu\.om$/;
+/** Any address with a local part, a domain and a dot in it: personal or institutional. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type RawApplication = {
   fullName: string | null;
   email: string | null;
-  universityId: string | null;
+  category: string | null;
+  institution: string | null;
+  institutionName: string | null;
   academicYear: string | null;
   discipline: string | null;
   interests: string[];
   consent: string | null;
   consentVersion: string | null;
-  document: Uint8Array | null;
 };
 
 export type ValidationResult =
@@ -66,9 +68,15 @@ export type ValidationResult =
 
 /**
  * The same rules the routine enforces, reported per field so the website can
- * mark exactly what to correct (UC-01: "show exactly which field").
+ * mark exactly what to correct (UC-01: "show exactly which field"). The
+ * category decides which details apply (ADR 0025); a detail it does not
+ * collect is dropped here, so a value typed before the applicant switched
+ * category is never stored and never blocks the application.
  */
-export function validateApplication(raw: RawApplication): ValidationResult {
+export function validateApplication(
+  raw: RawApplication,
+  options: Pick<MembershipOptions, "categories" | "institutions">
+): ValidationResult {
   const errors: { field: ApplicationField; code: FieldCode }[] = [];
 
   const fullName = (raw.fullName ?? "").trim();
@@ -82,19 +90,42 @@ export function validateApplication(raw: RawApplication): ValidationResult {
   if (!email) errors.push({ field: "email", code: "required" });
   else if (email.length > 254)
     errors.push({ field: "email", code: "too-long" });
-  else if (!SQU_EMAIL.test(email))
-    errors.push({ field: "email", code: "invalid" });
+  else if (!EMAIL.test(email)) errors.push({ field: "email", code: "invalid" });
 
-  const universityId = (raw.universityId ?? "").trim();
-  if (!universityId) errors.push({ field: "universityId", code: "required" });
-  else if (!/^[0-9]{6,10}$/.test(universityId))
-    errors.push({ field: "universityId", code: "invalid" });
+  const categoryId = (raw.category ?? "").trim();
+  const category = options.categories.find((c) => c.id === categoryId);
+  if (!categoryId) errors.push({ field: "category", code: "required" });
+  else if (!category) errors.push({ field: "category", code: "invalid" });
 
-  const year = Number(raw.academicYear);
-  if (!raw.academicYear)
-    errors.push({ field: "academicYear", code: "required" });
-  else if (!/^[1-5]$/.test(raw.academicYear) || !Number.isInteger(year))
-    errors.push({ field: "academicYear", code: "invalid" });
+  let institutionId: string | null = null;
+  let institutionName: string | null = null;
+  if (category && category.institution !== "none") {
+    const chosen = (raw.institution ?? "").trim();
+    if (chosen === OTHER_INSTITUTION) {
+      const name = (raw.institutionName ?? "").trim();
+      if (!name) errors.push({ field: "institutionName", code: "required" });
+      else if (name.length > 120)
+        errors.push({ field: "institutionName", code: "too-long" });
+      else if (name.length < 2 || CONTROL.test(name))
+        errors.push({ field: "institutionName", code: "invalid" });
+      else institutionName = name;
+    } else if (chosen) {
+      if (options.institutions.some((i) => i.id === chosen))
+        institutionId = chosen;
+      else errors.push({ field: "institution", code: "invalid" });
+    } else if (category.institution === "required") {
+      errors.push({ field: "institution", code: "required" });
+    }
+  }
+
+  let academicYear: number | null = null;
+  if (category?.academicYear) {
+    if (!raw.academicYear)
+      errors.push({ field: "academicYear", code: "required" });
+    else if (!/^[1-5]$/.test(raw.academicYear))
+      errors.push({ field: "academicYear", code: "invalid" });
+    else academicYear = Number(raw.academicYear);
+  }
 
   const discipline = raw.discipline ?? "";
   if (!discipline) errors.push({ field: "discipline", code: "required" });
@@ -118,23 +149,55 @@ export function validateApplication(raw: RawApplication): ValidationResult {
   )
     errors.push({ field: "consent", code: "invalid" });
 
-  const document = checkDocument(raw.document);
-  if (!document.ok) errors.push({ field: "idDocument", code: document.code });
-
-  if (errors.length > 0 || !document.ok) return { ok: false, errors };
+  if (errors.length > 0 || !category) return { ok: false, errors };
   return {
     ok: true,
     value: {
       fullName,
       email,
-      universityId,
-      academicYear: year,
+      category: category.id,
+      institutionId,
+      institutionName,
+      academicYear,
       discipline: discipline as MembershipDiscipline,
       interests: interests as MembershipInterest[],
       consentVersion: raw.consentVersion!,
-      document: { mediaType: document.mediaType, bytes: raw.document! },
     },
   };
+}
+
+const OPTIONS_TTL_MS = 5 * 60_000;
+let cachedOptions: { value: MembershipOptions; at: number } | null = null;
+
+/**
+ * The categories and institutions the database currently offers. Read
+ * through a short per-process cache: they change only by migration, and the
+ * routine re-validates every submission anyway.
+ */
+export async function membershipOptions(): Promise<MembershipOptions> {
+  if (cachedOptions && Date.now() - cachedOptions.at < OPTIONS_TTL_MS)
+    return cachedOptions.value;
+  const result = await optionsThroughRoutine();
+  if (result.code !== "SUCCESS")
+    throw new Error("Membership options unavailable");
+  const value: MembershipOptions = {
+    categories: result.categories ?? [],
+    institutions: result.institutions ?? [],
+    consentVersion: result.consentVersion ?? "",
+    approval: result.approval === "automatic" ? "automatic" : "review",
+    accountActivation: accountActivationOf(result.accountActivation),
+  };
+  cachedOptions = { value, at: Date.now() };
+  return value;
+}
+
+/** Anything but the database's explicit 'immediate' is the email confirmation default. */
+const accountActivationOf = (value: unknown): AccountActivation =>
+  value === "immediate" ? "immediate" : "email_confirmation";
+
+/** For tests: forget the cached options. */
+export function resetMembershipOptionsCache() {
+  cachedOptions = null;
 }
 
 /** 256 bits, URL-safe. Returned to the applicant once; only its hash is stored. */
@@ -153,109 +216,37 @@ export const isStatusToken = (value: unknown): value is string =>
 const ROUTINE_FIELDS: Record<string, ApplicationField> = {
   fullName: "fullName",
   email: "email",
-  universityId: "universityId",
+  category: "category",
+  institution: "institution",
+  institutionName: "institutionName",
   academicYear: "academicYear",
   discipline: "discipline",
   interests: "interests",
   consent: "consent",
-  idDocument: "idDocument",
 };
-
-type RoutineResult = { code: string; field?: string; applicationId?: string };
-
-/** Queues an object nothing may reference; the routine refuses a referenced one. */
-async function queueAbandonedUpload(bucket: string, key: string) {
-  try {
-    await queueAbandonedUploadThroughRoutine(bucket, key);
-  } catch {
-    // The key is random and identifies no one; it is what cleanup needs.
-    console.error("membership_storage_orphan", { bucket, key });
-  }
-}
-
-/**
- * The Storage path (ADR 0018): the database records the attempt and refuses
- * known duplicates before anything is uploaded, Core stores the object under
- * a random key, and only then does the database write the application with
- * the reference. An object whose application is not written is deleted, or
- * queued for deletion when that cannot be done (or confirmed) at once.
- */
-async function submitWithStorage(
-  config: StorageConfig,
-  application: Parameters<typeof submitThroughRoutine>[0] & {
-    mediaType: DocumentMediaType;
-  }
-): Promise<RoutineResult> {
-  const begun = await beginSubmissionThroughRoutine(application);
-  if (begun.code !== "SUCCESS") return begun;
-
-  const key = newDocumentKey(application.mediaType);
-  const stored = await putDocumentObject(
-    config,
-    key,
-    application.content,
-    application.mediaType,
-    application.sha256
-  );
-  if (!stored.ok) {
-    if (stored.uncertain) await queueAbandonedUpload(config.bucket, key);
-    return { code: "STORAGE_UNAVAILABLE" };
-  }
-
-  let result: RoutineResult;
-  try {
-    result = await submitStoredThroughRoutine({
-      ...application,
-      byteSize: application.content.byteLength,
-      storageBucket: config.bucket,
-      storageKey: key,
-    });
-  } catch (error) {
-    // The write may or may not have committed: only the queue, which checks
-    // for a reference, may remove the object now.
-    await queueAbandonedUpload(config.bucket, key);
-    throw error;
-  }
-  if (result.code !== "SUCCESS") {
-    // A refusal returns before anything is written, so nothing references it.
-    if (!(await deleteDocumentObject(config, key))) {
-      await queueAbandonedUpload(config.bucket, key);
-    }
-  }
-  return result;
-}
 
 export async function submitMembershipApplication(
   input: MembershipApplicationInput,
   ipAddress: string
 ): Promise<SubmitMembershipResult> {
   if (isIP(ipAddress) === 0) return { ok: false, error: "invalid_ip" };
-  const storage = currentDocumentStorage();
-  // Half-configured Storage is a deployment error: never fall back silently.
-  if (storage.mode === "misconfigured") {
-    return { ok: false, error: "server_error" };
-  }
   const statusToken = createStatusToken();
-  const content = Buffer.from(input.document.bytes);
-  const application = {
-    ...input,
-    statusTokenHash: hashStatusToken(statusToken),
-    mediaType: input.document.mediaType,
-    sha256: createHash("sha256").update(content).digest("hex"),
-    content,
-    ipAddress,
-  };
   try {
-    const result =
-      storage.mode === "storage"
-        ? await submitWithStorage(storage.config, application)
-        : await submitThroughRoutine(application);
+    const result = await submitThroughRoutine({
+      ...input,
+      statusTokenHash: hashStatusToken(statusToken),
+      ipAddress,
+    });
     switch (result.code) {
       case "SUCCESS":
         return {
           ok: true,
           applicationId: result.applicationId!,
           statusToken,
+          // A database before 0037 does not say; its applications always wait for review.
+          status: result.status === "approved" ? "approved" : "pending_review",
+          // Before 0038, accounts always need email confirmation.
+          accountActivation: accountActivationOf(result.accountActivation),
         };
       case "VALIDATION_ERROR":
         return {
@@ -275,6 +266,96 @@ export async function submitMembershipApplication(
         return { ok: false, error: "server_error" };
     }
   } catch {
+    return { ok: false, error: "server_error" };
+  }
+}
+
+export type ImmediateAccountResult =
+  | { ok: true; tokenHash: string; member: boolean }
+  | {
+      ok: false;
+      error:
+        | "not_found"
+        | "confirmation_required"
+        | "expired"
+        | "account_exists"
+        | "already_set_up"
+        | "not_configured"
+        | "server_error";
+    };
+
+const IMMEDIATE_REFUSALS: Record<
+  string,
+  Extract<ImmediateAccountResult, { ok: false }>["error"]
+> = {
+  NOT_FOUND: "not_found",
+  NOT_IMMEDIATE: "confirmation_required",
+  NOT_AVAILABLE: "not_found",
+  EXPIRED: "expired",
+  ACCOUNT_EXISTS: "account_exists",
+  ALREADY_SET_UP: "already_set_up",
+};
+
+/**
+ * Immediate account activation (ADR 0030). The status token proves only that the caller is the
+ * browser that submitted the application; the database decides everything else and supplies the
+ * email. Core creates the account it reserved (confirmed by the Admin API, no password, no email),
+ * links it and, if approved, writes the member record, then returns one magic-link token hash for
+ * the browser to sign in with and set its own password. The password never reaches Core.
+ */
+export async function setUpImmediateAccount(
+  statusToken: string
+): Promise<ImmediateAccountResult> {
+  if (!isStatusToken(statusToken)) return { ok: false, error: "not_found" };
+  const tokenHash = hashStatusToken(statusToken);
+  try {
+    let begin = await beginImmediateAccountThroughRoutine(tokenHash);
+    if (begin.code === "CREATE") {
+      const created = await createImmediateAccount({
+        id: begin.userId!,
+        email: begin.email!,
+        applicationId: begin.applicationId!,
+      });
+      if (created.code === "EMAIL_EXISTS") {
+        // Created by an earlier attempt, or by someone else meanwhile: the database tells which.
+        begin = await beginImmediateAccountThroughRoutine(tokenHash);
+      } else if (created.code !== "SUCCESS") {
+        return {
+          ok: false,
+          error:
+            created.code === "UNAVAILABLE" ? "not_configured" : "server_error",
+        };
+      } else {
+        begin = { ...begin, code: "LINK" };
+      }
+    }
+    if (begin.code !== "LINK") {
+      return {
+        ok: false,
+        error: IMMEDIATE_REFUSALS[begin.code] ?? "server_error",
+      };
+    }
+    const completed = await completeImmediateAccountThroughRoutine(
+      tokenHash,
+      begin.userId!
+    );
+    if (completed.code !== "SUCCESS") {
+      return {
+        ok: false,
+        error: IMMEDIATE_REFUSALS[completed.code] ?? "server_error",
+      };
+    }
+    const link = await createSignInTokenHash(begin.email!);
+    if (link.code !== "SUCCESS" || !link.tokenHash) {
+      return { ok: false, error: "server_error" };
+    }
+    return {
+      ok: true,
+      tokenHash: link.tokenHash,
+      member: completed.member === true,
+    };
+  } catch (error) {
+    logServerError("membership_immediate_account_failed", error);
     return { ok: false, error: "server_error" };
   }
 }

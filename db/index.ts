@@ -23,7 +23,11 @@
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { oneQueryPerConnection } from "./one-query-per-connection";
 import * as schema from "./schema";
+
+/** Connections per process (per warm Vercel instance), each running one query at a time. */
+const RUNTIME_CONNECTIONS = 1;
 
 export const RUNTIME_DATABASE_URL_MISSING =
   "APP_RUNTIME_DATABASE_URL is required for runtime database access.";
@@ -58,13 +62,19 @@ function createRuntimeDb() {
   //
   // Vercel functions are short-lived, so cap each warm instance at one
   // connection and refuse an unencrypted connection to any non-local target.
+  //
+  // One query at a time per connection: postgres.js would otherwise pipeline
+  // concurrent queries, and through the transaction pooler a pipelined query
+  // can lose its reply and hang the process (see one-query-per-connection.ts).
   const client = postgres(runtimeDatabaseUrl, {
-    max: 1,
+    max: RUNTIME_CONNECTIONS,
     prepare: false,
     ssl: isLocalTestDatabase ? false : "require",
   });
 
-  return drizzle(client, { schema });
+  return drizzle(oneQueryPerConnection(client, RUNTIME_CONNECTIONS), {
+    schema,
+  });
 }
 
 type RuntimeDb = ReturnType<typeof createRuntimeDb>;

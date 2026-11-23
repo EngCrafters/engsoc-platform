@@ -1,12 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSenior } from "@/lib/administration/access";
+import { getManagerContext } from "@/lib/auth/manager";
+import { can } from "@/lib/auth/permissions";
 import { changeAccess, replaceManager } from "@/lib/access/server";
 import { ACCESS_ERROR_MESSAGES as MESSAGES } from "@/lib/access/messages";
 import { isUuid } from "@/lib/admin-events/types";
 
 export type AccessActionState = { message: string; success: boolean };
+
+/** The signed-in person when they may change access: 'full' for every role, else managers only. */
+async function accountActor() {
+  const actor = await getManagerContext();
+  if (actor.kind !== "manager") return null;
+  const full = can(actor, "accounts.admin_levels");
+  if (!full && !can(actor, "accounts.manage")) return null;
+  return { userId: actor.userId, full };
+}
 
 function field(form: FormData, name: string) {
   const values = form.getAll(name);
@@ -19,15 +29,16 @@ export async function changeAccessAction(
   _previous: AccessActionState,
   form: FormData
 ): Promise<AccessActionState> {
-  // Technical Team for every role; Board Administration for Committee Managers only (ADR 0024).
-  const actor = await requireSenior();
+  // Manage administrator access covers every role; Manage committee access, Committee Managers
+  // only (ADR 0027). The database applies the same rule to the live actor.
+  const actor = await accountActor();
   if (!actor) return { success: false, message: MESSAGES.FORBIDDEN };
   const userId = field(form, "userId");
   const level = field(form, "level");
   const committeeId = field(form, "committeeId");
   const operation = field(form, "operation");
   const note = field(form, "note");
-  if (actor.accessLevel === "BOARD_ADMIN" && level !== "COMMITTEE_MANAGER") {
+  if (!actor.full && level !== "COMMITTEE_MANAGER") {
     return { success: false, message: MESSAGES.FORBIDDEN };
   }
   if (
@@ -83,7 +94,7 @@ export async function replaceManagerAction(
   _previous: AccessActionState,
   form: FormData
 ): Promise<AccessActionState> {
-  const actor = await requireSenior();
+  const actor = await accountActor();
   if (!actor) return { success: false, message: MESSAGES.FORBIDDEN };
   const oldUserId = field(form, "oldUserId");
   const newUserId = field(form, "newUserId");

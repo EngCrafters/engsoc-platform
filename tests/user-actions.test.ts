@@ -15,8 +15,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("../lib/auth/manager", () => ({
-  getManagerContext: mocks.getManagerContext,
+vi.mock("../lib/auth/manager", async () => ({
+  getManagerContext: async (...args: unknown[]) =>
+    (await import("./support/manager-fixture")).withAccess(
+      await (mocks.getManagerContext as (...a: unknown[]) => unknown)(...args)
+    ),
 }));
 vi.mock("../lib/access/server", () => ({
   changeAccess: mocks.changeAccess,
@@ -116,7 +119,7 @@ describe("Technical user administration actions", () => {
   });
 
   const deniedMessage =
-    "Your access level does not allow this change. Board Administration manages Committee Managers; the Technical Team manages every role.";
+    "Your permissions do not allow this change. Manage committee access covers Committee Managers; Manage administrator access covers Board Administration and Technical.";
 
   it.each(["COMMITTEE_MANAGER"])(
     "denies every operation to a %s and touches nothing",

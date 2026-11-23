@@ -50,11 +50,11 @@ describe("local review mode guard", () => {
     expect(isLocalReviewModeActive()).toBe(true);
   });
 
-  it("getLocalReviewCommittees returns nothing when inactive, without connecting", async () => {
+  it("getLocalReviewAccess returns nothing when inactive, without connecting", async () => {
     delete process.env.UC02_LOCAL_REVIEW_DATABASE_URL;
-    const { getLocalReviewCommittees } = await loadModule();
+    const { getLocalReviewAccess } = await loadModule();
     await expect(
-      getLocalReviewCommittees("11111111-1111-4111-8111-111111111111")
-    ).resolves.toEqual([]);
+      getLocalReviewAccess("11111111-1111-4111-8111-111111111111")
+    ).resolves.toBeNull();
   });
 });

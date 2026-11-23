@@ -1,22 +1,23 @@
-// Who the membership rules name as reviewers (ADR 0017), for display only.
+// Who sees the membership section, from the person's permissions (ADR 0027), for display only.
 
-/** The committee whose managers review membership applications. */
+import { canAny, type DashboardAccess } from "@/lib/auth/permissions";
+
+/** The committee whose configuration starts with membership review (seeded by migration 0035). */
 export const SOCIETY_AFFAIRS_SLUG = "society-affairs";
 
 /**
- * Whether an administrative role is one the membership rules name: the
- * Society Affairs manager, Board Administration or Technical. Used only when
- * the database cannot answer (for example, migration 0025 is missing), to
- * decide who is told that membership review needs setup. It grants nothing:
- * every list, document and decision is still decided by the database routines,
- * which apply the same rule to live access.
+ * Whether the person holds any membership-area permission: applications, SQU verification,
+ * leadership or their settings. Used when the database cannot answer (for example, a migration is
+ * missing) to decide who is told the section needs setup. It grants nothing: every list, document
+ * and decision is still decided by the database routines.
  */
 export function hasMembershipReviewerRole(manager: {
-  accessLevel: "COMMITTEE_MANAGER" | "BOARD_ADMIN" | "TECHNICAL";
-  committees: ReadonlyArray<{ slug?: string | null }>;
+  access: DashboardAccess;
 }): boolean {
-  if (manager.accessLevel !== "COMMITTEE_MANAGER") return true;
-  return manager.committees.some(
-    (committee) => committee.slug === SOCIETY_AFFAIRS_SLUG
+  return (
+    canAny(manager, "membership.view") ||
+    canAny(manager, "squ.view") ||
+    canAny(manager, "leadership.view") ||
+    canAny(manager, "settings.verification")
   );
 }

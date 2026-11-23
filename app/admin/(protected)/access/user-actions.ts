@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSenior } from "@/lib/administration/access";
+import {
+  requireAnyPermission,
+  requirePermission,
+} from "@/lib/administration/access";
+import { can } from "@/lib/auth/permissions";
 import {
   changeAccess,
   listAuthDirectory,
@@ -30,10 +34,21 @@ function error(code: string): UserActionState {
   };
 }
 
-/** Credential tools (password reset, temporary password) stay with the Technical Team. */
-async function requireTechnical() {
-  const actor = await requireSenior();
-  return actor?.accessLevel === "TECHNICAL" ? actor : null;
+/** Credential tools (password reset, temporary password) need accounts.credentials (ADR 0027). */
+async function requireCredentials() {
+  return requirePermission("accounts.credentials");
+}
+
+/** Inviting accounts and managing their access: committee access or administrator access. */
+async function requireAccountManager() {
+  const actor = await requireAnyPermission(
+    "accounts.manage",
+    "accounts.admin_levels"
+  );
+  return actor &&
+    (can(actor, "accounts.manage") || can(actor, "accounts.admin_levels"))
+    ? actor
+    : null;
 }
 
 function text(form: FormData, field: string) {
@@ -116,8 +131,9 @@ export async function createUserAction(
   _previous: UserActionState,
   form: FormData
 ): Promise<UserActionState> {
-  // Board Administration invites Committee Managers (or plain accounts) by email only (ADR 0024).
-  const actor = await requireSenior();
+  // Without Manage administrator access only Committee Managers (or plain accounts); without
+  // Account credentials, invitations only (ADR 0027).
+  const actor = await requireAccountManager();
   if (!actor) return error("FORBIDDEN");
 
   const email = text(form, "email")?.toLowerCase() ?? "";
@@ -135,14 +151,18 @@ export async function createUserAction(
     !METHODS.includes(method) ||
     (level === "COMMITTEE_MANAGER" &&
       (!isUuid(committeeId) ||
-        !actor.committees.some((committee) => committee.id === committeeId))) ||
+        !actor.allCommittees.some(
+          (committee) => committee.id === committeeId
+        ))) ||
     (level !== "COMMITTEE_MANAGER" && committeeId !== "")
   ) {
     return error("INVALID_INPUT");
   }
   if (
-    actor.accessLevel === "BOARD_ADMIN" &&
-    ((level !== "NONE" && level !== "COMMITTEE_MANAGER") || method !== "invite")
+    (!can(actor, "accounts.admin_levels") &&
+      level !== "NONE" &&
+      level !== "COMMITTEE_MANAGER") ||
+    (!can(actor, "accounts.credentials") && method !== "invite")
   ) {
     return error("FORBIDDEN");
   }
@@ -231,7 +251,7 @@ export async function sendResetEmailAction(
   _previous: UserActionState,
   form: FormData
 ): Promise<UserActionState> {
-  const actor = await requireTechnical();
+  const actor = await requireCredentials();
   if (!actor) return error("FORBIDDEN");
   const entry = await accountEmail(actor.userId, text(form, "userId") ?? "");
   if (!entry) return error("USER_NOT_FOUND");
@@ -252,7 +272,7 @@ export async function resendInvitationAction(
   _previous: UserActionState,
   form: FormData
 ): Promise<UserActionState> {
-  const actor = await requireSenior();
+  const actor = await requireAccountManager();
   if (!actor) return error("FORBIDDEN");
   const entry = await accountEmail(actor.userId, text(form, "userId") ?? "");
   if (!entry) return error("USER_NOT_FOUND");
@@ -278,7 +298,7 @@ export async function setTemporaryPasswordAction(
   _previous: UserActionState,
   form: FormData
 ): Promise<UserActionState> {
-  const actor = await requireTechnical();
+  const actor = await requireCredentials();
   if (!actor) return error("FORBIDDEN");
   const userId = text(form, "userId") ?? "";
   if (!isUuid(userId)) return error("USER_NOT_FOUND");
@@ -334,7 +354,7 @@ const HISTORY_LABELS: Record<string, string> = {
 export async function getUserHistoryAction(
   userId: string
 ): Promise<UserHistoryItem[]> {
-  const actor = await requireSenior();
+  const actor = await requirePermission("accounts.view");
   if (!actor || !isUuid(userId)) return [];
   const [rows, directory] = await Promise.all([
     listUserAudit(actor.userId, userId),
@@ -351,7 +371,7 @@ export async function getUserHistoryAction(
     label: HISTORY_LABELS[row.action] ?? row.action,
     detail: [
       row.previous_state || row.new_state
-        ? `${auditStateLabel(row.previous_state, actor.committees)} → ${auditStateLabel(row.new_state, actor.committees)}`
+        ? `${auditStateLabel(row.previous_state, actor.allCommittees)} → ${auditStateLabel(row.new_state, actor.allCommittees)}`
         : "",
       row.note ?? "",
     ]
