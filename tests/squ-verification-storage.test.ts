@@ -1,40 +1,36 @@
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// SQU student verification evidence in private Storage (ADR 0025, after ADR 0018's order):
+// begin, upload under a random key, then record the reference. No network, no database.
 vi.mock("server-only", () => ({}));
 const routines = vi.hoisted(() => ({
   begin: vi.fn(),
-  submitStored: vi.fn(),
   submit: vi.fn(),
   queue: vi.fn(),
-  status: vi.fn(),
 }));
-vi.mock("../lib/membership/db", () => ({
-  beginSubmissionThroughRoutine: routines.begin,
-  submitStoredThroughRoutine: routines.submitStored,
-  submitThroughRoutine: routines.submit,
-  queueAbandonedUploadThroughRoutine: routines.queue,
-  statusThroughRoutine: routines.status,
+vi.mock("../lib/verification/db", () => ({
+  beginSquThroughRoutine: routines.begin,
+  submitSquThroughRoutine: routines.submit,
+  queueAbandonedSquThroughRoutine: routines.queue,
+  ownSquThroughRoutine: vi.fn(),
+  ownLeadershipThroughRoutine: vi.fn(),
+  leadershipOptionsThroughRoutine: vi.fn(),
+  requestLeadershipThroughRoutine: vi.fn(),
 }));
 
 import { DOCUMENT_KEY_PATTERN, STORAGE_ENV } from "../lib/membership/storage";
-import { submitMembershipApplication } from "../lib/membership";
+import { submitSquVerification } from "../lib/verification/member";
 
 // A synthetic, non-image byte sequence with a PNG signature: never a real card.
 const PNG = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4,
 ]);
-const application = {
-  fullName: "Synthetic Applicant",
-  email: "s000001@squ.edu.om",
-  universityId: "00000001",
-  academicYear: 2,
-  discipline: "civil" as const,
-  interests: [],
-  consentVersion: "2026-10-v1",
+const ACTOR = "11111111-1111-4111-8111-111111111111";
+const evidence = {
+  studentNumber: "20231234",
   document: { mediaType: "image/png" as const, bytes: PNG },
 };
-const IP = "203.0.113.7";
 const SECRET = "local-test-secret-NEVER-SENT-0123456789";
 const storageEnv = {
   SUPABASE_S3_ENDPOINT: "https://project.storage.supabase.co/storage/v1/s3",
@@ -64,11 +60,8 @@ beforeEach(() => {
   });
   vi.spyOn(console, "error").mockImplementation(() => {});
   routines.begin.mockResolvedValue({ code: "SUCCESS" });
-  routines.submitStored.mockResolvedValue({
-    code: "SUCCESS",
-    applicationId: "33333333-3333-4333-8333-333333333333",
-  });
-  routines.queue.mockResolvedValue("SUCCESS");
+  routines.submit.mockResolvedValue({ code: "SUCCESS", requestId: "r-1" });
+  routines.queue.mockResolvedValue({ code: "SUCCESS" });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -82,82 +75,70 @@ const keyOf = (call: Call) =>
     ""
   );
 
-describe("membership submission with private Storage", () => {
-  it("keeps the PostgreSQL path while no Storage variable is set", async () => {
-    routines.submit.mockResolvedValue({
-      code: "SUCCESS",
-      applicationId: "33333333-3333-4333-8333-333333333333",
+describe("SQU verification evidence with private Storage", () => {
+  it("keeps the bytes in PostgreSQL while no Storage variable is set", async () => {
+    expect((await submitSquVerification(ACTOR, evidence)).code).toBe("SUCCESS");
+    expect(routines.submit).toHaveBeenCalledWith(ACTOR, {
+      studentNumber: "20231234",
+      mediaType: "image/png",
+      sha256: createHash("sha256").update(PNG).digest("hex"),
+      byteSize: PNG.byteLength,
+      content: Buffer.from(PNG),
+      storageBucket: null,
+      storageKey: null,
     });
-    const result = await submitMembershipApplication(application, IP);
-    expect(result.ok).toBe(true);
-    expect(routines.submit).toHaveBeenCalledTimes(1);
-    expect(routines.begin).not.toHaveBeenCalled();
     expect(calls).toEqual([]);
   });
 
   it("refuses to store anything when Storage is only partly configured", async () => {
     useStorage({ ...storageEnv, SUPABASE_S3_MEMBERSHIP_BUCKET: "" });
-    expect(await submitMembershipApplication(application, IP)).toEqual({
-      ok: false,
-      error: "server_error",
+    expect(await submitSquVerification(ACTOR, evidence)).toEqual({
+      code: "STORAGE_UNAVAILABLE",
     });
-    expect(routines.submit).not.toHaveBeenCalled();
     expect(routines.begin).not.toHaveBeenCalled();
+    expect(routines.submit).not.toHaveBeenCalled();
     expect(calls).toEqual([]);
   });
 
-  it("uploads nothing for a refused applicant", async () => {
+  it("uploads nothing for a member the database refuses", async () => {
     useStorage();
-    for (const [code, error] of [
-      ["RATE_LIMITED", "rate_limited"],
-      ["ALREADY_APPLIED", "already_applied"],
-      ["ALREADY_MEMBER", "already_member"],
+    for (const code of [
+      "ALREADY_PENDING",
+      "ALREADY_VERIFIED",
+      "RATE_LIMITED",
+      "MEMBER_REQUIRED",
     ]) {
       routines.begin.mockResolvedValue({ code });
-      expect(await submitMembershipApplication(application, IP)).toEqual({
-        ok: false,
-        error,
-      });
+      expect((await submitSquVerification(ACTOR, evidence)).code).toBe(code);
     }
     expect(calls).toEqual([]);
-    expect(routines.submitStored).not.toHaveBeenCalled();
+    expect(routines.submit).not.toHaveBeenCalled();
   });
 
-  it("stores the card under a random key and records only the reference", async () => {
+  it("stores the card under a random squ-verification key and records only the reference", async () => {
     useStorage();
-    const result = await submitMembershipApplication(application, IP);
-    expect(result.ok).toBe(true);
+    expect((await submitSquVerification(ACTOR, evidence)).code).toBe("SUCCESS");
     expect(calls.map((c) => c.method)).toEqual(["PUT"]);
     const key = keyOf(calls[0]);
     expect(key).toMatch(DOCUMENT_KEY_PATTERN);
+    expect(key.startsWith("squ-verification/")).toBe(true);
     expect(key.endsWith(".png")).toBe(true);
-    expect(key).not.toMatch(/s000001|00000001|Synthetic/);
-    const stored = routines.submitStored.mock.calls[0][0];
-    expect(stored).toMatchObject({
+    expect(key).not.toMatch(/20231234|1111/);
+    expect(routines.submit.mock.calls[0][1]).toMatchObject({
+      content: null,
       storageBucket: "v1",
       storageKey: key,
       byteSize: PNG.byteLength,
-      mediaType: "image/png",
-      sha256: createHash("sha256").update(PNG).digest("hex"),
-      ipAddress: IP,
     });
-    expect(routines.begin).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: "s000001@squ.edu.om",
-        universityId: "00000001",
-        ipAddress: IP,
-      })
-    );
   });
 
-  it("reports a refused upload as unavailable and writes no application", async () => {
+  it("reports a refused upload as unavailable and writes no request", async () => {
     useStorage();
     respond = () => new Response(null, { status: 403 });
-    expect(await submitMembershipApplication(application, IP)).toEqual({
-      ok: false,
-      error: "server_error",
+    expect(await submitSquVerification(ACTOR, evidence)).toEqual({
+      code: "STORAGE_UNAVAILABLE",
     });
-    expect(routines.submitStored).not.toHaveBeenCalled();
+    expect(routines.submit).not.toHaveBeenCalled();
     expect(routines.queue).not.toHaveBeenCalled();
   });
 
@@ -166,39 +147,36 @@ describe("membership submission with private Storage", () => {
     respond = () => {
       throw new TypeError("socket hang up");
     };
-    expect((await submitMembershipApplication(application, IP)).ok).toBe(false);
-    expect(routines.submitStored).not.toHaveBeenCalled();
+    expect((await submitSquVerification(ACTOR, evidence)).code).toBe(
+      "STORAGE_UNAVAILABLE"
+    );
+    expect(routines.submit).not.toHaveBeenCalled();
     expect(routines.queue).toHaveBeenCalledWith("v1", keyOf(calls[0]));
   });
 
-  it("deletes the object when the application is refused after upload", async () => {
+  it("deletes the object when the request is refused after upload, or queues it when that fails", async () => {
     useStorage();
-    routines.submitStored.mockResolvedValue({ code: "ALREADY_APPLIED" });
-    expect(await submitMembershipApplication(application, IP)).toEqual({
-      ok: false,
-      error: "already_applied",
-    });
+    routines.submit.mockResolvedValue({ code: "ALREADY_PENDING" });
+    expect((await submitSquVerification(ACTOR, evidence)).code).toBe(
+      "ALREADY_PENDING"
+    );
     expect(calls.map((c) => c.method)).toEqual(["PUT", "DELETE"]);
     expect(keyOf(calls[1])).toBe(keyOf(calls[0]));
     expect(routines.queue).not.toHaveBeenCalled();
-  });
 
-  it("queues the object when that deletion fails", async () => {
-    useStorage();
-    routines.submitStored.mockResolvedValue({ code: "ALREADY_MEMBER" });
+    calls = [];
     respond = (call) =>
       new Response(null, { status: call.method === "DELETE" ? 500 : 200 });
-    await submitMembershipApplication(application, IP);
+    await submitSquVerification(ACTOR, evidence);
     expect(routines.queue).toHaveBeenCalledWith("v1", keyOf(calls[0]));
   });
 
   it("never deletes directly when the database outcome is unknown", async () => {
     useStorage();
-    routines.submitStored.mockRejectedValue(new Error("connection reset"));
-    expect(await submitMembershipApplication(application, IP)).toEqual({
-      ok: false,
-      error: "server_error",
-    });
+    routines.submit.mockRejectedValue(new Error("connection reset"));
+    await expect(submitSquVerification(ACTOR, evidence)).rejects.toThrow(
+      "connection reset"
+    );
     // Only the queue, which refuses referenced objects, may remove it.
     expect(calls.map((c) => c.method)).toEqual(["PUT"]);
     expect(routines.queue).toHaveBeenCalledWith("v1", keyOf(calls[0]));

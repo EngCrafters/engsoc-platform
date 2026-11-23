@@ -17,7 +17,12 @@ import {
   type PendingErasure,
   type ProjectDeletionPreview,
 } from "@/lib/administration/server";
-import { isUuid, requireSenior } from "@/lib/administration/access";
+import {
+  isUuid,
+  requireAnyPermission,
+  requirePermission,
+} from "@/lib/administration/access";
+import type { PermissionKey } from "@/lib/auth/permissions";
 import {
   BLOCKER_MESSAGES,
   administrationMessage,
@@ -228,15 +233,26 @@ function memberPreview(p: MemberDeletionPreview): DeletionPreview {
 /** Server actions receive whatever the browser sends: accept only the known kinds. */
 const KINDS: readonly string[] = ["event", "project", "membership", "account"];
 
+/** Each kind's permission (ADR 0027). Events are scoped: the routine checks the event's committee. */
+const DELETE_PERMISSION: Record<DeletionKind, PermissionKey> = {
+  event: "events.delete",
+  project: "projects.delete",
+  membership: "members.delete",
+  account: "accounts.erase",
+};
+const deletionActor = (kind: DeletionKind) =>
+  kind === "event"
+    ? requireAnyPermission("events.delete")
+    : requirePermission(DELETE_PERMISSION[kind]);
+
 export async function previewDeletionAction(
   kind: DeletionKind,
   id: string
 ): Promise<PreviewState> {
   if (!KINDS.includes(kind))
     return { ok: false, message: administrationMessage("VALIDATION_ERROR") };
-  const actor = await requireSenior();
-  if (!actor || (kind === "account" && actor.accessLevel !== "TECHNICAL"))
-    return { ok: false, message: administrationMessage("FORBIDDEN") };
+  const actor = await deletionActor(kind);
+  if (!actor) return { ok: false, message: administrationMessage("FORBIDDEN") };
   if (!isUuid(id))
     return { ok: false, message: administrationMessage("NOT_FOUND") };
   try {
@@ -290,9 +306,8 @@ export async function deletePermanentlyAction(
     typeof password !== "string"
   )
     return { ok: false, message: administrationMessage("VALIDATION_ERROR") };
-  const actor = await requireSenior();
-  if (!actor || (kind === "account" && actor.accessLevel !== "TECHNICAL"))
-    return { ok: false, message: administrationMessage("FORBIDDEN") };
+  const actor = await deletionActor(kind);
+  if (!actor) return { ok: false, message: administrationMessage("FORBIDDEN") };
   const people = kind === "membership" || kind === "account";
   if (people) {
     const check = await confirmOwnPassword(actor.email ?? "", password);
@@ -376,12 +391,12 @@ async function finishErasure(
   return completed.code === "SUCCESS";
 }
 
-/** Retries an erasure whose Auth deletion was not confirmed. Technical Team only. */
+/** Retries an erasure whose Auth deletion was not confirmed (accounts.erase). */
 export async function retryErasureAction(
   erasureId: string
 ): Promise<DeletionState> {
-  const actor = await requireSenior();
-  if (!actor || actor.accessLevel !== "TECHNICAL" || !isUuid(erasureId))
+  const actor = await requirePermission("accounts.erase");
+  if (!actor || !isUuid(erasureId))
     return { ok: false, message: administrationMessage("FORBIDDEN") };
   try {
     const listed = await listAccountErasures(actor.userId);

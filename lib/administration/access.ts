@@ -1,23 +1,29 @@
 import "server-only";
 
-import { getManagerContext, type ManagerContext } from "@/lib/auth/manager";
-
-export type SeniorContext = Extract<ManagerContext, { kind: "manager" }> & {
-  accessLevel: "BOARD_ADMIN" | "TECHNICAL";
-};
+import { getManagerContext, type Manager } from "@/lib/auth/manager";
+import { can, canAny, type PermissionKey } from "@/lib/auth/permissions";
 
 /**
- * The Administration section's gate: an active Board Administration or Technical Team grant,
- * re-checked for this request. It mirrors the database; every routine checks again.
+ * The signed-in person when they hold `key` (society-wide, or for `committeeId`), re-checked for
+ * this request. It mirrors the database (ADR 0027); every routine checks again.
  */
-export async function requireSenior(): Promise<SeniorContext | null> {
+export async function requirePermission(
+  key: PermissionKey,
+  committeeId?: string | null
+): Promise<Manager | null> {
   const actor = await getManagerContext();
-  if (
-    actor.kind !== "manager" ||
-    (actor.accessLevel !== "BOARD_ADMIN" && actor.accessLevel !== "TECHNICAL")
-  )
+  if (actor.kind !== "manager" || !can(actor, key, committeeId)) return null;
+  return actor;
+}
+
+/** The signed-in person when they hold any of `keys`, in any scope (an entry point). */
+export async function requireAnyPermission(
+  ...keys: PermissionKey[]
+): Promise<Manager | null> {
+  const actor = await getManagerContext();
+  if (actor.kind !== "manager" || !keys.some((key) => canAny(actor, key)))
     return null;
-  return actor as SeniorContext;
+  return actor;
 }
 
 export const isUuid = (value: unknown): value is string =>

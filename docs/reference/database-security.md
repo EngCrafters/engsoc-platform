@@ -98,12 +98,13 @@ to `anon` and `authenticated`.
 
 ## Triggers
 
-| Trigger                                 | Table                                              | Function                                    | Effect                                                                              |
-| --------------------------------------- | -------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `events_committee_not_archived`         | `public.events` (insert, update of `committee_id`) | `private.reject_archived_committee`         | Refuses events in an archived committee                                             |
-| `administrative_access_revocation_kind` | `public.administrative_access` (update)            | `private.keep_revocation_kind`              | Keeps `revocation_kind` consistent with `revoked_at`                                |
-| `membership_document_removed`           | `private.membership_documents` (after delete)      | `private.queue_removed_membership_document` | Queues the Storage object in `membership_storage_deletions` in the same transaction |
-| `uc02_audit_update_guard`               | `private.uc02_audit` (update)                      | `private.guard_audit_update`                | Allows only the erasure pseudonymization; refuses every other update                |
+| Trigger                                    | Table                                               | Function                                    | Effect                                                                              |
+| ------------------------------------------ | --------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `events_committee_not_archived`            | `public.events` (insert, update of `committee_id`)  | `private.reject_archived_committee`         | Refuses events in an archived committee                                             |
+| `administrative_access_revocation_kind`    | `public.administrative_access` (update)             | `private.keep_revocation_kind`              | Keeps `revocation_kind` consistent with `revoked_at`                                |
+| `membership_document_removed`              | `private.membership_documents` (after delete)       | `private.queue_removed_membership_document` | Queues the Storage object in `membership_storage_deletions` in the same transaction |
+| `squ_verification_document_removed` (0033) | `private.squ_verification_documents` (after delete) | `private.queue_removed_membership_document` | The same, for SQU verification evidence                                             |
+| `uc02_audit_update_guard`                  | `private.uc02_audit` (update)                       | `private.guard_audit_update`                | Allows only the erasure pseudonymization; refuses every other update                |
 
 ## Supabase Auth relationships
 
@@ -245,6 +246,119 @@ longer called by the application, which uses `register_event_guest`.
 | `set_membership_approval_policy`       | yes              | yes                       | `lib/membership/server.ts`           |
 | `submit_membership_application`        | yes              | yes                       | `lib/membership/db.ts`               |
 | `submit_stored_membership_application` | yes              | yes                       | `lib/membership/db.ts`               |
+
+**Since 0033** the current Core submits through `submit_membership_application_v2` (next
+section). `begin_membership_submission`, `submit_membership_application`,
+`submit_stored_membership_application` and `queue_abandoned_membership_upload` stay executable
+for one release so the previous Core keeps working. The current Core no longer calls them.
+
+### Categories, SQU verification and leadership (0033, ADR 0025)
+
+Read from the local replay database's catalog on 2026-11-18. Every entry point is SECURITY
+DEFINER, owned by `uc02_routine_owner`, executable by `app_runtime` only, and takes the actor
+from Core's verified identity. Every helper is internal.
+
+| Routine                                                                                                                                                                                                                                                                                                                                                    | `app_runtime` may execute | Called from                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------- |
+| `get_membership_options`, `submit_membership_application_v2`                                                                                                                                                                                                                                                                                               | yes                       | `lib/membership/db.ts`                                           |
+| `update_own_profile_v2`                                                                                                                                                                                                                                                                                                                                    | yes                       | `lib/members/profile.ts`                                         |
+| `get_own_squ_verification`, `get_own_leadership`, `begin_squ_verification`, `submit_squ_verification`, `queue_abandoned_verification_upload`, `get_leadership_options`, `request_leadership`                                                                                                                                                               | yes                       | `lib/verification/db.ts`                                         |
+| `list_squ_verifications`, `get_squ_verification`, `get_squ_verification_document`, `decide_squ_verification`, `revoke_squ_verification`, `purge_expired_verification_documents`                                                                                                                                                                            | yes                       | `lib/verification/db.ts`                                         |
+| `list_leadership_requests`, `leadership_filter_options`, `get_leadership_request`, `decide_leadership_request`, `assign_leadership`, `update_leadership_appointment`, `revoke_leadership_appointment`                                                                                                                                                      | yes                       | `lib/verification/db.ts`                                         |
+| `admin_list_committee_teams`, `admin_create_team`, `admin_update_team`, `admin_move_team`, `admin_set_team_status`, `admin_delete_team`                                                                                                                                                                                                                    | yes                       | `lib/verification/db.ts` (through `lib/administration/teams.ts`) |
+| `get_verification_settings`, `set_verification_settings`, `set_position_limit`                                                                                                                                                                                                                                                                             | yes                       | `lib/verification/db.ts`                                         |
+| `verification_reviewer_kind` and `leadership_reviewer_kind` (SECURITY DEFINER), `leadership_appoint`, `leadership_recent_requests`, `cancel_team_requests`, `lock_organization`, `squ_state`, `squ_submission_block`, `team_json`, `position_json`, `team_names_invalid`, `note_text_valid`, `membership_details_json`, `membership_details_invalid_field` | no (internal)             | other routines                                                   |
+
+Replaced in place (same signatures): `get_own_profile`, `get_membership_application`,
+`get_membership_review_overview`, `list_membership_applications` (recreated, three columns
+appended), `admin_get_member`, `admin_set_committee_archived`, `admin_activity_actions`,
+`member_deletion_summary`, `purge_member_data`, `membership_complete_activation`,
+`claim_membership_storage_deletions` and `core_schema_version` (33). The one-time
+`backfill_0033` is dropped by the migration.
+
+**Authority:**
+
+- `verification_reviewer_kind` decides the SQU verification routines: Board Administration
+  (`senior`) and the Society Affairs Committee Manager. Technical access alone does **not** qualify,
+  unlike `membership_reviewer_kind` for applications.
+- `leadership_reviewer_kind` delegates to the same rule. It decides leadership requests, direct
+  appointments, position changes and revocations.
+- `senior_admin_level` (Board or Technical) decides teams: create, edit, move, deactivate, archive,
+  delete.
+- Technical alone changes settings and position limits.
+- Every decision, revocation and appointment change refuses the actor's own record
+  (`SELF_REVIEW`).
+- No 0033 routine writes or reads `public.administrative_access` to decide what an appointment
+  allows.
+
+**Concurrency:** transaction-scoped advisory locks.
+
+- `organization-structure` is exclusive for team changes, approvals, direct assignments and
+  position changes, and shared for requests. Occupancy checks and structure changes therefore
+  serialize, and a position cannot exceed its limit.
+- `leadership-member:<id>` serializes one member's leadership requests and limits.
+- `squ-verification:<id>` serializes one member's submissions.
+
+Decisions also check a `revision`, so a stale screen gets `STALE_REVISION`.
+
+**Member-facing output:** `get_own_squ_verification`, `get_own_leadership` and `squ_state` never
+return:
+
+- reviewer notes;
+- reviewer identities;
+- document keys;
+- the full student number, which is masked to its last three digits.
+
+**Audit:** every submission, decision, view of evidence, revocation, appointment change, team
+change and settings change writes `private.uc02_audit` in the same transaction. The member is
+identified by `memberId` only, so erasure pseudonymizes it.
+
+**0034 (ADR 0026, committee-level leadership).** New entry points for `app_runtime`:
+`assign_leadership(uuid, uuid, uuid, uuid, text, text)` (committee as well as team; the 0033
+five-argument form remains and delegates) and `set_leadership_requests_open(uuid, boolean)`
+(Board Administration or Technical, through `senior_admin_level`; audited as
+`leadership.requests_opened` or `leadership.requests_closed`). Internal, not executable by any login
+role: `leadership_appoint_scoped` (occupancy per scope under the exclusive organization lock),
+`cancel_committee_requests` and `leadership_scope_json`. The member, reviewer and committee
+routines were replaced with the same signatures; they read the scope as "committee" when
+`team_id` is null. `request_leadership` refuses with `REQUESTS_CLOSED` while requests are closed;
+decisions and revocations are unaffected by the switch.
+
+### Permissions (0035, ADR 0027)
+
+Internal (no grant to `app_runtime`): `actor_permission_grants` (plain SQL, inlined), the
+PL/pgSQL predicates `has_permission`, `has_any_permission`, `can_in_committee`,
+`can_record_permission`, `can_view_committee`, `can_view_any_committee`, `permission_committees`,
+the locking forms `lock_permission`, `lock_committee_permission`, `lock_record_permission`
+(shared or exclusive organization lock plus `FOR SHARE` on the actor's access row),
+`account_admin_kind`, `recovery_account_count`, `recovery_guard_begin`, `recovery_guard_end`,
+`permission_set_json`, `group_permissions_json`, `is_full_access`, `permission_catalog_json`. They
+have no `SECURITY DEFINER` and no `SET` so the planner can inline or cache them; only routines
+owned by `uc02_routine_owner` call them, and every name is schema-qualified.
+
+Runtime: `get_dashboard_access`, `list_permission_groups`, `get_permission_group`,
+`set_group_permissions`, `preview_retention_impact`, `set_verification_settings` (5 and 6
+arguments), `set_position_limit` (3 and 4 arguments).
+
+Redefined on the permission model: `can_access_committee` (`events.view`), `lock_committee_access`
+(unused, `events.edit`), `can_review_event` (`events.approve`), `membership_reviewer_kind`,
+`verification_reviewer_kind`, `leadership_reviewer_kind`, `project_reviewer`. 65 existing routines
+name their permission instead of a level; the migration's self-check fails if any routine other
+than `senior_admin_level` still checks a level directly.
+
+### Email Centre (0036, ADR 0028)
+
+Internal: `email_audience_members` (the audience query), `email_audience_valid`,
+`email_uuid_list`, `email_text_list`, `email_campaign_counts`, `email_finish_campaigns`.
+
+Runtime, each checking `email.send`: `email_filter_options`, `email_audience_preview`,
+`email_search_members`, `email_member_names`, `email_save_campaign`, `email_list_campaigns`,
+`email_get_campaign`, `email_queue_campaign`, `email_cancel_campaign`, `email_record_test`,
+`email_save_template`, `email_list_templates`, `email_archive_template`. Runtime without an actor,
+called only after Core authorized the caller: `email_claim_deliveries` (rechecks the sender's
+`email.send` and each recipient's eligibility, leases with `FOR UPDATE SKIP LOCKED`),
+`email_complete_delivery`, `email_record_event`, `email_unsubscribe`. The member's own:
+`get_own_email_preferences`, `set_own_email_preferences`.
 
 ### Projects
 

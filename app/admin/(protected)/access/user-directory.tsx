@@ -33,7 +33,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PermanentDeletionDialog } from "@/components/admin/permanent-deletion-dialog";
-import type { AccessLevel } from "@/lib/auth/manager";
 import { AccessDialog, type AccessSelection } from "./access-dialog";
 import { SuspensionDialog, type SuspensionTarget } from "./suspension-dialog";
 import { AddUserDialog } from "./add-user-dialog";
@@ -48,6 +47,7 @@ import {
   scopeLabel,
   type Committee,
   type UserRecord,
+  type AccountRights,
 } from "./user-types";
 
 type Confirm = { kind: "reset" | "resend"; user: UserRecord };
@@ -62,13 +62,13 @@ export function UserDirectory({
   users,
   committees,
   currentUserId,
-  actorLevel,
+  rights,
   adminConfigured,
 }: {
   users: UserRecord[];
   committees: Committee[];
   currentUserId: string;
-  actorLevel: AccessLevel;
+  rights: AccountRights;
   /** False when the server has no Auth Admin key, so account creation is off. */
   adminConfigured: boolean;
 }) {
@@ -80,8 +80,8 @@ export function UserDirectory({
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [suspension, setSuspension] = useState<SuspensionTarget | null>(null);
   const [erase, setErase] = useState<UserRecord | null>(null);
-  const technical = actorLevel === "TECHNICAL";
-  /** Board Administration acts only on accounts without senior access. */
+  const technical = rights.adminLevels;
+  /** Without administrator-level rights, only accounts without senior access are managed. */
   const manageable = (user: UserRecord) =>
     technical ||
     !user.access ||
@@ -280,7 +280,7 @@ export function UserDirectory({
                                 : "Revoke manager access"}
                           </DropdownMenuItem>
                         ) : null}
-                        {technical && adminConfigured ? (
+                        {rights.credentials && adminConfigured ? (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
@@ -307,7 +307,7 @@ export function UserDirectory({
                             ) : null}
                           </>
                         ) : null}
-                        {!technical &&
+                        {!rights.credentials &&
                         adminConfigured &&
                         (!user.emailConfirmed || user.invited) ? (
                           <>
@@ -319,7 +319,7 @@ export function UserDirectory({
                             </DropdownMenuItem>
                           </>
                         ) : null}
-                        {technical && adminConfigured && !isSelf ? (
+                        {rights.erase && adminConfigured && !isSelf ? (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -356,13 +356,13 @@ export function UserDirectory({
         open={addOpen}
         onOpenChange={setAddOpen}
         committees={committees}
-        actorLevel={actorLevel}
+        rights={rights}
       />
       <AccessDialog
         selection={access}
         committees={committees}
         users={users}
-        actorLevel={actorLevel}
+        rights={rights}
         onClose={closeAccess}
       />
       <SuspensionDialog target={suspension} onClose={closeSuspension} />
@@ -379,7 +379,7 @@ export function UserDirectory({
       <UserDetailsSheet
         user={detail}
         isSelf={detail?.userId === currentUserId}
-        canAdminister={technical && adminConfigured}
+        canAdminister={rights.credentials && adminConfigured}
         onClose={() => setDetail(null)}
         onAction={(action, user) => {
           setDetail(null);

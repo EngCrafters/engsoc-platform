@@ -14,7 +14,6 @@ import {
   Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import type { AccessLevel } from "@/lib/auth/manager";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/ui/brand-mark";
 import {
@@ -45,12 +44,30 @@ import {
 import {
   adminNavigation,
   isAdminNavActive,
+  type DashboardNav,
 } from "@/components/admin/admin-navigation";
 
-type Committees = ReadonlyArray<{ id: string; name: string }>;
 type OpenSettings = (trigger: HTMLElement) => void;
 export type MembershipNavigation =
-  { awaiting: number } | { unavailable: "setup-required" | "database-error" };
+  | {
+      /** Applications pending or verified. */
+      awaiting: number;
+      squPending: number;
+      leadershipPending: number;
+    }
+  | { unavailable: "setup-required" | "database-error" };
+
+/** Items waiting in each membership queue, for that queue's sidebar entry. */
+function membershipCount(
+  membership: Extract<MembershipNavigation, { awaiting: number }>,
+  href: string
+) {
+  return href === "/admin/membership/verifications"
+    ? membership.squPending
+    : href === "/admin/membership/leadership"
+      ? membership.leadershipPending
+      : membership.awaiting;
+}
 
 function NavLink({
   href,
@@ -114,12 +131,12 @@ function SettingsButton({ onOpenSettings }: { onOpenSettings: OpenSettings }) {
 
 function AccountMenu({
   email,
-  accessLevel,
+  roleLabel,
   logoutAction,
   onOpenSettings,
 }: {
   email: string | null;
-  accessLevel: AccessLevel;
+  roleLabel: string;
   logoutAction: () => void | Promise<void>;
   onOpenSettings: OpenSettings;
 }) {
@@ -149,12 +166,11 @@ function AccountMenu({
                 <span className="truncate font-medium" title={identity}>
                   {identity}
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {accessLevel === "TECHNICAL"
-                    ? "Technical Team"
-                    : accessLevel === "BOARD_ADMIN"
-                      ? "Board Administration"
-                      : "Committee Manager"}
+                <span
+                  className="truncate text-xs text-muted-foreground"
+                  title={roleLabel}
+                >
+                  {roleLabel}
                 </span>
               </div>
               <ChevronsUpDown
@@ -174,11 +190,7 @@ function AccountMenu({
                 {identity}
               </span>
               <span className="block text-xs text-muted-foreground">
-                {accessLevel === "TECHNICAL"
-                  ? "Technical Team"
-                  : accessLevel === "BOARD_ADMIN"
-                    ? "Board Administration"
-                    : "Committee Manager"}
+                {roleLabel}
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -240,16 +252,15 @@ function AccountMenu({
 
 export function AdminSidebar({
   email,
-  accessLevel,
-  committees,
+  nav,
   membership = null,
   logoutAction,
   onOpenSettings,
   ...props
 }: {
   email: string | null;
-  accessLevel: AccessLevel;
-  committees: Committees;
+  /** Which entries the person's permissions open (ADR 0027), computed on the server. */
+  nav: DashboardNav;
   /**
    * Present only for membership reviewers; `awaiting` = pending + verified.
    * `unavailable`: the database could not confirm access, so the section
@@ -259,7 +270,7 @@ export function AdminSidebar({
   logoutAction: () => void | Promise<void>;
   onOpenSettings: OpenSettings;
 } & Omit<React.ComponentProps<typeof Sidebar>, "children">) {
-  const scopeLabel = committees.map((committee) => committee.name).join(", ");
+  const show = (link: { href: string }) => nav.items[link.href] === true;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -274,9 +285,7 @@ export function AdminSidebar({
                     Engineering Society
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {accessLevel === "TECHNICAL"
-                      ? "Technical Administration"
-                      : "Administration"}
+                    Administration
                   </span>
                 </div>
               </Link>
@@ -289,13 +298,12 @@ export function AdminSidebar({
           <SidebarGroupLabel>Administration</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu aria-label="Administration">
-              {adminNavigation.workspace.map((link) => (
+              {adminNavigation.workspace.filter(show).map((link) => (
                 <NavLink key={link.href} {...link} />
               ))}
-              {(accessLevel !== "COMMITTEE_MANAGER" || membership) &&
-                adminNavigation.projects.map((link) => (
-                  <NavLink key={link.href} {...link} />
-                ))}
+              {adminNavigation.projects.filter(show).map((link) => (
+                <NavLink key={link.href} {...link} />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -304,41 +312,55 @@ export function AdminSidebar({
             <SidebarGroupLabel>Membership</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu aria-label="Membership">
-                {adminNavigation.membership.map((link) =>
-                  "unavailable" in membership ? (
-                    <NavLink
-                      key={link.href}
-                      {...link}
-                      badge={
-                        membership.unavailable === "setup-required"
-                          ? "Setup"
-                          : "!"
-                      }
-                      badgeLabel={
-                        membership.unavailable === "setup-required"
-                          ? "setup required"
-                          : "temporarily unavailable"
-                      }
-                    />
-                  ) : (
-                    <NavLink
-                      key={link.href}
-                      {...link}
-                      badge={membership.awaiting}
-                      badgeLabel={`${membership.awaiting} awaiting a decision`}
-                    />
-                  )
-                )}
+                {adminNavigation.membership
+                  .filter(show)
+                  .map((link) =>
+                    "unavailable" in membership ? (
+                      <NavLink
+                        key={link.href}
+                        {...link}
+                        badge={
+                          membership.unavailable === "setup-required"
+                            ? "Setup"
+                            : "!"
+                        }
+                        badgeLabel={
+                          membership.unavailable === "setup-required"
+                            ? "setup required"
+                            : "temporarily unavailable"
+                        }
+                      />
+                    ) : (
+                      <NavLink
+                        key={link.href}
+                        {...link}
+                        badge={membershipCount(membership, link.href)}
+                        badgeLabel={`${membershipCount(membership, link.href)} awaiting a decision`}
+                      />
+                    )
+                  )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
-        {accessLevel !== "COMMITTEE_MANAGER" ? (
+        {adminNavigation.communications.some(show) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Communications</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu aria-label="Communications">
+                {adminNavigation.communications.filter(show).map((link) => (
+                  <NavLink key={link.href} {...link} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+        {adminNavigation.administration.some(show) ? (
           <SidebarGroup>
             <SidebarGroupLabel>Society administration</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu aria-label="Society administration">
-                {adminNavigation.administration.map((link) => (
+                {adminNavigation.administration.filter(show).map((link) => (
                   <NavLink key={link.href} {...link} />
                 ))}
               </SidebarMenu>
@@ -358,24 +380,20 @@ export function AdminSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        {committees.length > 0 ? (
+        {nav.scopeLabel ? (
           <p
             role="note"
-            aria-label={`Committee scope: ${scopeLabel}`}
-            title={scopeLabel}
+            aria-label={`Committee scope: ${nav.scopeLabel}`}
+            title={nav.scopeLabel}
             className="flex items-center gap-2 px-2 text-xs text-muted-foreground"
           >
             <Layers3 aria-hidden="true" className="size-4 shrink-0" />
-            <span className="min-w-0 truncate">
-              {accessLevel === "COMMITTEE_MANAGER"
-                ? committees[0].name
-                : "All Committees"}
-            </span>
+            <span className="min-w-0 truncate">{nav.scopeLabel}</span>
           </p>
         ) : null}
         <AccountMenu
           email={email}
-          accessLevel={accessLevel}
+          roleLabel={nav.roleLabel}
           logoutAction={logoutAction}
           onOpenSettings={onOpenSettings}
         />

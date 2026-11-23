@@ -10,7 +10,13 @@ import {
   updateCommittee,
   type MemberRow,
 } from "@/lib/administration/server";
-import { formText, isUuid, requireSenior } from "@/lib/administration/access";
+import {
+  formText,
+  isUuid,
+  requireAnyPermission,
+  requirePermission,
+} from "@/lib/administration/access";
+import { can } from "@/lib/auth/permissions";
 import { administrationMessage } from "@/lib/administration/messages";
 import { logServerError } from "@/lib/api/log";
 
@@ -70,7 +76,7 @@ export async function createCommitteeAction(
   _previous: AdminActionState,
   form: FormData
 ): Promise<AdminActionState> {
-  const actor = await requireSenior();
+  const actor = await requirePermission("committees.manage");
   if (!actor) return FORBIDDEN;
   const name = formText(form, "name") ?? "";
   const slug = formText(form, "slug") ?? "";
@@ -99,7 +105,7 @@ export async function updateCommitteeAction(
   _previous: AdminActionState,
   form: FormData
 ): Promise<AdminActionState> {
-  const actor = await requireSenior();
+  const actor = await requirePermission("committees.manage");
   if (!actor) return FORBIDDEN;
   const id = formText(form, "committeeId");
   const name = formText(form, "name") ?? "";
@@ -123,7 +129,7 @@ export async function archiveCommitteeAction(
   _previous: AdminActionState,
   form: FormData
 ): Promise<AdminActionState> {
-  const actor = await requireSenior();
+  const actor = await requirePermission("committees.manage");
   if (!actor) return FORBIDDEN;
   const id = formText(form, "committeeId");
   const archived = formText(form, "archived");
@@ -141,6 +147,7 @@ export async function archiveCommitteeAction(
     if (result.code === "BLOCKED") {
       const managers = Number(result.managers ?? 0);
       const upcoming = Number(result.upcomingEvents ?? 0);
+      const appointments = Number(result.appointments ?? 0);
       return {
         status: "error",
         message: [
@@ -149,6 +156,9 @@ export async function archiveCommitteeAction(
             : "",
           upcoming
             ? `${upcoming} upcoming live event${upcoming === 1 ? "" : "s"} must be archived first.`
+            : "",
+          appointments
+            ? `${appointments} active team appointment${appointments === 1 ? "" : "s"} must be revoked first.`
             : "",
         ]
           .filter(Boolean)
@@ -169,7 +179,7 @@ export async function rosterAction(
   _previous: AdminActionState,
   form: FormData
 ): Promise<AdminActionState> {
-  const actor = await requireSenior();
+  const actor = await requirePermission("committees.manage");
   if (!actor) return FORBIDDEN;
   const committee = formText(form, "committeeId");
   const member = formText(form, "memberId");
@@ -210,9 +220,13 @@ export async function rosterAction(
 export async function searchMembersAction(
   query: string
 ): Promise<
-  { id: string; name: string; email: string; universityId: string }[]
+  { id: string; name: string; email: string; universityId: string | null }[]
 > {
-  const actor = await requireSenior();
+  // Rosters and appointments both pick members by search.
+  const actor = await requireAnyPermission(
+    "committees.manage",
+    "leadership.assign"
+  );
   if (
     !actor ||
     typeof query !== "string" ||
@@ -240,8 +254,16 @@ export async function accessSuspensionAction(
   _previous: AdminActionState,
   form: FormData
 ): Promise<AdminActionState> {
-  const actor = await requireSenior();
-  if (!actor) return FORBIDDEN;
+  // Committee access, or administrator access; the routine limits the first to Committee Managers.
+  const actor = await requireAnyPermission(
+    "accounts.manage",
+    "accounts.admin_levels"
+  );
+  if (
+    !actor ||
+    !(can(actor, "accounts.manage") || can(actor, "accounts.admin_levels"))
+  )
+    return FORBIDDEN;
   const user = formText(form, "userId");
   const suspend = formText(form, "suspend");
   const note = formText(form, "note");

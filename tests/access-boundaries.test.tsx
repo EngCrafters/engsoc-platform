@@ -3,7 +3,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ context: vi.fn(), read: vi.fn() }));
-vi.mock("../lib/auth/manager", () => ({ getManagerContext: mocks.context }));
+vi.mock("../lib/auth/manager", async () => {
+  const { withAccess } = await import("./support/manager-fixture");
+  return {
+    getManagerContext: async (...args: unknown[]) =>
+      withAccess(
+        await (mocks.context as (...a: unknown[]) => unknown)(...args)
+      ),
+  };
+});
 vi.mock("../lib/access/server", () => ({
   listAccess: mocks.read,
   listAuthDirectory: mocks.read,
@@ -64,7 +72,7 @@ describe("retained identities at the admin page boundary", () => {
     ]) {
       mocks.context.mockResolvedValue(context);
       expect(renderToStaticMarkup(await AccessPage())).toContain(
-        "managed by Board Administration and the"
+        "available to people with the View accounts permission"
       );
     }
     expect(mocks.read).not.toHaveBeenCalled();

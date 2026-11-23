@@ -18,15 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { requirePermission } from "@/lib/administration/access";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { requireSenior } from "@/lib/administration/access";
+  accessSummary,
+  can,
+  canAny,
+  type PermissionKey,
+} from "@/lib/auth/permissions";
 import {
   adminOverview,
   listAccountErasures,
@@ -34,29 +32,44 @@ import {
   type PendingErasure,
 } from "@/lib/administration/server";
 import {
-  PERMISSION_MATRIX,
   activityLabel,
   actorLabel,
   formatWhen,
 } from "@/lib/administration/labels";
 import { logServerError } from "@/lib/api/log";
-import { cn } from "@/lib/utils";
 import { PendingErasures } from "./pending-erasures";
 
 export const dynamic = "force-dynamic";
 
-const SECTIONS = [
+const SECTIONS: ReadonlyArray<{
+  href: string;
+  title: string;
+  description: string;
+  icon: typeof Building2;
+  /** Shown when the person holds this permission in any scope. */
+  permission: PermissionKey;
+}> = [
+  {
+    href: "/admin/administration/permissions",
+    title: "Permissions",
+    description:
+      "What each committee and team may do; affected leaders and history.",
+    icon: ShieldCheck,
+    permission: "permissions.manage",
+  },
   {
     href: "/admin/administration/committees",
     title: "Committees",
     description: "Catalog, descriptions, managers, rosters and archive.",
     icon: Building2,
+    permission: "committees.view",
   },
   {
     href: "/admin/access",
     title: "Accounts & access",
     description: "Invite administrators, assign roles, suspend and reactivate.",
     icon: KeyRound,
+    permission: "accounts.view",
   },
   {
     href: "/admin/administration/members",
@@ -64,22 +77,25 @@ const SECTIONS = [
     description:
       "Search members, review their records, delete with safeguards.",
     icon: Users,
+    permission: "members.view",
   },
   {
     href: "/admin/membership",
     title: "Membership applications",
     description: "Review, approve and correct verified details.",
     icon: UserCheck,
+    permission: "membership.view",
   },
-] as const;
+];
 
 export default async function AdministrationPage() {
-  const actor = await requireSenior();
+  // The overview needs committees.view (ADR 0027); each area below needs its own permission.
+  const actor = await requirePermission("committees.view");
   if (!actor)
     return (
       <ErrorState
-        title="Administration is for senior administrators"
-        description="Board Administration and the Technical Team manage committees, accounts and members here."
+        title="Administration needs the View committees permission"
+        description="Committees, accounts and members are shown to people whose permissions include them."
       />
     );
   let overview: Overview | null = null;
@@ -87,7 +103,7 @@ export default async function AdministrationPage() {
   try {
     const result = await adminOverview(actor.userId);
     if (result.code === "SUCCESS") overview = result as unknown as Overview;
-    if (actor.accessLevel === "TECHNICAL") {
+    if (can(actor, "accounts.erase")) {
       const pending = await listAccountErasures(actor.userId);
       erasures = (pending.erasures as PendingErasure[] | undefined) ?? [];
     }
@@ -138,11 +154,7 @@ export default async function AdministrationPage() {
         title="Administration"
         description="Committees, accounts, permissions and members in one place. Every change is checked by the database and recorded in the audit."
         context={
-          <Badge variant="secondary">
-            {actor.accessLevel === "TECHNICAL"
-              ? "Technical Team"
-              : "Board Administration"}
-          </Badge>
+          <Badge variant="secondary">{accessSummary(actor.access)}</Badge>
         }
       />
 
@@ -164,27 +176,29 @@ export default async function AdministrationPage() {
         aria-label="Administration areas"
         className="grid gap-3 @2xl/main:grid-cols-2"
       >
-        {SECTIONS.map(({ href, title, description, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="group flex items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-          >
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-              <Icon aria-hidden="true" className="size-4" />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="font-medium">{title}</span>
-              <span className="text-sm text-muted-foreground">
-                {description}
+        {SECTIONS.filter((section) => canAny(actor, section.permission)).map(
+          ({ href, title, description, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group flex items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                <Icon aria-hidden="true" className="size-4" />
               </span>
-            </span>
-            <ArrowRight
-              aria-hidden="true"
-              className="mt-1 size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-            />
-          </Link>
-        ))}
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="font-medium">{title}</span>
+                <span className="text-sm text-muted-foreground">
+                  {description}
+                </span>
+              </span>
+              <ArrowRight
+                aria-hidden="true"
+                className="mt-1 size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+              />
+            </Link>
+          )
+        )}
       </nav>
 
       {overview.access.suspended > 0 ||
@@ -277,63 +291,33 @@ export default async function AdministrationPage() {
               <ShieldCheck aria-hidden="true" className="size-4" /> Permissions
             </CardTitle>
             <CardDescription>
-              What each access level may do. Enforced in the database; your
-              column is highlighted.
+              Access comes from personal levels (Board Administration,
+              Technical, Committee Manager) and from the permissions assigned to
+              each committee and team, which their active Chiefs and Assistant
+              Chiefs receive. The database enforces every permission.
             </CardDescription>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table className="min-w-[30rem] text-xs">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Capability</TableHead>
-                  <TableHead
-                    className={cn(
-                      actor.accessLevel === "TECHNICAL" && "text-foreground"
-                    )}
-                  >
-                    Technical
-                  </TableHead>
-                  <TableHead
-                    className={cn(
-                      actor.accessLevel === "BOARD_ADMIN" && "text-foreground"
-                    )}
-                  >
-                    Board
-                  </TableHead>
-                  <TableHead>Manager</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {PERMISSION_MATRIX.map((row) => (
-                  <TableRow key={row.capability}>
-                    <TableCell className="whitespace-normal">
-                      {row.capability}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        "whitespace-normal",
-                        actor.accessLevel === "TECHNICAL" &&
-                          "bg-muted/60 font-medium"
-                      )}
-                    >
-                      {row.technical}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        "whitespace-normal",
-                        actor.accessLevel === "BOARD_ADMIN" &&
-                          "bg-muted/60 font-medium"
-                      )}
-                    >
-                      {row.board}
-                    </TableCell>
-                    <TableCell className="whitespace-normal text-muted-foreground">
-                      {row.manager}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent className="flex flex-col gap-3 text-sm">
+            <p>
+              <span className="text-muted-foreground">Your access: </span>
+              {accessSummary(actor.access)} ·{" "}
+              <span className="tabular-nums">
+                {Object.keys(actor.access.permissions).length}
+              </span>{" "}
+              permissions
+            </p>
+            {can(actor, "permissions.manage") ? (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="self-start"
+              >
+                <Link href="/admin/administration/permissions">
+                  Manage committee and team permissions
+                </Link>
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       </div>

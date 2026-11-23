@@ -232,10 +232,18 @@ paths:
         restricted to exact allowed origins and Core rate-limits each client
         address (five submissions an hour).
 
-        The application is stored as `pending_review` together with the SQU ID
-        card. Core validates every field and identifies the card by its file
-        signature (JPEG, PNG, WebP or PDF; at most 4 MiB). No field can set a
-        status, role, committee or reviewer. Society Affairs and Senior
+        The application is stored as `pending_review`, or as `approved` at
+        once under the `automatic` approval policy (ADR 0029, migration 0037);
+        the member record still waits for the applicant's confirmed sign-in.
+        Since ADR 0025
+        (migration 0033) it carries no student ID and no file: the category
+        decides which details apply (see GET /membership-options), and Core
+        drops any field the category does not collect. No field can set a
+        status, role, committee or reviewer.
+
+        For one release Core also accepts the previous website's form (no
+        `category`, with `universityId` and `idDocument`): it is treated as a
+        University Student at SQU, and the student ID and file are discarded. Society Affairs and Senior
         Management review it in the Core dashboard; an approved applicant is
         invited by email to set a password.
 
@@ -249,24 +257,34 @@ paths:
               type: object
               additionalProperties: false
               required:
-                [
-                  fullName,
-                  email,
-                  universityId,
-                  academicYear,
-                  discipline,
-                  consent,
-                  consentVersion,
-                  idDocument,
-                ]
+                [fullName, email, category, discipline, consent, consentVersion]
               properties:
                 fullName: { type: string, minLength: 1, maxLength: 200 }
                 email:
                   type: string
                   maxLength: 254
-                  description: An SQU address (`…@squ.edu.om` or a subdomain of it).
-                universityId: { type: string, pattern: "^[0-9]{6,10}$" }
-                academicYear: { type: string, enum: ["1", "2", "3", "4", "5"] }
+                  description: Any valid address, personal or institutional.
+                category:
+                  type: string
+                  description: |
+                    A category id from GET /membership-options:
+                    university_student, graduate, academic,
+                    industry_professional or other.
+                institution:
+                  type: string
+                  description: |
+                    Required for university_student, optional for graduate,
+                    ignored otherwise. A listed institution id, or "other" with
+                    institutionName.
+                institutionName:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                  description: The university's name when institution is "other".
+                academicYear:
+                  type: string
+                  enum: ["1", "2", "3", "4", "5"]
+                  description: Required for university_student only.
                 discipline:
                   type: string
                   enum:
@@ -303,11 +321,10 @@ paths:
                         hse,
                       ]
                 consent: { type: string, enum: ["true"] }
-                consentVersion: { type: string, enum: ["2026-10-v1"] }
-                idDocument:
+                consentVersion:
                   type: string
-                  format: binary
-                  description: Image (JPEG, PNG, WebP) or PDF of the SQU student ID card, ≤ 4 MiB.
+                  enum: ["2026-11-v2", "2026-10-v1"]
+                  description: 2026-11-v2 is current; 2026-10-v1 is the previous website's.
       responses:
         "201":
           description: Application stored as pending review
@@ -324,13 +341,20 @@ paths:
                     type: object
                     required: [status, statusToken]
                     properties:
-                      status: { type: string, enum: [pending_review] }
+                      status: { type: string, enum: [pending_review, approved] }
+                      accountActivation:
+                        type: string
+                        enum: [email_confirmation, immediate]
+                        description: |
+                          Since migration 0038 (ADR 0030). `immediate`: ask
+                          POST /membership-applications/account for the
+                          account instead of using Supabase sign-up.
                       statusToken:
                         { type: string, pattern: "^[A-Za-z0-9_-]{43}$" }
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
-          description: The same email or student ID already has an open or approved application (`reason` already-applied) or a membership (`reason` already-member).
+          description: The same email already has an open or approved application (`reason` already-applied) or a membership (`reason` already-member).
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -347,7 +371,7 @@ paths:
         "422":
           description: |
             `errors[]` names each field: `code` is `required`, `invalid`,
-            `too-long`, `too-large`, `unsupported-type` or `unexpected-field`.
+            `too-long` or `unexpected-field`.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -361,6 +385,55 @@ paths:
       responses:
         "204":
           description: Preflight response
+  /membership-applications/account:
+    post:
+      tags: [Membership]
+      summary: Immediate account activation (ADR 0030)
+      description: |
+        For an application submitted under immediate account activation:
+        Core creates the registrant's account with the Supabase Auth Admin
+        API (no confirmation email, no password), links it, writes the member
+        record if the application is approved, and returns a one-time
+        magic-link token hash. The browser signs in with it and sets its
+        password with Supabase Auth. Only the status token identifies the
+        application; the email comes from the database. An address that
+        already has an account is never signed in to.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [statusToken]
+              properties:
+                statusToken: { type: string, pattern: "^[A-Za-z0-9_-]{43}$" }
+      responses:
+        "201":
+          description: Account ready; sign in with the token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [tokenHash, member]
+                    properties:
+                      tokenHash: { type: string }
+                      member: { type: boolean }
+        "404": { description: Unknown status token. }
+        "409":
+          description: |
+            reason confirmation-required, account-exists, already-set-up or
+            expired.
+        "422": { description: Malformed body. }
+        "503":
+          description: |
+            Unavailable; reason not-configured when this server cannot create
+            accounts (use email confirmation).
   /membership-applications/status:
     post:
       tags: [Membership]
@@ -409,6 +482,71 @@ paths:
               schema: { $ref: "#/components/schemas/Problem" }
         "503":
           $ref: "#/components/responses/Unavailable"
+    options:
+      tags: [Membership]
+      summary: CORS preflight
+      responses:
+        "204":
+          description: Preflight response
+  /membership-options:
+    get:
+      tags: [Membership]
+      operationId: getMembershipOptions
+      summary: The membership form's categories and institutions (ADR 0025)
+      description: |
+        Public reference data from the database: the active categories with
+        whether each asks for an institution (required, optional or none) and
+        an academic year, the listed institutions, and the current consent
+        version. No key; exact-origin CORS; cached for five minutes.
+      responses:
+        "200":
+          description: Active categories and institutions, in display order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [categories, institutions, consentVersion]
+                    properties:
+                      categories:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, label, institution, academicYear]
+                          properties:
+                            id: { type: string }
+                            label: { $ref: "#/components/schemas/Localized" }
+                            institution:
+                              { type: string, enum: [required, optional, none] }
+                            academicYear: { type: boolean }
+                      institutions:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, name, country]
+                          properties:
+                            id: { type: string }
+                            name: { $ref: "#/components/schemas/Localized" }
+                            country: { type: string, pattern: "^[A-Z]{2}$" }
+                      consentVersion: { type: string }
+                      approval:
+                        type: string
+                        enum: [automatic, review]
+                        description: |
+                          Since migration 0037. `automatic`: a valid
+                          registration is approved at once (ADR 0029).
+                          For the form's wording only.
+                      accountActivation:
+                        type: string
+                        enum: [email_confirmation, immediate]
+                        description: |
+                          Since migration 0038 (ADR 0030). Wording only; the
+                          submission reports the mode it recorded.
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
     options:
       tags: [Membership]
       summary: CORS preflight
@@ -501,9 +639,11 @@ paths:
       description: |
         Name, emails, student ID, academic details, interests, photo state,
         membership activity and recent correction requests, with the profile
-        features Core currently allows. Private and never cached. A confirmed
-        SQU sign-in email that differs from the membership email is followed
-        here, audited as member.email_synced.
+        features Core currently allows. Since ADR 0025 it also carries the
+        category, institution and whether the member is SQU-verified. Private
+        and never cached. A confirmed sign-in email that differs from the
+        membership email and belongs to no other member is followed here,
+        audited as member.email_synced.
       security: [{ memberSession: [] }]
       responses:
         "200":
@@ -522,9 +662,11 @@ paths:
       summary: Save the member's self-service fields
       description: |
         `{phone}` alone is the event-registration prompt (ADR 0020) and is
-        always accepted. Otherwise all four self-service fields are required,
-        and only while MEMBER_PROFILE_EDITING is not `disabled` (403
-        EDITING_DISABLED). Name, email and student ID are never accepted:
+        always accepted. Otherwise all the self-service fields of one of the
+        two shapes are required, and only while MEMBER_PROFILE_EDITING is not
+        `disabled` (403 EDITING_DISABLED). The ADR 0025 shape adds the
+        category, institution and institutionName under the registration
+        rules; the four-field shape is the previous website's. Name, email and student ID are never accepted:
         they change through POST /me/profile/changes.
       security: [{ memberSession: [] }]
       requestBody:
@@ -562,6 +704,35 @@ paths:
                           mechatronics,
                           industrial,
                         ]
+                    interests:
+                      type: array
+                      maxItems: 4
+                      uniqueItems: true
+                      items: { type: string }
+                - type: object
+                  additionalProperties: false
+                  required:
+                    [
+                      phone,
+                      category,
+                      institution,
+                      institutionName,
+                      academicYear,
+                      discipline,
+                      interests,
+                    ]
+                  properties:
+                    phone: { type: [string, "null"], maxLength: 32 }
+                    category: { type: string }
+                    institution:
+                      type: string
+                      description: A listed institution id, "other", or empty.
+                    institutionName: { type: string, maxLength: 120 }
+                    academicYear:
+                      type: [integer, "null"]
+                      minimum: 1
+                      maximum: 5
+                    discipline: { type: string }
                     interests:
                       type: array
                       maxItems: 4
@@ -688,6 +859,261 @@ paths:
           description: errors code UNCHANGED (already the current value) or ALREADY_PENDING.
         "422": { description: VALIDATION_ERROR }
         "503": { $ref: "#/components/responses/Unavailable" }
+  /me/verification:
+    get:
+      operationId: getOwnSquVerification
+      summary: The member's SQU student verification (ADR 0025)
+      description: |
+        The SQU state only (the number masked to its last three digits).
+        Committee leadership is a separate endpoint, so either can fail
+        without hiding the other. Never a reviewer note, reviewer identity or
+        document key. Private and never cached.
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OwnSquVerification" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (GET with Authorization)
+      responses:
+        "204": { description: Preflight response }
+  /me/leadership:
+    get:
+      operationId: getOwnLeadership
+      summary: The member's committee appointments, requests and limits (ADR 0025)
+      description: |
+        Appointments and requests with the member-facing reasons, the request
+        limit (requests the structure cancelled do not count) and whether a
+        dashboard grant exists, reported only. Never a reviewer note or
+        reviewer identity. Private and never cached.
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OwnLeadership" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (GET with Authorization)
+      responses:
+        "204": { description: Preflight response }
+  /me/verification/squ:
+    post:
+      operationId: submitSquVerification
+      summary: Submit SQU student verification evidence
+      description: |
+        Optional, and independent of membership. One pending request at a
+        time, none while verified, and at most the configured number of
+        submissions in 30 days (default 3). A membership reviewer decides; the
+        evidence is stored privately and never reachable by URL.
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [studentNumber, document]
+              properties:
+                studentNumber: { type: string, pattern: "^[0-9]{6,10}$" }
+                document:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG, WebP or PDF of the SQU student ID card, at most 4 MiB.
+      responses:
+        "201":
+          description: Submitted; the member's updated roles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OwnSquVerification" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: errors code ALREADY_PENDING or ALREADY_VERIFIED.
+        "413": { description: Larger than the body limit. }
+        "422":
+          description: studentNumber or document invalid (required, invalid, too-large, unsupported-type, unexpected-field).
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (POST with Authorization)
+      responses:
+        "204": { description: Preflight response }
+  /me/leadership/options:
+    get:
+      operationId: getLeadershipOptions
+      summary: Every active committee with its active teams (possibly none), the positions, and whether requests are open
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: Private, no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { const: SUCCESS }
+                      requestsOpen:
+                        type: boolean
+                        description: ADR 0026. False while Board Administration or Technical have closed new requests.
+                      committees:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            teams:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id: { type: string, format: uuid }
+                                  name:
+                                    { $ref: "#/components/schemas/TeamName" }
+                      positions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            label: { $ref: "#/components/schemas/Localized" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (GET with Authorization)
+      responses:
+        "204": { description: Preflight response }
+  /me/leadership/requests:
+    post:
+      operationId: requestLeadership
+      summary: Request a Chief or Assistant Chief position for a committee, or for one of its teams
+      description: |
+        Without a team (teamId null or absent) the request is committee
+        leadership; with one, team leadership (ADR 0026). The database
+        re-checks that requests are open and the committee → (team) →
+        position path. A request grants nothing until a leadership reviewer
+        approves it; an appointment then gives only the dashboard permissions
+        assigned to its committee or team (ADR 0027).
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [committeeId, position]
+              properties:
+                committeeId: { type: string, format: uuid }
+                teamId:
+                  type: [string, "null"]
+                  format: uuid
+                  description: Null or absent for committee leadership.
+                position: { type: string, enum: [chief, assistant_chief] }
+      responses:
+        "201":
+          description: Requested; the member's updated roles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OwnLeadership" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: errors code REQUESTS_CLOSED, ALREADY_PENDING, ALREADY_APPOINTED, TEAM_INACTIVE or COMMITTEE_ARCHIVED.
+        "422":
+          description: VALIDATION_ERROR or HIERARCHY_MISMATCH (the team is not in that committee).
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (POST with Authorization)
+      responses:
+        "204": { description: Preflight response }
+  /me/email-preferences:
+    get:
+      operationId: getOwnEmailPreferences
+      summary: The member's choice about the society's optional email announcements
+      description: ADR 0028. No stored choice means subscribed.
+      security: [{ memberSession: [] }]
+      responses:
+        "200":
+          description: The stored choice
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { const: SUCCESS }
+                      announcements: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    patch:
+      operationId: setOwnEmailPreferences
+      summary: Turn the society's optional email announcements on or off
+      description: Audited (email.preferences_changed). Unsubscribe links in Email Centre messages change the same setting.
+      security: [{ memberSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [announcements]
+              properties:
+                announcements: { type: boolean }
+      responses:
+        "200":
+          description: The stored choice
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code: { const: SUCCESS }
+                      announcements: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: VALIDATION_ERROR (field announcements).
+        "503": { $ref: "#/components/responses/Unavailable" }
+    options:
+      summary: CORS preflight (GET or PATCH with Authorization)
+      responses:
+        "204": { description: Preflight response }
   /me/events:
     get:
       operationId: listOwnRegistrations
@@ -887,6 +1313,120 @@ components:
       description: Correlation id, echoed from a valid caller value or generated.
       schema: { type: string }
   schemas:
+    Localized:
+      type: object
+      required: [en, ar]
+      properties:
+        en: { type: string }
+        ar: { type: string }
+    TeamName:
+      type: object
+      required: [en, ar]
+      properties:
+        en: { type: string }
+        ar: { type: [string, "null"] }
+    RolePath:
+      type: object
+      properties:
+        committee:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            archived: { type: boolean }
+        level:
+          type: string
+          enum: [committee, team]
+          description: ADR 0026. Committee leadership has no team.
+        team:
+          type: [object, "null"]
+          description: Null for committee leadership.
+          properties:
+            id: { type: string, format: uuid }
+            name: { $ref: "#/components/schemas/TeamName" }
+            status: { type: string, enum: [active, inactive, archived] }
+        position:
+          type: object
+          properties:
+            id: { type: string }
+            label: { $ref: "#/components/schemas/Localized" }
+    OwnSquVerification:
+      type: object
+      description: ADR 0025. SQU student verification only; it changes nothing about membership.
+      properties:
+        code: { const: SUCCESS }
+        status:
+          type: string
+          enum: [not_verified, pending, verified, rejected, revoked]
+        studentNumber:
+          type: [string, "null"]
+          description: Masked to the last three digits.
+        submittedAt: { type: [string, "null"], format: date-time }
+        decidedAt: { type: [string, "null"], format: date-time }
+        verifiedAt: { type: [string, "null"], format: date-time }
+        rejectionReason: { type: [string, "null"] }
+        revokedAt: { type: [string, "null"], format: date-time }
+        revocationReason: { type: [string, "null"] }
+        submissionsPer30Days: { type: integer }
+        recentSubmissions: { type: integer }
+        canSubmit: { type: boolean }
+        nextSubmissionAt: { type: [string, "null"], format: date-time }
+    OwnLeadership:
+      type: object
+      description: ADRs 0025 and 0026. Committee- and team-level appointments and requests; none of them grants dashboard access.
+      properties:
+        code: { const: SUCCESS }
+        requestsOpen:
+          type: boolean
+          description: Whether new requests are accepted; appointments and requests are listed either way.
+        appointments:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/RolePath"
+              - type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  active: { type: boolean }
+                  appointedAt: { type: string, format: date-time }
+                  endedAt: { type: [string, "null"], format: date-time }
+                  endReason: { type: [string, "null"] }
+        requests:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/RolePath"
+              - type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  status:
+                    type: string
+                    enum: [pending, approved, rejected, cancelled]
+                  submittedAt: { type: string, format: date-time }
+                  decidedAt: { type: [string, "null"], format: date-time }
+                  rejectionReason: { type: [string, "null"] }
+                  cancellationReason:
+                    type: [string, "null"]
+                    enum:
+                      [
+                        team_moved,
+                        team_inactive,
+                        team_archived,
+                        committee_archived,
+                        null,
+                      ]
+        limits:
+          type: object
+          properties:
+            requestsPer30Days: { type: integer }
+            recentRequests:
+              type: integer
+              description: Requests in the last 30 days, not counting those the structure cancelled.
+            maxActiveAppointments: { type: [integer, "null"] }
+            activeAppointments: { type: integer }
+        dashboardAccess:
+          type: boolean
+          description: Whether the member holds any dashboard permission (a personal level, or a position whose committee or team has permissions, ADR 0027). Reported only.
     MemberProfile:
       type: object
       additionalProperties: false
@@ -916,12 +1456,30 @@ components:
         email:
           type: string
           format: email
-          description: The verified SQU email the membership keeps.
+          description: The email the membership keeps.
         signInEmail:
           type: [string, "null"]
           format: email
           description: The Supabase Auth sign-in email.
-        universityId: { type: string }
+        universityId:
+          type: [string, "null"]
+          description: Null for members admitted after ADR 0025.
+        category:
+          type: [string, "null"]
+          description: Null for a legacy member whose category was not recorded.
+        categoryLabel:
+          oneOf:
+            - $ref: "#/components/schemas/Localized"
+            - type: "null"
+        institution:
+          type: [object, "null"]
+          properties:
+            id: { type: string }
+            name: { $ref: "#/components/schemas/Localized" }
+        institutionName:
+          type: [string, "null"]
+          description: A university typed by the member ("Other university").
+        squVerified: { type: boolean }
         academicYear: { type: [integer, "null"], minimum: 1, maximum: 5 }
         discipline: { type: [string, "null"] }
         interests: { type: array, items: { type: string }, maxItems: 4 }

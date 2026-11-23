@@ -110,14 +110,14 @@ failures. The website logs Core's request ID in its own `core-api` log lines.
 
 ## Routine maintenance
 
-| Task                                  | How                                                                                                                                                                                       |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Issue, rotate or revoke an API client | [Configuration → API clients and keys](../reference/configuration.md#api-clients-and-keys)                                                                                                |
-| Rotate the `app_runtime` password     | `ALTER ROLE app_runtime WITH PASSWORD …` as the owner, then update `APP_RUNTIME_DATABASE_URL` in Vercel and redeploy. The staging rotation is recorded in `STAGING_ROLLOUT_0027_0030.md`. |
-| Technical bootstrap or recovery       | `private.set_technical_access` as `app_maintenance`, following [`Platform_Maintenance_Runbook.md`](../Platform_Maintenance_Runbook.md); never for routine ownership changes               |
-| Set the membership approval policy    | Technical, on `/admin/membership` (owner decision required)                                                                                                                               |
-| Rate-limit rows                       | Pruned automatically: attempts older than one hour by `purge_rate_limit_attempts`, submission attempts older than one day                                                                 |
-| Dependency advisories                 | `npm audit --omit=dev`; Next.js is pinned at 16.4.2, and the `sharp` and `source-map-js` overrides are in `package.json`                                                                  |
+| Task                                                      | How                                                                                                                                                                                       |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Issue, rotate or revoke an API client                     | [Configuration → API clients and keys](../reference/configuration.md#api-clients-and-keys)                                                                                                |
+| Rotate the `app_runtime` password                         | `ALTER ROLE app_runtime WITH PASSWORD …` as the owner, then update `APP_RUNTIME_DATABASE_URL` in Vercel and redeploy. The staging rotation is recorded in `STAGING_ROLLOUT_0027_0030.md`. |
+| Technical bootstrap or recovery                           | `private.set_technical_access` as `app_maintenance`, following [`Platform_Maintenance_Runbook.md`](../Platform_Maintenance_Runbook.md); never for routine ownership changes               |
+| Set the membership approval policy and account activation | Board Administration or Technical (`settings.membership_policy`, migration 0039), on `/admin/membership`                                                                                  |
+| Rate-limit rows                                           | Pruned automatically: attempts older than one hour by `purge_rate_limit_attempts`, submission attempts older than one day                                                                 |
+| Dependency advisories                                     | `npm audit --omit=dev`; Next.js is pinned at 16.4.2, and the `sharp` and `source-map-js` overrides are in `package.json`                                                                  |
 
 ## Production change checklist
 

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { getManagerContext } from "@/lib/auth/manager";
+import { can } from "@/lib/auth/permissions";
 import { getAdminEvent } from "@/lib/admin-events/server";
 import { getEventLifecycleStatus } from "@/lib/admin-events/status";
 import { AdminPageHeader } from "@/components/admin/page-header";
@@ -70,12 +71,12 @@ export default async function EventPage({
               archived={Boolean(event.archivedAt)}
               reviewRequired={event.reviewRequired}
               isFlagger={event.flaggedBy === manager.userId}
-              canReview={manager.accessLevel !== "COMMITTEE_MANAGER"}
+              canReview={can(manager, "events.approve", event.committeeId)}
               isApproved={event.approvedBy !== null}
               isPast={status === "past"}
               lifecycleStatus={status}
             />
-            {manager.accessLevel !== "COMMITTEE_MANAGER" ? (
+            {can(manager, "events.delete", event.committeeId) ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 p-4">
                 <div className="flex max-w-xl flex-col gap-1">
                   <p className="text-sm font-medium">Delete permanently</p>

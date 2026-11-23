@@ -54,7 +54,11 @@ export function memberResult(
         ? "forbidden"
         : data.code === "RATE_LIMITED"
           ? "rate-limited"
-          : ["PHONE_REQUIRED", "VALIDATION_ERROR"].includes(data.code)
+          : [
+                "PHONE_REQUIRED",
+                "VALIDATION_ERROR",
+                "HIERARCHY_MISMATCH",
+              ].includes(data.code)
             ? "invalid-fields"
             : [
                   "NOT_REGISTERED",
@@ -70,6 +74,13 @@ export function memberResult(
                   "ALREADY_PENDING",
                   "UNCHANGED",
                   "CONFLICT",
+                  // ADR 0025: verification and leadership requests.
+                  "ALREADY_VERIFIED",
+                  "ALREADY_APPOINTED",
+                  "TEAM_INACTIVE",
+                  "COMMITTEE_ARCHIVED",
+                  // ADR 0026: leadership requests closed by the administrators.
+                  "REQUESTS_CLOSED",
                 ].includes(data.code)
               ? "conflict"
               : "service-unavailable";

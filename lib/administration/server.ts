@@ -1,4 +1,5 @@
 import "server-only";
+import { withRecoveryGuard } from "@/lib/auth/recovery";
 
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -10,7 +11,10 @@ import { db } from "@/db";
 export type Result = { code: string; field?: string } & Record<string, unknown>;
 
 async function call(query: ReturnType<typeof sql>): Promise<Result> {
-  const rows = await db.execute<{ result: Result }>(query);
+  const rows = await withRecoveryGuard(() =>
+    db.execute<{ result: Result }>(query)
+  );
+  if (!Array.isArray(rows)) return rows as Result;
   if (!rows.length) throw new Error("Administration operation unavailable");
   return rows[0].result;
 }
@@ -101,7 +105,7 @@ export type CommitteeDetail = {
     memberId: string;
     name: string;
     email: string;
-    universityId: string;
+    universityId: string | null;
     discipline: string | null;
     year: number | null;
     responsibility: string | null;
@@ -168,7 +172,7 @@ export type MemberRow = {
   id: string;
   name: string;
   email: string;
-  universityId: string;
+  universityId: string | null;
   year: number | null;
   discipline: string | null;
   status: "member" | "graduate";
@@ -194,7 +198,7 @@ export type MemberDetail = {
     id: string;
     name: string;
     email: string;
-    universityId: string;
+    universityId: string | null;
     year: number | null;
     discipline: string | null;
     status: "member" | "graduate";
@@ -202,7 +206,25 @@ export type MemberDetail = {
     hasPhoto: boolean;
     createdAt: string;
     updatedAt: string | null;
+    /** ADR 0025: the category and institution, as the routines describe them. */
+    category: string | null;
+    categoryLabel: { en: string; ar: string } | null;
+    institution: { id: string; en: string; ar: string } | null;
+    institutionName: string | null;
   };
+  /** SQU student verification, separate from membership (ADR 0025). */
+  squVerification: { status: string; verifiedAt: string | null } | null;
+  /**
+   * Active leadership appointments, at committee level (team null, ADR 0026)
+   * or in a team; each gives the permissions assigned to its committee or team (ADR 0027).
+   */
+  appointments: {
+    id: string;
+    committee: string;
+    team: { id: string; name: { en: string; ar: string | null } } | null;
+    position: { id: string; label: { en: string; ar: string } };
+    appointedAt: string;
+  }[];
   account: {
     email: string;
     confirmed: boolean;

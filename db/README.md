@@ -12,8 +12,9 @@ restricted `app_runtime` role created by the UC-02 security migration —
 there is no fallback to `DATABASE_URL` (that's a migration-only credential;
 see "Applying migrations" below). The runtime role has no table DML grants;
 all reads and writes call fixed private routines. It uses Supabase's shared
-transaction pooler with one application-side connection, no prepared
-statements, and required TLS — except when the hostname is `127.0.0.1` or
+transaction pooler with one application-side connection running one query at a
+time (`one-query-per-connection.ts`: the pooler can lose a pipelined query's
+reply, which hung every later query), no prepared statements, and required TLS — except when the hostname is `127.0.0.1` or
 `localhost`, which is only ever the disposable Postgres container the
 isolated test suites (`tests/db`, `tests/e2e`) run against and which has no
 TLS listener at all.

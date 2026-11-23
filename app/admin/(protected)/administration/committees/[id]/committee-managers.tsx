@@ -23,7 +23,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import type { AccessLevel } from "@/lib/auth/manager";
 import { formatDay } from "@/lib/administration/labels";
 import {
   AccessDialog,
@@ -37,7 +36,11 @@ import {
   SuspensionDialog,
   type SuspensionTarget,
 } from "../../../access/suspension-dialog";
-import type { Committee, UserRecord } from "../../../access/user-types";
+import type {
+  AccountRights,
+  Committee,
+  UserRecord,
+} from "../../../access/user-types";
 
 export type ManagerRow = {
   userId: string;
@@ -59,7 +62,7 @@ export function CommitteeManagers({
   managers,
   users,
   committees,
-  actorLevel,
+  rights,
   currentUserId,
 }: {
   committee: Committee;
@@ -67,7 +70,7 @@ export function CommitteeManagers({
   managers: ManagerRow[];
   users: UserRecord[];
   committees: Committee[];
-  actorLevel: AccessLevel;
+  rights: AccountRights;
   currentUserId: string;
 }) {
   const [assignOpen, setAssignOpen] = useState(false);
@@ -214,7 +217,7 @@ export function CommitteeManagers({
         selection={access}
         committees={committees}
         users={users}
-        actorLevel={actorLevel}
+        rights={rights}
         onClose={closeAccess}
       />
       <SuspensionDialog target={suspension} onClose={closeSuspension} />

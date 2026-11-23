@@ -16,9 +16,7 @@ async function login(
   if (admin) await page.goto(`${CORE}/admin/login`);
   else if (returnTo)
     await page.goto(`${WEB}/login?next=${encodeURIComponent(returnTo)}`);
-  await page
-    .getByLabel(admin ? "Email address" : "University email", { exact: true })
-    .fill(email);
+  await page.getByLabel("Email address", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }

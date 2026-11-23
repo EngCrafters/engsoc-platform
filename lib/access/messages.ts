@@ -9,7 +9,9 @@ export const ACCESS_ERROR_MESSAGES: Record<string, string> = {
   ACCESS_CHANGED:
     "Access has changed. Refresh the user list before trying again.",
   FORBIDDEN:
-    "Your access level does not allow this change. Board Administration manages Committee Managers; the Technical Team manages every role.",
+    "Your permissions do not allow this change. Manage committee access covers Committee Managers; Manage administrator access covers Board Administration and Technical.",
+  LAST_RECOVERY_ACCOUNT:
+    "This would leave no account able to manage permissions and administrator access. Give that access to someone else first.",
   COMMITTEE_ARCHIVED:
     "This committee is archived. Restore it before assigning managers.",
   SELF_CHANGE: "You cannot change your own access.",

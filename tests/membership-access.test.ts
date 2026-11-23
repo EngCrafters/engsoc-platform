@@ -40,6 +40,7 @@ describe("getMembershipAccess", () => {
         result: {
           code: "SUCCESS",
           reviewer: "society_affairs",
+          verificationReviewer: "society_affairs",
           policy: null,
           counts,
         },
@@ -47,9 +48,27 @@ describe("getMembershipAccess", () => {
     ]);
     await expect(getMembershipAccess(ACTOR)).resolves.toEqual({
       kind: "reviewer",
-      overview: { reviewer: "society_affairs", policy: null, counts },
+      overview: {
+        reviewer: "society_affairs",
+        verificationReviewer: "society_affairs",
+        // Absent in this (pre-0035) answer; 0035's overview names the leadership reviewer too.
+        leadershipReviewer: null,
+        policy: null,
+        counts,
+      },
     });
     expect(log).not.toHaveBeenCalled();
+  });
+
+  it("keeps Technical an application reviewer without SQU or leadership review authority", async () => {
+    state.execute.mockResolvedValue([
+      { result: { code: "SUCCESS", reviewer: "senior", policy: null, counts } },
+    ]);
+    const access = await getMembershipAccess(ACTOR);
+    expect(access).toMatchObject({
+      kind: "reviewer",
+      overview: { reviewer: "senior", verificationReviewer: null },
+    });
   });
 
   it("treats a refused actor, such as another committee's manager, as no access", async () => {

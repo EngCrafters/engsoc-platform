@@ -1,5 +1,6 @@
 import "server-only";
 import postgres from "postgres";
+import { parseAccess } from "./permissions";
 
 /**
  * Local-only escape hatch so a developer running `/admin` for visual review
@@ -46,28 +47,22 @@ export function isLocalReviewModeActive(): boolean {
 }
 
 /**
- * The committees `userId` actively manages, read directly from the local
- * review database. Mirrors the shape of the real committee-grant query in
- * `manager.ts`. Returns `[]` when local review mode is inactive.
+ * The person's dashboard access, read from the local review database through the same routine the
+ * real path uses (private.get_dashboard_access, migration 0035), so the shell, account page and
+ * every list agree during local review. Returns null when local review mode is inactive.
  */
-export async function getLocalReviewCommittees(
-  userId: string
-): Promise<ReadonlyArray<{ id: string; name: string; slug: string | null }>> {
+export async function getLocalReviewAccess(userId: string) {
   const url = localReviewUrl();
-  if (!url) return [];
+  if (!url) return null;
 
   const sql = postgres(url, { max: 1, prepare: false });
   try {
-    return await sql<{ id: string; name: string; slug: string | null }[]>`
-      SELECT c.id, c.name, c.slug
-      FROM public.administrative_access cm
-      JOIN public.committees c ON c.id = cm.committee_id
-      WHERE cm.user_id = ${userId} AND cm.revoked_at IS NULL
-        AND cm.access_level = 'COMMITTEE_MANAGER' AND c.slug IS NOT NULL
-      ORDER BY c.name
+    const [row] = await sql<{ result: unknown }[]>`
+      SELECT private.get_dashboard_access(${userId}::uuid) AS result
     `;
+    return parseAccess(row?.result);
   } catch {
-    throw new Error("Unable to read local review committee grants.");
+    throw new Error("Unable to read local review dashboard access.");
   } finally {
     await sql.end({ timeout: 5 });
   }

@@ -1,5 +1,12 @@
 # UC-01 membership applications: data and security contract
 
+> **Amended by Development Cycle 2** ([ADR 0025](adr/0025-expanded-membership-verification-and-leadership.md),
+> migration 0033, not yet applied to hosted databases). Membership is open to five categories and
+> any valid email. No student ID or ID card is collected at registration; SQU student verification
+> is a separate, optional flow for members. Where this document describes the SQU-only form, the
+> `universityId` field or the registration ID card, it records the behaviour before 0033. Summary:
+> [development-cycle-2.md](development-cycle-2.md).
+
 Status: implemented on branch `feat/uc01-membership-applications` (October 20, 2026, Dubai).
 **Not deployed.** Migrations `0025_membership_applications` and
 `0026_membership_document_storage` are applied to **staging** with the owner's approval
@@ -18,6 +25,7 @@ cards are stored, [ADR 0018](adr/0018-membership-id-cards-in-private-storage.md)
 | From                           | Action   | To                                       | Who                                                                                           | Notes                                                                      |
 | ------------------------------ | -------- | ---------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | (none)                         | submit   | `pending_review`                         | Anyone, through `POST /v1/membership-applications`                                            | Application and ID document are written in one transaction                 |
+| (none)                         | submit   | `approved` (`auto_approved`)             | Anyone, under the `automatic` policy (ADR 0029, migration 0037)                               | No reviewer; activation still needs the applicant's confirmed email        |
 | `pending_review`               | verify   | `verified`                               | Any reviewer                                                                                  | Records `verified_by`/`verified_at`                                        |
 | `pending_review`               | approve  | `approved`                               | `single_step` only: any reviewer                                                              | Deletes the document in the same transaction                               |
 | `verified`                     | approve  | `approved`                               | `two_step`: a Senior Management reviewer other than the verifier; `single_step`: any reviewer | Deletes the document in the same transaction                               |
@@ -110,7 +118,8 @@ Both endpoints are public, take no key or cookie, use exact-origin CORS
 - `POST /v1/membership-applications`, `multipart/form-data`, fields `fullName`, `email`,
   `universityId`, `academicYear`, `discipline`, `interests` (repeated), `consent` (`true`),
   `consentVersion`, `idDocument` (the file). Any other field is `422 unexpected-field`.
-  - `201 {data:{status:"pending_review", statusToken}}`. The token is shown once.
+  - `201 {data:{status:"pending_review", statusToken}}` (`"approved"` under the `automatic`
+    policy, ADR 0029). The token is shown once.
   - `409` with `reason` `already-applied` or `already-member`.
   - `413` above 4.5 MB, `422 invalid-fields` with `errors[]`.
   - `429` with `Retry-After: 3600` from the sixth attempt in an hour from one IP. Attempts are
@@ -203,9 +212,12 @@ permanent records, like other UC-02 audit.
 - `tests/membership-storage.test.ts`: SigV4 signing reproduces AWS's published GET and PUT example
   signatures. Also covers configuration rules, keys, and object operations with no secret in any
   header or log.
-- `tests/membership-submission-storage.test.ts`: the submission order and every failure path.
-- `tests/db/membership-storage-s3.test.ts`: the full Storage round trip with Core's real
-  submission, document route and deletion worker. It runs against a local S3 stand-in behind a
+- `tests/membership-submission-storage.test.ts` (removed in Development Cycle 2 with the
+  registration upload; `tests/squ-verification-storage.test.ts` covers the same order for SQU
+  evidence): the submission order and every failure path.
+- `tests/db/membership-storage-s3.test.ts` (removed in Development Cycle 2;
+  `tests/db/verification-storage-s3.test.ts` is its successor for SQU evidence): the full Storage
+  round trip with Core's real submission, document route and deletion worker. It runs against a local S3 stand-in behind a
   proxy that verifies every SigV4 signature independently. Covers storing, Society Affairs viewing,
   403 for another manager, 401 when signed out, refusing a tampered object, approval refused while
   the policy is unset, and deletion after rejection. Skipped unless pointed at a local stand-in.

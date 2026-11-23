@@ -1,4 +1,5 @@
 import type {
+  AccountActivation,
   ApplicationStatus,
   ApprovalPolicy,
   MembershipDiscipline,
@@ -43,8 +44,9 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 export const REVIEWER_LABELS: Record<ReviewerKind, string> = {
+  senior: "a reviewer who can give final approval",
+  reviewer: "a reviewer",
   society_affairs: "Society Affairs",
-  senior: "Senior Management",
 };
 
 export const POLICY_LABELS: Record<ApprovalPolicy, string> = {
@@ -52,6 +54,25 @@ export const POLICY_LABELS: Record<ApprovalPolicy, string> = {
     "Two steps: Society Affairs or Senior Management verifies, then a different Senior Management reviewer approves.",
   single_step:
     "One step: any Society Affairs or Senior Management reviewer may approve.",
+  automatic:
+    "Automatic: every valid registration is approved at once. The member account becomes active when the applicant confirms their email.",
+};
+
+/** ADR 0030: how registrants' accounts are created. */
+export const ACCOUNT_ACTIVATION_LABELS: Record<
+  AccountActivation,
+  { title: string; description: string }
+> = {
+  email_confirmation: {
+    title: "Email confirmation required",
+    description:
+      "Registrants get a confirmation link by email. Their account, and their membership, become active once they confirm it. This proves they own the address.",
+  },
+  immediate: {
+    title: "Immediate activation",
+    description:
+      "No confirmation email. The account is created at registration and the registrant is signed in straight away. The email address is not verified.",
+  },
 };
 
 export const disciplineLabel = (value: string) =>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AccountOverview } from "@/components/admin/account-overview";
 import { getManagerContext } from "@/lib/auth/manager";
+import { accountAccessView } from "@/lib/auth/permissions";
 import { logoutAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Account & security" };
@@ -15,8 +16,7 @@ export default async function AdminAccountPage() {
     <AccountOverview
       email={manager.email}
       userId={manager.userId}
-      accessLevel={manager.accessLevel}
-      committees={manager.committees}
+      view={accountAccessView(manager)}
       logoutAction={logoutAction}
     />
   );

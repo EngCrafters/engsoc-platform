@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getManagerContext } from "@/lib/auth/manager";
+import { can, canAny } from "@/lib/auth/permissions";
 import {
   writeAdminEvent,
   getAdminEvent,
@@ -99,7 +100,9 @@ export async function saveEventAction(form: FormData) {
       return { code: "SERVER_ERROR" };
     }
   } else if (
-    !manager.committees.some((c) => c.id === committeeId && !c.archived)
+    !committeeId ||
+    !can(manager, "events.create", committeeId) ||
+    !manager.allCommittees.some((c) => c.id === committeeId && !c.archived)
   )
     return { code: "NOT_FOUND" };
   const cover = form.get("cover");
@@ -179,9 +182,10 @@ export async function lifecycleEventAction(_previous: unknown, form: FormData) {
   const manager = await getManagerContext();
   if (manager.kind !== "manager") return { code: "AUTH_REQUIRED" };
   const operation = one(form, "operation");
+  // Approval needs events.approve; the routine checks it for the event's committee.
   if (
     (operation === "approve_event" || operation === "reject_review") &&
-    manager.accessLevel === "COMMITTEE_MANAGER"
+    !canAny(manager, "events.approve")
   )
     return { code: "GLOBAL_ACCESS_REQUIRED" };
   const eventId = one(form, "eventId");

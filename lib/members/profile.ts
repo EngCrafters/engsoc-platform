@@ -73,6 +73,23 @@ export const updateOwnProfile = (
     sql`SELECT private.update_own_profile(${actor}::uuid, ${input.phone}, ${input.academicYear}::integer, ${input.discipline}, ${textArray(input.interests)}::text[]) AS result`
   );
 
+/** ADR 0025: the category decides which of the institution and year apply. */
+export const updateOwnProfileV2 = (
+  actor: string,
+  input: {
+    phone: string | null;
+    category: string;
+    institutionId: string | null;
+    institutionName: string | null;
+    academicYear: number | null;
+    discipline: string;
+    interests: readonly string[];
+  }
+) =>
+  call(
+    sql`SELECT private.update_own_profile_v2(${actor}::uuid, ${input.phone}, ${input.category}, ${input.institutionId}, ${input.institutionName}, ${input.academicYear}::integer, ${input.discipline}, ${textArray(input.interests)}::text[]) AS result`
+  );
+
 export const setOwnPhoto = (actor: string, key: string | null) =>
   call(sql`SELECT private.set_own_photo(${actor}::uuid, ${key}) AS result`);
 

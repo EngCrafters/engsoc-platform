@@ -29,16 +29,16 @@ test("committee managers never reach administration", async ({ page }) => {
   ).toHaveCount(0);
   await page.goto(`${CORE}/admin/administration`);
   await expect(
-    page.getByText("Administration is for senior administrators")
+    page.getByText("Administration needs the View committees permission")
   ).toBeVisible();
   await page.goto(`${CORE}/admin/administration/members`);
   await expect(
-    page.getByText("The member directory is for senior administrators")
+    page.getByText("The member directory needs the View members permission")
   ).toBeVisible();
   await page.goto(`${CORE}/admin/access`);
   await expect(
     page.getByText(
-      "Accounts and access are managed by Board Administration and the Technical Team."
+      "Accounts and access are available to people with the View accounts permission."
     )
   ).toBeVisible();
 });
@@ -54,7 +54,10 @@ test("Board Administration runs a committee: create, roster, manager lifecycle, 
     await expect(
       page.getByRole("heading", { level: 1, name: "Administration" })
     ).toBeVisible();
-    await expect(page.getByText("Permissions", { exact: true })).toBeVisible();
+    // ADR 0027: the overview links to Administration → Permissions.
+    await expect(
+      page.getByRole("link", { name: /^Permissions What each committee/ })
+    ).toBeVisible();
 
     // Create, then edit.
     await page.goto(`${CORE}/admin/administration/committees`);

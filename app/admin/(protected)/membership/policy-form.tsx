@@ -96,6 +96,7 @@ export function MembershipPolicyForm({
                   </SelectItem>
                   <SelectItem value="two_step">Two steps</SelectItem>
                   <SelectItem value="single_step">One step</SelectItem>
+                  <SelectItem value="automatic">Automatic</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { after } from "next/server";
 import { ArrowRight, Inbox, ShieldAlert } from "lucide-react";
 import { getManagerContext } from "@/lib/auth/manager";
+import { can } from "@/lib/auth/permissions";
 import {
+  defaultMembershipFilter,
+  getAccountActivationSetting,
   getMembershipAccess,
   listMembershipApplications,
   parseMembershipFilter,
@@ -13,16 +16,21 @@ import {
   encodeMembershipCursor,
 } from "@/lib/membership/cursor";
 import { hasMembershipReviewerRole } from "@/lib/membership/access";
-import { POLICY_LABELS, REVIEWER_LABELS } from "@/lib/membership/labels";
+import {
+  ACCOUNT_ACTIVATION_LABELS,
+  POLICY_LABELS,
+} from "@/lib/membership/labels";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { EmptyState } from "@/components/admin/empty-state";
 import { MembershipFilters } from "@/components/admin/membership-filters";
 import { MembershipList } from "@/components/admin/membership-list";
+import { MembershipSectionTabs } from "@/components/admin/membership-section-tabs";
 import { MembershipUnavailable } from "@/components/admin/membership-unavailable";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MembershipPolicyForm } from "./policy-form";
+import { AccountActivationForm } from "./account-activation-form";
 import { ProfileCorrections } from "./corrections";
 import { profileChangeRequests } from "@/lib/members/profile";
 import { logServerError } from "@/lib/api/log";
@@ -41,11 +49,10 @@ export default async function MembershipApplicationsPage({
   if (access.kind === "unavailable" && hasMembershipReviewerRole(manager)) {
     return <MembershipUnavailable reason={access.reason} />;
   }
-  if (access.kind !== "reviewer") {
+  if (access.kind !== "reviewer" || !can(manager, "membership.view")) {
     return (
       <p role="alert">
-        Membership applications are reviewed by Society Affairs and Senior
-        Management only.
+        Membership applications need the View applications permission.
       </p>
     );
   }
@@ -53,7 +60,9 @@ export default async function MembershipApplicationsPage({
   const { overview } = access;
   // Retries any ID card deletion an earlier decision could not finish.
   after(() => processMembershipStorageDeletions());
-  const filter = parseMembershipFilter(single(query.status));
+  const automatic = overview.policy === "automatic";
+  const defaultFilter = defaultMembershipFilter(overview.policy);
+  const filter = parseMembershipFilter(single(query.status), defaultFilter);
   const rawSearch = single(query.q)?.trim().slice(0, 100) || null;
   const view = { filter, query: rawSearch };
   const cursorResult = decodeMembershipCursor(single(query.cursor), view);
@@ -65,17 +74,26 @@ export default async function MembershipApplicationsPage({
       });
   const { counts } = overview;
   const awaiting = counts.pending_review + counts.verified;
+  const activation = await getAccountActivationSetting();
 
   return (
     <section aria-labelledby="membership-title" className="flex flex-col gap-6">
       <AdminPageHeader
         title="Membership applications"
         headingId="membership-title"
-        description="Verify applicants against their SQU ID card, then approve or reject. Approved applicants are invited to create their member account."
+        description={
+          automatic
+            ? "Students, graduates, academics, professionals and others register on the website and are approved automatically. Each member account becomes active when its owner confirms their email. Applications from before automatic approval can still be approved or rejected here."
+            : "Students, graduates, academics, professionals and others apply here. Check the details, then approve or reject. Approved applicants are invited to create their member account."
+        }
         context={
           <>
             <Badge variant="secondary">
-              {REVIEWER_LABELS[overview.reviewer]} reviewer
+              {!can(manager, "membership.review")
+                ? "View only"
+                : overview.reviewer === "senior"
+                  ? "Reviewer with final approval"
+                  : "Reviewer"}
             </Badge>
             <span className="text-sm text-muted-foreground tabular-nums">
               {awaiting} awaiting a decision
@@ -85,6 +103,15 @@ export default async function MembershipApplicationsPage({
             </span>
           </>
         }
+      />
+
+      <MembershipSectionTabs
+        current="applications"
+        counts={{
+          applications: awaiting,
+          verifications: counts.squPending ?? 0,
+          leadership: counts.leadershipPending ?? 0,
+        }}
       />
 
       {overview.policy === null ? (
@@ -103,9 +130,23 @@ export default async function MembershipApplicationsPage({
           {POLICY_LABELS[overview.policy]}
         </p>
       )}
+      <p className="-mt-4 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">Account activation:</span>{" "}
+        {ACCOUNT_ACTIVATION_LABELS[activation.accountActivation].title}
+        {activation.accountActivation === "immediate" &&
+        !activation.canCreateAccounts
+          ? " (unavailable on this server, so registrants confirm their email)"
+          : null}
+      </p>
 
-      {manager.accessLevel === "TECHNICAL" ? (
-        <MembershipPolicyForm policy={overview.policy} />
+      {can(manager, "settings.membership_policy") ? (
+        <>
+          <MembershipPolicyForm policy={overview.policy} />
+          <AccountActivationForm
+            current={activation.accountActivation}
+            canCreateAccounts={activation.canCreateAccounts}
+          />
+        </>
       ) : null}
 
       <ProfileCorrections
@@ -121,6 +162,7 @@ export default async function MembershipApplicationsPage({
 
       <MembershipFilters
         filter={filter}
+        defaultFilter={defaultFilter}
         query={rawSearch}
         counts={{
           pending_review: counts.pending_review,
@@ -144,8 +186,10 @@ export default async function MembershipApplicationsPage({
             description={
               rawSearch
                 ? "Try another name, email or student ID, or another status."
-                : filter === "pending_review"
-                  ? "New membership applications appear here as students submit them on the website."
+                : filter === defaultFilter
+                  ? automatic
+                    ? "New members appear here as people register on the website."
+                    : "New membership applications appear here as people submit them on the website."
                   : "No applications have this status."
             }
           />
@@ -161,7 +205,7 @@ export default async function MembershipApplicationsPage({
                   <Link
                     href={(() => {
                       const params = new URLSearchParams();
-                      if (filter !== "pending_review")
+                      if (filter !== defaultFilter)
                         params.set("status", filter);
                       if (rawSearch) params.set("q", rawSearch);
                       params.set(

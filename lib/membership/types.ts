@@ -34,8 +34,13 @@ export const MEMBERSHIP_INTERESTS = [
 export type MembershipInterest = (typeof MEMBERSHIP_INTERESTS)[number];
 export const MAX_INTERESTS = 4;
 
-/** Consent wordings Core accepts. The text of each is in the data contract. */
-export const CONSENT_VERSIONS = ["2026-10-v1"] as const;
+/**
+ * Consent wordings Core accepts. The text of each is in the data contract. 2026-11-v2 is the
+ * current form (ADR 0025, no ID card); 2026-10-v1 is the previous website's, accepted during a
+ * release.
+ */
+export const CONSENT_VERSIONS = ["2026-10-v1", "2026-11-v2"] as const;
+export const CURRENT_CONSENT_VERSION = "2026-11-v2";
 
 /** 4 MiB: inside Vercel's 4.5 MB request limit with room for the other fields. */
 export const MAX_DOCUMENT_BYTES = 4 * 1024 * 1024;
@@ -62,30 +67,84 @@ export type ApplicantStatus = "pending_review" | "approved" | "rejected";
 export type ApplicationField =
   | "fullName"
   | "email"
-  | "universityId"
+  | "category"
+  | "institution"
+  | "institutionName"
   | "academicYear"
   | "discipline"
   | "interests"
-  | "consent"
-  | "idDocument";
+  | "consent";
 
 /** A field problem the public API reports in `errors[]`. */
 export type FieldCode =
   "required" | "invalid" | "too-long" | "too-large" | "unsupported-type";
 
+/**
+ * A validated application (ADR 0025). Details a category does not collect are already dropped:
+ * `institutionId` and `institutionName` are never both set, and `academicYear` is set only for a
+ * category that asks for it.
+ */
 export type MembershipApplicationInput = {
   fullName: string;
   email: string;
-  universityId: string;
-  academicYear: number;
+  category: string;
+  institutionId: string | null;
+  institutionName: string | null;
+  academicYear: number | null;
   discipline: MembershipDiscipline;
   interests: MembershipInterest[];
   consentVersion: string;
-  document: { mediaType: DocumentMediaType; bytes: Uint8Array };
 };
 
+/** The registration form's choices, read from the database (`private.get_membership_options`). */
+export type LocalizedText = { en: string; ar: string };
+export type MembershipCategoryOption = {
+  id: string;
+  label: LocalizedText;
+  institution: "required" | "optional" | "none";
+  academicYear: boolean;
+};
+export type InstitutionOption = {
+  id: string;
+  name: LocalizedText;
+  country: string;
+};
+export type MembershipOptions = {
+  categories: MembershipCategoryOption[];
+  institutions: InstitutionOption[];
+  consentVersion: string;
+  /**
+   * Whether a valid registration is approved at once ('automatic', ADR 0029) or waits for a
+   * reviewer ('review'). For the form's wording only; the database decides at submission.
+   */
+  approval: "automatic" | "review";
+  /** How a registrant's account is created (ADR 0030); the submission decides, this is wording. */
+  accountActivation: AccountActivation;
+};
+
+/**
+ * ADR 0030: 'email_confirmation' (Supabase sign-up, confirmation email) or 'immediate' (Core
+ * creates the account without email verification and signs the registering browser in once).
+ */
+export type AccountActivation = "email_confirmation" | "immediate";
+export const ACCOUNT_ACTIVATIONS: readonly AccountActivation[] = [
+  "email_confirmation",
+  "immediate",
+];
+
+/** The wire value for "my university is not listed"; the name then comes from `institutionName`. */
+export const OTHER_INSTITUTION = "other";
+
 export type SubmitMembershipResult =
-  | { ok: true; applicationId: string; statusToken: string }
+  | {
+      ok: true;
+      applicationId: string;
+      statusToken: string;
+      /** 'approved' when the automatic policy approved it at submission (ADR 0029). */
+      status: "pending_review" | "approved";
+      /** The account activation mode recorded with the application (ADR 0030). */
+      accountActivation: AccountActivation;
+    }
   | {
       ok: false;
       error:
@@ -108,6 +167,10 @@ export type ApplicationStatusResult =
     }
   | { ok: false; error: "not_found" | "server_error" };
 
-export type ReviewerKind = "senior" | "society_affairs";
-export type ApprovalPolicy = "two_step" | "single_step";
+/**
+ * How the database describes a membership reviewer (ADR 0027): 'senior' can also give final
+ * approval, 'reviewer' cannot. 'society_affairs' appears only in audit entries written before 0035.
+ */
+export type ReviewerKind = "senior" | "reviewer" | "society_affairs";
+export type ApprovalPolicy = "two_step" | "single_step" | "automatic";
 export type ReviewDecision = "verify" | "approve" | "reject";

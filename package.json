@@ -20,7 +20,8 @@
     "db:check": "drizzle-kit check",
     "test:project-flow": "playwright test --config playwright.projects.config.ts",
     "test:profile-flow": "playwright test --config playwright.profile.config.ts",
-    "test:admin-flow": "playwright test --config playwright.admin.config.ts"
+    "test:admin-flow": "playwright test --config playwright.admin.config.ts",
+    "local:stack": "tsx tests/event-flow/local-stack.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

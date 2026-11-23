@@ -16,3 +16,8 @@ event, registers verified profiles and a waitlist, decodes the actual QR,
 checks safe login return and explicit attendance, verifies the persisted phone,
 attendance/audit, scoped dashboard/CSV, foreign-manager denial, Arabic and mobile.
 No test code or adapters are loaded by application routes.
+
+`npm run local:stack` (`local-stack.ts`) starts the same isolated stack and keeps it running for
+manual testing: website on 3601, Core on 3600, the synthetic adapters on 3602, against the fresh
+loopback `uc02_test` database named by `TEST_DATABASE_URL`. It prints the synthetic accounts and
+stops on Ctrl+C. It never reaches a hosted project.

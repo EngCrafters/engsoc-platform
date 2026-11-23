@@ -22,11 +22,14 @@ const FILTERS: { value: MembershipFilter; label: string }[] = [
  */
 export function MembershipFilters({
   filter,
+  defaultFilter = "pending_review",
   query,
   counts,
   children,
 }: {
   filter: MembershipFilter;
+  /** The tab shown without a status in the URL. */
+  defaultFilter?: MembershipFilter;
   query: string | null;
   counts: Partial<Record<MembershipFilter, number>>;
   children: ReactNode;
@@ -41,7 +44,7 @@ export function MembershipFilters({
     const params = new URLSearchParams(searchParams.toString());
     params.delete("cursor");
     if (next.status !== undefined) {
-      if (next.status === "pending_review") params.delete("status");
+      if (next.status === defaultFilter) params.delete("status");
       else params.set("status", next.status);
     }
     if (next.q !== undefined) {

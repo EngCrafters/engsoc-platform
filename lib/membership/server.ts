@@ -4,9 +4,11 @@ import { createHash } from "node:crypto";
 import { cache } from "react";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
+import { canAdministerAuth } from "@/lib/auth/admin";
 import {
   claimStorageDeletionsThroughRoutine,
   completeStorageDeletionThroughRoutine,
+  optionsThroughRoutine,
 } from "./db";
 import {
   currentDocumentStorage,
@@ -15,6 +17,7 @@ import {
 } from "./storage";
 import {
   MAX_DOCUMENT_BYTES,
+  type AccountActivation,
   type ApplicationStatus,
   type ApprovalPolicy,
   type ReviewDecision,
@@ -30,6 +33,14 @@ import {
 
 export type MembershipOverview = {
   reviewer: ReviewerKind;
+  /**
+   * Who may review SQU verification and decide leadership (migration 0033):
+   * Board Administration ("senior") and Society Affairs. Null for Technical,
+   * who reviews applications but holds no review authority over these.
+   */
+  verificationReviewer: ReviewerKind | null;
+  /** Non-null when the person sees leadership requests (any committee). */
+  leadershipReviewer?: ReviewerKind | null;
   policy: ApprovalPolicy | null;
   counts: {
     pending_review: number;
@@ -37,16 +48,32 @@ export type MembershipOverview = {
     approved: number;
     rejected: number;
     activationPending: number;
+    /** Pending SQU verification and leadership requests (migration 0033). */
+    squPending: number;
+    leadershipPending: number;
   };
+};
+
+/** Category and institution as the routines describe them (ADR 0025). */
+export type MembershipDetails = {
+  category: string | null;
+  categoryLabel: { en: string; ar: string } | null;
+  institution: { id: string; en: string; ar: string } | null;
+  institutionName: string | null;
 };
 
 export type MembershipListItem = {
   id: string;
   fullName: string;
   email: string;
-  universityId: string;
-  academicYear: number;
+  universityId: string | null;
+  academicYear: number | null;
   discipline: string;
+  category: string | null;
+  /** The category's English label, from the database. */
+  categoryLabel: string | null;
+  /** The listed institution's English name, or the typed one. */
+  institution: string | null;
   status: ApplicationStatus;
   submittedAt: string;
   decidedAt: string | null;
@@ -54,12 +81,12 @@ export type MembershipListItem = {
   hasDocument: boolean;
 };
 
-export type MembershipApplicationDetail = {
+export type MembershipApplicationDetail = MembershipDetails & {
   id: string;
   fullName: string;
   email: string;
-  universityId: string;
-  academicYear: number;
+  universityId: string | null;
+  academicYear: number | null;
   discipline: string;
   interests: string[];
   consentVersion: string;
@@ -72,6 +99,12 @@ export type MembershipApplicationDetail = {
   decidedBy: string | null;
   decidedAt: string | null;
   decidedByEmail: string | null;
+  /** Approved by the automatic policy at submission, not by a reviewer (ADR 0029). */
+  autoApproved?: boolean;
+  /** The account activation mode at submission (ADR 0030); null before 0038. */
+  accountActivation?: AccountActivation | null;
+  /** The account was created by Core without email verification (ADR 0030). */
+  accountUnverified?: boolean;
   decisionNote: string | null;
   memberId: string | null;
   activatedAt: string | null;
@@ -99,12 +132,21 @@ export type MembershipFilter = (typeof MEMBERSHIP_FILTERS)[number];
 export const MEMBERSHIP_PAGE_SIZE = 25;
 
 export function parseMembershipFilter(
-  value: string | undefined
+  value: string | undefined,
+  fallback: MembershipFilter = "pending_review"
 ): MembershipFilter {
   return (MEMBERSHIP_FILTERS as readonly string[]).includes(value ?? "")
     ? (value as MembershipFilter)
-    : "pending_review";
+    : fallback;
 }
+
+/**
+ * The list a reviewer sees first: the review queue, or under the automatic policy (ADR 0029)
+ * the approved registrations, where new members arrive.
+ */
+export const defaultMembershipFilter = (
+  policy: ApprovalPolicy | null
+): MembershipFilter => (policy === "automatic" ? "approved" : "pending_review");
 
 export async function canReviewMembership(actorId: string): Promise<boolean> {
   const rows = await db.execute<{ allowed: boolean }>(
@@ -125,10 +167,23 @@ export async function getMembershipOverview(
   if (!result || result.code !== "SUCCESS") return null;
   return {
     reviewer: result.reviewer!,
+    verificationReviewer: result.verificationReviewer ?? null,
+    leadershipReviewer: result.leadershipReviewer ?? null,
     policy: result.policy ?? null,
     counts: result.counts!,
   };
 }
+
+/** Zero counts, for a person who sees a queue's settings but not the queue itself. */
+export const EMPTY_COUNTS: MembershipOverview["counts"] = {
+  pending_review: 0,
+  verified: 0,
+  approved: 0,
+  rejected: 0,
+  activationPending: 0,
+  squPending: 0,
+  leadershipPending: 0,
+};
 
 // PostgreSQL's codes for a function, table or schema that does not exist.
 const MISSING_OBJECT_CODES = new Set(["42883", "42P01", "3F000"]);
@@ -194,7 +249,7 @@ export async function listMembershipApplications(
     full_name: string;
     email: string;
     university_id: string;
-    academic_year: number;
+    academic_year: number | null;
     discipline: string;
     status: ApplicationStatus;
     submitted_at: string;
@@ -202,6 +257,9 @@ export async function listMembershipApplications(
     activated: boolean;
     has_document: boolean;
     cursor_at: string;
+    category: string | null;
+    category_label: string | null;
+    institution: string | null;
   }>(sql`
     SELECT * FROM private.list_membership_applications(
       ${actorId}::uuid, ${options.filter}, ${options.query},
@@ -215,8 +273,11 @@ export async function listMembershipApplications(
     fullName: row.full_name,
     email: row.email,
     universityId: row.university_id,
-    academicYear: Number(row.academic_year),
+    academicYear: row.academic_year === null ? null : Number(row.academic_year),
     discipline: row.discipline,
+    category: row.category,
+    categoryLabel: row.category_label,
+    institution: row.institution,
     status: row.status,
     submittedAt: new Date(row.submitted_at).toISOString(),
     decidedAt: row.decided_at ? new Date(row.decided_at).toISOString() : null,
@@ -422,6 +483,37 @@ export async function setMembershipApprovalPolicy(
     result: { code: "SUCCESS" | "FORBIDDEN" | "VALIDATION_ERROR" };
   }>(
     sql`SELECT private.set_membership_approval_policy(${actorId}::uuid, ${policy}) AS result`
+  );
+  return rows[0]?.result ?? { code: "VALIDATION_ERROR" };
+}
+
+/**
+ * The account activation setting (ADR 0030) as it is now, read without the registration form's
+ * five-minute cache, and whether this server can create accounts (the service-role key is set),
+ * without which immediate activation falls back to email confirmation.
+ */
+export async function getAccountActivationSetting(): Promise<{
+  accountActivation: AccountActivation;
+  canCreateAccounts: boolean;
+}> {
+  const result = await optionsThroughRoutine();
+  return {
+    accountActivation:
+      result.accountActivation === "immediate"
+        ? "immediate"
+        : "email_confirmation",
+    canCreateAccounts: canAdministerAuth(),
+  };
+}
+
+export async function setMembershipAccountActivation(
+  actorId: string,
+  mode: AccountActivation
+): Promise<{ code: "SUCCESS" | "FORBIDDEN" | "VALIDATION_ERROR" }> {
+  const rows = await db.execute<{
+    result: { code: "SUCCESS" | "FORBIDDEN" | "VALIDATION_ERROR" };
+  }>(
+    sql`SELECT private.set_membership_account_activation(${actorId}::uuid, ${mode}) AS result`
   );
   return rows[0]?.result ?? { code: "VALIDATION_ERROR" };
 }

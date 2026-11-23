@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireSenior } from "@/lib/administration/access";
+import { requireAnyPermission } from "@/lib/administration/access";
+import { can } from "@/lib/auth/permissions";
 import {
   listCommittees,
   type CommitteeSummary,
@@ -23,12 +24,17 @@ import { CommitteeFormDialog } from "./committee-form";
 export const dynamic = "force-dynamic";
 
 export default async function CommitteesPage() {
-  const actor = await requireSenior();
+  // Everyone who can see a committee page: the list shows only the committees they may open.
+  const actor = await requireAnyPermission(
+    "committees.view",
+    "teams.manage",
+    "leadership.assign"
+  );
   if (!actor)
     return (
       <ErrorState
-        title="Committees are managed by senior administrators"
-        description="Board Administration and the Technical Team manage the committee catalog."
+        title="Committees are not in your permissions"
+        description="The committee catalog needs the View committees permission, or team or leadership permissions for a committee."
       />
     );
   let committees: CommitteeSummary[] | null = null;
@@ -54,7 +60,9 @@ export default async function CommitteesPage() {
         headingId="committees-title"
         title="Committees"
         description={`${active} active, ${committees.length - active} archived. Committees are archived, never deleted, so their events and projects keep their owner.`}
-        actions={<CommitteeFormDialog />}
+        actions={
+          can(actor, "committees.manage") ? <CommitteeFormDialog /> : null
+        }
       />
       {committees.length === 0 ? (
         <EmptyState

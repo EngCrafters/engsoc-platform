@@ -54,8 +54,22 @@ export const MEMBERSHIP_CONFLICT_REASONS = [
 export type MembershipConflictReason =
   (typeof MEMBERSHIP_CONFLICT_REASONS)[number];
 
+/**
+ * Immediate account activation (ADR 0030), told only to the browser holding the application's
+ * status token. `not-configured` accompanies a 503: this server cannot create accounts, so the
+ * website uses email confirmation instead.
+ */
+export const ACCOUNT_REASONS = [
+  "confirmation-required",
+  "account-exists",
+  "already-set-up",
+  "expired",
+  "not-configured",
+] as const;
+export type AccountReason = (typeof ACCOUNT_REASONS)[number];
+
 export type ConflictReason =
-  RegistrationConflictReason | MembershipConflictReason;
+  RegistrationConflictReason | MembershipConflictReason | AccountReason;
 
 type ProblemSpec = { status: number; title: string; type: string };
 
@@ -127,7 +141,12 @@ export function problem(
     requestId,
   };
   if (options.errors?.length) body.errors = options.errors;
-  if (code === "conflict" && options.reason) body.reason = options.reason;
+  if (
+    options.reason &&
+    (code === "conflict" ||
+      (code === "service-unavailable" && options.reason === "not-configured"))
+  )
+    body.reason = options.reason;
 
   const headers: Record<string, string> = {
     "content-type": "application/problem+json; charset=utf-8",

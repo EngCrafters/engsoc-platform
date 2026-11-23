@@ -4,13 +4,15 @@ import { logoutAction } from "../actions";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { NoAccessState } from "@/components/admin/no-access-state";
 import { getManagerContext } from "@/lib/auth/manager";
+import { accountAccessView } from "@/lib/auth/permissions";
+import { dashboardNav } from "@/components/admin/admin-navigation";
 import type { ManagerContext } from "@/lib/auth/manager";
 import { hasMembershipReviewerRole } from "@/lib/membership/access";
 import { getMembershipAccess } from "@/lib/membership/server";
 
 /**
- * Membership review is a separate authority (ADR 0017): only Society Affairs
- * managers and Senior Management see the section, as the database confirms.
+ * The membership section follows the person's permissions (ADR 0027): each
+ * queue is shown to holders of its permission, as the database confirms.
  * When the database cannot answer (for example before migration 0025 is
  * applied), those roles see the section marked as needing setup, which opens
  * an explanation and nothing else; other managers still see nothing, the rest
@@ -22,7 +24,11 @@ async function membershipNavigation(
   const access = await getMembershipAccess(manager.userId);
   if (access.kind === "reviewer") {
     const { counts } = access.overview;
-    return { awaiting: counts.pending_review + counts.verified };
+    return {
+      awaiting: counts.pending_review + counts.verified,
+      squPending: counts.squPending ?? 0,
+      leadershipPending: counts.leadershipPending ?? 0,
+    };
   }
   if (access.kind === "unavailable" && hasMembershipReviewerRole(manager)) {
     return { unavailable: access.reason };
@@ -48,8 +54,8 @@ export default async function ProtectedAdminLayout({
     <AdminShell
       email={manager.email}
       userId={manager.userId}
-      accessLevel={manager.accessLevel}
-      committees={manager.committees}
+      nav={dashboardNav(manager)}
+      view={accountAccessView(manager)}
       membership={membership}
       logoutAction={logoutAction}
     >

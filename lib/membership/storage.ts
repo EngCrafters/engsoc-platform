@@ -114,12 +114,22 @@ const EXTENSIONS: Record<DocumentMediaType, string> = {
   "application/pdf": "pdf",
 };
 
+/**
+ * The private documents this module stores, each under its own prefix in the
+ * same bucket (ADR 0018): membership ID cards from earlier applications and
+ * SQU student verification evidence (ADR 0025).
+ */
+export type DocumentKeyPrefix = "membership-id-cards" | "squ-verification";
+
 export const DOCUMENT_KEY_PATTERN =
-  /^membership-id-cards\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|pdf)$/;
+  /^(membership-id-cards|squ-verification)\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|pdf)$/;
 
 /** A random object key: no name, email, student ID or original file name. */
-export function newDocumentKey(mediaType: DocumentMediaType): string {
-  return `membership-id-cards/${randomUUID()}.${EXTENSIONS[mediaType]}`;
+export function newDocumentKey(
+  mediaType: DocumentMediaType,
+  prefix: DocumentKeyPrefix = "membership-id-cards"
+): string {
+  return `${prefix}/${randomUUID()}.${EXTENSIONS[mediaType]}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -225,11 +235,12 @@ export function signRequest(input: {
 type Fetch = typeof fetch;
 
 /**
- * What the deletion queue may hold (0032): ID cards, event covers, project images and member
- * photos, matching the queue's own CHECK. Reads and uploads still accept ID cards only.
+ * What the deletion queue may hold (0032, 0033): ID cards, SQU verification evidence, event
+ * covers, project images and member photos, matching the queue's own CHECK. Reads and uploads
+ * accept the two document prefixes only.
  */
 export const QUEUED_KEY_PATTERN =
-  /^(membership-id-cards\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|pdf)|event-covers\/[0-9a-f-]{36}\.(jpg|png)|project-images\/[0-9a-f-]{36}\.(jpg|png)|member-photos\/[0-9a-f-]{36}\.jpg)$/;
+  /^((membership-id-cards|squ-verification)\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|pdf)|event-covers\/[0-9a-f-]{36}\.(jpg|png)|project-images\/[0-9a-f-]{36}\.(jpg|png)|member-photos\/[0-9a-f-]{36}\.jpg)$/;
 
 function objectUrl(
   config: StorageConfig,

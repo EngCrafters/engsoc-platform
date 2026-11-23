@@ -12,10 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { isUuid, requireSenior } from "@/lib/administration/access";
+import { isUuid, requirePermission } from "@/lib/administration/access";
+import { can } from "@/lib/auth/permissions";
 import { formatDay, formatWhen } from "@/lib/administration/labels";
 import { getMember, type MemberDetail } from "@/lib/administration/server";
 import { logServerError } from "@/lib/api/log";
+import { leadershipPath } from "@/lib/verification/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,12 @@ const LEVELS: Record<string, string> = {
   COMMITTEE_MANAGER: "Committee Manager",
   BOARD_ADMIN: "Board Administration",
   TECHNICAL: "Technical Team",
+};
+const SQU_STATUS: Record<string, string> = {
+  pending: "Pending review",
+  rejected: "Not verified (last request rejected)",
+  revoked: "Revoked",
+  not_verified: "Not verified",
 };
 
 function Facts({ items }: { items: [string, React.ReactNode][] }) {
@@ -41,12 +49,15 @@ function Facts({ items }: { items: [string, React.ReactNode][] }) {
 export default async function MemberPage({
   params,
 }: PageProps<"/admin/administration/members/[id]">) {
-  const [{ id }, actor] = await Promise.all([params, requireSenior()]);
+  const [{ id }, actor] = await Promise.all([
+    params,
+    requirePermission("members.view"),
+  ]);
   if (!actor)
     return (
       <ErrorState
-        title="Member records are for senior administrators"
-        description="Board Administration and the Technical Team review member records here."
+        title="Member records need the View members permission"
+        description="Member records are shown to people whose permissions include them."
       />
     );
   if (!isUuid(id)) notFound();
@@ -74,7 +85,11 @@ export default async function MemberPage({
       <AdminPageHeader
         headingId="member-title"
         title={member.name}
-        description={`${member.email} · student ID ${member.universityId}`}
+        description={
+          member.universityId
+            ? `${member.email} · student ID ${member.universityId}`
+            : member.email
+        }
         context={
           <>
             <Badge
@@ -86,6 +101,9 @@ export default async function MemberPage({
               <Badge variant="outline">
                 {LEVELS[access.level] ?? access.level}
               </Badge>
+            ) : null}
+            {detail.squVerification?.status === "verified" ? (
+              <Badge variant="secondary">SQU Verified</Badge>
             ) : null}
             {detail.changeRequests.some((r) => r.status === "pending") ? (
               <Badge variant="outline">Correction pending</Badge>
@@ -99,13 +117,25 @@ export default async function MemberPage({
           <CardHeader>
             <CardTitle>Membership</CardTitle>
             <CardDescription>
-              The record approved from the SQU ID card. Corrections go through
-              the membership page.
+              The approved membership record. Corrections to the name or student
+              ID go through the membership page.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Facts
               items={[
+                ["Category", member.categoryLabel?.en ?? "Not recorded"],
+                [
+                  member.category === "graduate" ? "Alma mater" : "Institution",
+                  member.institution?.en ?? member.institutionName ?? "—",
+                ],
+                [
+                  "SQU student verification",
+                  detail.squVerification?.status === "verified"
+                    ? `Verified ${formatDay(detail.squVerification.verifiedAt)}`
+                    : (SQU_STATUS[detail.squVerification?.status ?? ""] ??
+                      "Not verified"),
+                ],
                 [
                   "Discipline",
                   <span key="d" className="capitalize">
@@ -158,7 +188,22 @@ export default async function MemberPage({
           <CardHeader>
             <CardTitle>Committees</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm">
+          <CardContent className="flex flex-col gap-3 text-sm">
+            {detail.appointments.length > 0 ? (
+              <ul className="flex flex-col gap-1.5" aria-label="Appointments">
+                {detail.appointments.map((a) => (
+                  <li key={a.id}>
+                    <span className="font-medium">
+                      {leadershipPath(a.committee, a.team, a.position)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · since {formatDay(a.appointedAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             {detail.committees.length === 0 ? (
               <p className="text-muted-foreground">
                 Not on any committee roster.
@@ -252,64 +297,68 @@ export default async function MemberPage({
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldAlert
-              aria-hidden="true"
-              className="size-4 text-destructive"
-            />{" "}
-            Permanent actions
-          </CardTitle>
-          <CardDescription>
-            Membership suspension needs an approved society policy before it can
-            be offered. Deletion shows everything affected and is blocked while
-            projects or accountability records depend on it.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 text-sm">
-          {self ? (
-            <p className="text-muted-foreground">
-              You cannot delete your own records.
-            </p>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="max-w-xl text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    Delete the membership record.
-                  </span>{" "}
-                  Removes the membership, applications, ID cards, photo and
-                  roster places. Registrations are anonymized. The sign-in
-                  account stays.
-                </p>
-                <PermanentDeletionDialog
-                  kind="membership"
-                  id={member.id}
-                  label="Delete membership"
-                />
-              </div>
-              {actor.accessLevel === "TECHNICAL" && account ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-                  <p className="max-w-xl text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      Delete the account completely.
-                    </span>{" "}
-                    Everything above, plus the Supabase sign-in identity. Audit
-                    entries stay without anything identifying the person.
-                    Technical Team only.
-                  </p>
-                  <PermanentDeletionDialog
-                    kind="account"
-                    id={member.id}
-                    label="Delete account"
-                  />
-                </div>
-              ) : null}
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {can(actor, "members.delete") || can(actor, "accounts.erase") ? (
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldAlert
+                aria-hidden="true"
+                className="size-4 text-destructive"
+              />{" "}
+              Permanent actions
+            </CardTitle>
+            <CardDescription>
+              Membership suspension needs an approved society policy before it
+              can be offered. Deletion shows everything affected and is blocked
+              while projects or accountability records depend on it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 text-sm">
+            {self ? (
+              <p className="text-muted-foreground">
+                You cannot delete your own records.
+              </p>
+            ) : (
+              <>
+                {can(actor, "members.delete") ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="max-w-xl text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        Delete the membership record.
+                      </span>{" "}
+                      Removes the membership, applications, ID cards, photo and
+                      roster places. Registrations are anonymized. The sign-in
+                      account stays.
+                    </p>
+                    <PermanentDeletionDialog
+                      kind="membership"
+                      id={member.id}
+                      label="Delete membership"
+                    />
+                  </div>
+                ) : null}
+                {can(actor, "accounts.erase") && account ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                    <p className="max-w-xl text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        Delete the account completely.
+                      </span>{" "}
+                      Everything above, plus the Supabase sign-in identity.
+                      Audit entries stay without anything identifying the
+                      person. Needs the Delete sign-in accounts permission.
+                    </p>
+                    <PermanentDeletionDialog
+                      kind="account"
+                      id={member.id}
+                      label="Delete account"
+                    />
+                  </div>
+                ) : null}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </section>
   );
 }

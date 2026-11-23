@@ -136,10 +136,19 @@ export const members = pgTable(
     id: uuid("id").primaryKey(), // = auth.users.id
     fullName: text("full_name").notNull(),
     email: text("email").notNull().unique(), // compared case-insensitively in app code
-    universityId: text("university_id").notNull().unique(),
+    // ADR 0025: no longer collected at registration, so new members have none.
+    // Existing student IDs stay; uniqueness still applies where present.
+    universityId: text("university_id").unique(),
     year: integer("year"),
     major: text("major"),
     status: memberStatus("status").notNull().default("member"),
+    // ADR 0025: references to private.membership_categories and
+    // private.institutions (stable ids; labels live there). A listed
+    // institution or a typed name, never both. Written only by activation and
+    // the member's own profile routine; NULL means not recorded.
+    category: text("category"),
+    institutionId: text("institution_id"),
+    institutionName: text("institution_name"),
     // ADR 0020: private E.164 phone; own-profile routines only, no browser grants.
     phone: text("phone"),
     // ADR 0023: changed only through own-profile routines, never a browser grant.

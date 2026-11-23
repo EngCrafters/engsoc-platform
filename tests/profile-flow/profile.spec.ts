@@ -10,7 +10,6 @@ const reviewer = "91000000-0000-4000-8000-000000000005";
 const applicant = {
   name: "Profile Flow Member",
   email: "profile-flow@squ.edu.om",
-  studentId: "24681357",
   password: "Synthetic-profile-password-42!",
 };
 
@@ -36,7 +35,7 @@ async function inboxLink(page: Page, type: string) {
 
 async function signIn(page: Page, email: string, password: string) {
   await page.goto(`${WEB}/login`);
-  await page.getByLabel("University email", { exact: true }).fill(email);
+  await page.getByLabel("Email address", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
@@ -80,32 +79,24 @@ test("register → confirm → pending → approved → avatar → profile → e
     ).toHaveCount(0);
     await page.keyboard.press("Escape");
 
-    // Register, with a synthetic ID card.
+    // Register as an SQU student (ADR 0025): no student ID and no ID card at registration.
     await page.goto(`${WEB}/register`);
     await page.getByLabel("Full name", { exact: true }).fill(applicant.name);
     await page
-      .getByLabel("University email", { exact: true })
+      .getByLabel("Email address", { exact: true })
       .fill(applicant.email);
+    await expect(page.getByLabel("Student ID", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("SQU student ID card")).toHaveCount(0);
     await page
-      .getByLabel("Student ID", { exact: true })
-      .fill(applicant.studentId);
+      .getByRole("radio", { name: "University Student", exact: true })
+      .check({ force: true }); // a styled chip: its label text takes the click
+    await page.getByLabel("University", { exact: true }).selectOption("squ");
     await page.getByLabel("Academic year", { exact: true }).selectOption("2");
     await page.getByLabel("Discipline", { exact: true }).selectOption("civil");
     await page.getByLabel("Password", { exact: true }).fill(applicant.password);
     await page
       .getByLabel("Confirm password", { exact: true })
       .fill(applicant.password);
-    const card = await sharp({
-      create: { width: 640, height: 400, channels: 3, background: "#e8eef9" },
-    })
-      .png()
-      .toBuffer();
-    await page.getByLabel("SQU student ID card").setInputFiles({
-      name: "synthetic-card.png",
-      mimeType: "image/png",
-      buffer: card,
-    });
-    await expect(page.getByText(/Ready to send/)).toBeVisible();
     await page.getByLabel(/I confirm that these details are mine/).check();
     await page
       .getByRole("button", { name: "Submit application", exact: true })
@@ -186,12 +177,14 @@ test("register → confirm → pending → approved → avatar → profile → e
     ).toHaveCount(0);
     await page.keyboard.press("Escape");
 
-    // Real data from the application.
+    // Real data from the application: a student ID is no longer collected.
     const verified = page.getByRole("region", { name: "Verified identity" });
     await expect(verified).toContainText(applicant.email);
-    await expect(verified).toContainText(applicant.studentId);
+    await expect(verified).not.toContainText("Student ID");
     const about = page.getByRole("region", { name: "About you" });
     await expect(about).toContainText("Year 2");
+    await expect(about).toContainText("University Student");
+    await expect(about).toContainText("Sultan Qaboos University (SQU)");
 
     // Edit: validation first, then a saved change.
     await page.getByRole("link", { name: "Edit profile" }).click();
@@ -216,12 +209,16 @@ test("register → confirm → pending → approved → avatar → profile → e
     await expect(about).toContainText("Year 3");
 
     // Photo: preview, save, and the navbar follows.
+    // The photo picker, not the SQU evidence picker of "Verification & Society Roles".
+    const photoInput = page.locator(
+      'input[type="file"][accept="image/jpeg,image/png"]'
+    );
     const photo = await sharp({
       create: { width: 900, height: 600, channels: 3, background: "#234bc4" },
     })
       .png()
       .toBuffer();
-    await page.locator('input[type="file"]').setInputFiles({
+    await photoInput.setInputFiles({
       name: "synthetic-photo.png",
       mimeType: "image/png",
       buffer: photo,
@@ -234,7 +231,7 @@ test("register → confirm → pending → approved → avatar → profile → e
       page.getByAltText(`Profile photo of ${applicant.name}`)
     ).toBeVisible();
     // A file that is not an image never leaves the browser.
-    await page.locator('input[type="file"]').setInputFiles({
+    await photoInput.setInputFiles({
       name: "notes.txt",
       mimeType: "text/plain",
       buffer: Buffer.from("not an image"),
@@ -246,16 +243,19 @@ test("register → confirm → pending → approved → avatar → profile → e
     // A verified field changes only through a reviewer.
     await page.getByRole("button", { name: "Request a correction" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Detail to correct").selectOption("university_id");
-    await dialog.getByLabel("Correct value").fill("13579246");
+    // No student ID is on record, so only the name can be corrected.
+    await expect(
+      dialog.getByLabel("Detail to correct").locator("option")
+    ).toHaveCount(1);
+    await dialog.getByLabel("Correct value").fill("Profile Flow Member Two");
     await dialog.getByRole("button", { name: "Send request" }).click();
     await expect(
       page.getByText("Your request is with the reviewers.")
     ).toBeVisible();
     await expect(verified).toContainText(
-      "Correction requested: 13579246 · awaiting review"
+      "Correction requested: Profile Flow Member Two · awaiting review"
     );
-    await expect(verified).toContainText(applicant.studentId);
+    await expect(verified).toContainText(applicant.name);
 
     // Refresh: everything persisted in Core.
     await page.reload();
@@ -268,12 +268,14 @@ test("register → confirm → pending → approved → avatar → profile → e
     await expect(avatar.locator("img")).toBeVisible();
     await expect(verified).toContainText("awaiting review");
     const [row] =
-      await db`SELECT id, phone, year, interests, photo_key, university_id FROM public.members WHERE email=${applicant.email}`;
+      await db`SELECT id, phone, year, interests, photo_key, university_id, category, institution_id FROM public.members WHERE email=${applicant.email}`;
     expect(row).toMatchObject({
       phone: "+96891234567",
       year: 3,
       interests: ["robotics", "programming"],
-      university_id: applicant.studentId,
+      university_id: null,
+      category: "university_student",
+      institution_id: "squ",
     });
     expect(row.photo_key).toMatch(/^member-photos\/[0-9a-f-]{36}\.jpg$/);
     const audit =
@@ -344,11 +346,11 @@ test("register → confirm → pending → approved → avatar → profile → e
     const corrections = admin.getByRole("region", {
       name: "Profile corrections",
     });
-    await expect(corrections).toContainText("13579246");
+    await expect(corrections).toContainText("Profile Flow Member Two");
     await corrections.getByRole("button", { name: "Approve" }).click();
     await expect(admin.getByText("Decision saved.")).toBeVisible();
     await page.reload();
-    await expect(verified).toContainText("13579246");
+    await expect(verified).toContainText("Profile Flow Member Two");
     await expect(verified).toContainText("Your correction was approved.");
 
     // Sign out: the original navbar returns at once.
@@ -383,7 +385,7 @@ test("register → confirm → pending → approved → avatar → profile → e
     await phone.goto(`${WEB}/profile`);
     await expect(phone.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(
-      phone.getByRole("heading", { level: 1, name: applicant.name })
+      phone.getByRole("heading", { level: 1, name: "Profile Flow Member Two" })
     ).toBeVisible();
     await expect(phone.getByText("الهوية الموثّقة")).toBeVisible();
     await phone.getByRole("button", { name: "فتح القائمة" }).click();

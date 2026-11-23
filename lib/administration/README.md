@@ -1,8 +1,10 @@
 # Administration
 
 ADR 0024 owns the contract; migration 0032 holds every rule. `server.ts` calls the restricted
-routines with the verified actor and nothing else. `access.ts` is the page and action gate, which
-mirrors the database's Board/Technical check. `messages.ts` and `labels.ts` are display text only.
+routines with the verified actor and nothing else. `access.ts` is the page and action gate
+(`requirePermission`, `requireAnyPermission`), which mirrors the database's permission checks (ADR
+0027). `permissions.ts` wraps the committee and team permission routines (`list_permission_groups`,
+`get_permission_group`, `set_group_permissions`). `messages.ts` and `labels.ts` are display text only.
 
 Permanent deletion always previews first, then deletes in one transaction. Storage files go
 through the existing deletion queue (`processMembershipStorageDeletions`). Account erasure removes

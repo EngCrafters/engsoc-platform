@@ -23,28 +23,50 @@ sequenceDiagram
   participant DB as PostgreSQL
   participant A as Supabase Auth
   participant R as Reviewer (dashboard)
-  V->>C: POST /membership-applications (fields + ID card)
-  C->>DB: begin_membership_submission (rate limit, duplicates)
-  C->>C: upload card to private bucket (if Storage configured)
-  C->>DB: submit_(stored_)membership_application → pending_review
-  C-->>V: 201 statusToken
+  V->>C: GET /membership-options (categories, institutions)
+  V->>C: POST /membership-applications (category fields, no ID, no card)
+  C->>DB: submit_membership_application_v2 (rate limit, duplicates) → approved or pending_review
+  C-->>V: 201 status + statusToken
   V->>A: signUp(email, password) → confirmation email
   V->>A: confirm via email link
-  R->>DB: review_membership_application(verify)
-  R->>DB: review_membership_application(approve|reject) → card deleted
-  R->>DB: activate_membership
-  alt identity exists and is confirmed or invited
-    DB->>DB: members row + activated_at
-  else no identity
-    R->>A: invite (Auth Admin API) → retry activation
-  else identity unconfirmed
-    V->>C: GET /me/membership after a confirmed sign-in → activation completes
+  alt automatic policy (ADR 0029, active since 0037)
+    V->>C: GET /me/membership (confirmed sign-in)
+    C->>DB: get_my_membership → members row + activated_at
+  else single_step or two_step
+    R->>DB: review_membership_application(verify)
+    R->>DB: review_membership_application(approve|reject)
+    R->>DB: activate_membership
+    alt identity exists and is confirmed or invited
+      DB->>DB: members row + activated_at
+    else no identity
+      R->>A: invite (Auth Admin API) → retry activation
+    else identity unconfirmed
+      V->>C: GET /me/membership after a confirmed sign-in → activation completes
+    end
   end
 ```
 
+**Automatic approval** (ADR 0029, migration 0037; the active policy). The submit routine stores a
+valid application as `approved` with `auto_approved = true` and no reviewer, after the same
+validation, address limit and duplicate checks. Nothing else changes: the member record is written
+at the applicant's first confirmed sign-in (the website calls `GET /v1/me/membership` after the
+confirmation link, and again whenever a member-only call answers `MEMBER_REQUIRED`), and a reviewer
+can still send the invitation for an applicant who never finished sign-up. No reviewer step is
+needed, and registration grants no administrative access, committee place or leadership.
+
+**Account activation** (ADR 0030, migration 0038), a separate setting. Under
+`email_confirmation` (the default) the website's Supabase sign-up sends the confirmation email, as
+above. Under `immediate` the browser instead calls `POST /v1/membership-applications/account`
+with its status token: Core creates the account it reserved with the Auth Admin API (confirmed,
+no password, no email), links it, writes the member record if approved, and returns a one-time
+sign-in token; the browser signs in and sets its password with Supabase Auth. An address that
+already has an account is never signed in to. The application records that the address was not
+verified. Without the service-role key the endpoint answers `not-configured` and the website
+uses email confirmation.
+
 | Step               | Entry point                                                                                                   | Who                                                                                                              | Writes                                                                                                                                                                        | Failure cases                                                                                                                                                                                |
 | ------------------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Submit             | `POST /v1/membership-applications`                                                                            | Anyone; SQU email                                                                                                | `membership_applications` (`pending_review`, token hash), `membership_documents` (bytes or Storage reference), `membership_submission_attempts`, audit `membership.submitted` | 422 validation; 409 `already-applied` or `already-member`; 429 after 20 per IP per hour; 503 when Storage is misconfigured or fails (nothing saved; an orphan upload is queued for deletion) |
+| Submit             | `POST /v1/membership-applications`                                                                            | Anyone; any valid email                                                                                          | `membership_applications` (`pending_review`, token hash), `membership_documents` (bytes or Storage reference), `membership_submission_attempts`, audit `membership.submitted` | 422 validation; 409 `already-applied` or `already-member`; 429 after 20 per IP per hour; 503 when Storage is misconfigured or fails (nothing saved; an orphan upload is queued for deletion) |
 | Account            | Website → Supabase `signUp`                                                                                   | Applicant                                                                                                        | `auth.users` (unconfirmed)                                                                                                                                                    | Sign-up failure keeps the application; the website offers a retry                                                                                                                            |
 | Link               | `GET /v1/me/membership` (any confirmed sign-in)                                                               | Applicant                                                                                                        | `membership_applications.auth_user_id`, audit `membership.account_linked`                                                                                                     | Unconfirmed email links nothing (`emailConfirmed:false`)                                                                                                                                     |
 | Verify             | Dashboard `reviewMembershipAction` (`verify`)                                                                 | Society Affairs manager, Board, Technical; not their own email                                                   | `status = verified`, `verified_by`, `revision + 1`, audit                                                                                                                     | `STALE_REVISION`, `INVALID_TRANSITION`, `SELF_REVIEW`, `FORBIDDEN`                                                                                                                           |
@@ -57,13 +79,109 @@ sequenceDiagram
 
 - Supabase Auth for sign-up, confirmation and invitations. Invitations need
   `SUPABASE_SERVICE_ROLE_KEY` and a redirect on the allow-list.
-- Storage for ID cards (optional fallback to the database).
+- No Storage: since migration 0033 (ADR 0025) the application carries no file. Applications from
+  before 0033 may still hold an ID card, deleted at the decision.
 - The website, for the applicant UI.
 
 **Not implemented:**
 
 - automatic expiry or deletion of applications;
 - membership suspension.
+
+## SQU student verification (0033)
+
+| Step   | Entry point                                                          | Who                                                         | Writes                                                                                                | Fails with                                                                         |
+| ------ | -------------------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Submit | `POST /v1/me/verification/squ` (website profile)                     | A member, for themself                                      | Evidence object (`squ-verification/`), request and document rows, audit `verification.submitted`      | `ALREADY_PENDING`, `ALREADY_VERIFIED`, `RATE_LIMITED`, invalid number or file, 503 |
+| View   | `/admin/membership/verifications/[id]/document`                      | Board Administration, Society Affairs                       | Audit `verification.document_viewed`                                                                  | 404, size or SHA-256 mismatch                                                      |
+| Decide | Dashboard `decideSquAction` → `decide_squ_verification`              | Board Administration, Society Affairs; not about themselves | Request decision; on approval a `squ_verifications` row; audit `verification.approved` or `.rejected` | `SELF_REVIEW`, `STALE_REVISION`, `STUDENT_NUMBER_IN_USE`, `INVALID_TRANSITION`     |
+| Revoke | Dashboard `revokeSquAction` → `revoke_squ_verification`              | Board Administration, Society Affairs; not about themselves | `revoked_at`, reason, optional note; audit `verification.revoked`                                     | `SELF_REVIEW`, `INVALID_TRANSITION`                                                |
+| Retain | `purge_expired_verification_documents` on the verification list view | Automatic, **only** once Technical sets a retention period  | Deletes evidence of decided requests older than the period, 25 at a time, queueing Storage objects    | Nothing happens while the period is `NULL` (the default)                           |
+
+The member sees the state, the decision date and any member-facing reason on `/profile`. No email
+is sent (ADR 0025, open decision 5).
+
+## Committee and team leadership (0033, 0034)
+
+A request or appointment belongs to a committee, and to a team only for team leadership (ADR 0026):
+"Society Affairs Committee → Assistant Chief" is committee leadership, "Support & Logistics
+Committee → Technical Team → Chief" team leadership. Every committee offers committee leadership,
+with or without teams.
+
+| Step               | Entry point                                                                                         | Who                                                                                  | Writes                                                                                                                                                                 | Fails with                                                                                                          |
+| ------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Manage teams       | `/admin/administration/committees/[id]` → `team-actions.ts` → `admin_*_team`                        | Board, Technical                                                                     | `committee_teams`; moving, deactivating or archiving cancels pending requests with a reason; audit `team.created`, `.updated`, `.moved`, `.status_changed`, `.deleted` | `NAME_TAKEN`, `IN_USE` (deleting a used team), `BLOCKED` (archiving with active appointments), `COMMITTEE_ARCHIVED` |
+| Open or close      | Membership → Leadership switch → `set_leadership_requests_open`                                     | Board, Technical                                                                     | `verification_settings.leadership_requests_open`; audit `leadership.requests_opened` or `.requests_closed`                                                             | `FORBIDDEN`, `UNCHANGED`                                                                                            |
+| Request a position | `POST /v1/me/leadership/requests` (website profile; `teamId` null for committee leadership)         | A member, while requests are open                                                    | `leadership_requests` (`pending`); audit `leadership.requested` with the level                                                                                         | `REQUESTS_CLOSED`, `HIERARCHY_MISMATCH`, `TEAM_INACTIVE`, `COMMITTEE_ARCHIVED`, `ALREADY_PENDING`, `RATE_LIMITED`   |
+| Decide             | Dashboard `/admin/membership/leadership/[id]` → `decide_leadership_request`                         | Leadership reviewers, not about themselves                                           | On approval a `leadership_appointments` row (`source = request`); audit `leadership.approved` or `.rejected`                                                           | `SELF_REVIEW`, `POSITION_FULL`, `STALE_STRUCTURE` (team moved), `STALE_REVISION`                                    |
+| Appoint directly   | Committee page (Committee leaders, or a team) → `assign_leadership`                                 | Leadership reviewers (on the page: Board), not themselves                            | Appointment (`source = direct`); audit `appointment.created`                                                                                                           | `POSITION_FULL`, `PENDING_REQUEST`, limits                                                                          |
+| Change or revoke   | Committee page or request detail → `update_leadership_appointment`, `revoke_leadership_appointment` | Leadership reviewers (Board Administration, Society Affairs). Never about themselves | Position change or `ended_at` with a member-facing reason; audit `appointment.updated` or `.revoked`                                                                   | `SELF_REVIEW`, `POSITION_FULL`, `STALE_REVISION`                                                                    |
+
+Approvals and structure changes take one exclusive lock, so two approvals for one position in one
+scope (the committee itself or one team) cannot both succeed. Closing requests stops new ones only:
+pending requests can still be decided and appointments stay visible. **No step writes `administrative_access`.** A Chief or Assistant Chief has no
+dashboard access unless `/admin/access` grants it separately.
+
+## Committee and team permissions (0035, ADR 0027)
+
+```mermaid
+flowchart LR
+  PM["Holder of permissions.manage"] -->|"Administration → Permissions<br/>set_group_permissions"| G["Committee or team<br/>configuration"]
+  G -->|"active appointment in that scope"| L["Chief / Assistant Chief"]
+  G -->|"committee configuration"| CM["Committee Manager<br/>of that committee"]
+  LV["Personal level<br/>(fixed mapping)"] --> P["Effective permissions<br/>get_dashboard_access"]
+  L --> P
+  CM --> P
+  P -->|"every routine re-checks<br/>has_permission"| D["Dashboard pages, actions, routines"]
+```
+
+1. A holder of `permissions.manage` opens Administration → Permissions, picks a committee or a
+   team, ticks permissions (own committee or all committees where scopable), reviews the preview
+   of affected leaders and saves. Full access and changes to `permissions.manage` ask for
+   confirmation. The change is audited and applies on each leader's next request.
+2. A member approved as Chief or Assistant Chief receives their scope's configuration from the
+   moment the appointment exists; revocation, a team made inactive or an archived committee ends
+   it. Pending requests never grant anything. The website profile shows which positions give
+   dashboard access.
+3. Nobody changes their own group's configuration, and no change may leave the society without an
+   account able to manage permissions and administrator access.
+
+## Email Centre (0036, ADR 0028)
+
+```mermaid
+sequenceDiagram
+  participant S as Sender (email.send)
+  participant C as Core
+  participant DB as PostgreSQL
+  participant T as Transport (deferred provider)
+  S->>C: draft, filters, preview (25 per page)
+  C->>DB: email_save_campaign / email_audience_preview
+  S->>C: confirm N recipients
+  C->>DB: email_queue_campaign(expected N): one delivery per recipient
+  loop each bounded batch (page open, or the dispatch route)
+    C->>DB: email_claim_deliveries: recheck sender and recipients, lease
+    C->>T: one message per recipient, idempotency key = delivery id
+    C->>DB: email_complete_delivery: accepted / retry / failed
+  end
+```
+
+1. The sender builds the audience from member data (category, self-reported institution,
+   academic year, discipline, interests, membership status, SQU verification, leadership
+   position, committee and team, plus individual inclusions and exclusions) and sees the count
+   and a searchable page of recipients. Unsubscribed and suppressed addresses are always left out.
+2. They write the message in English, Arabic or both, preview it as a recipient sees it, save a
+   draft or template, and send themselves a test.
+3. Sending asks them to confirm the exact count; queuing recounts and refuses a changed audience.
+4. Batches of 25 run while the page is open, or whenever a scheduler calls
+   `/v1/internal/email-dispatch`. Before each send the sender's permission and the recipient's
+   eligibility are rechecked: a sender who lost `email.send` halts the rest of the campaign.
+5. Temporary failures retry with back-off up to five attempts; permanent ones are listed with
+   their reason, and invalid addresses are suppressed. "Accepted" is not "delivered" until the
+   provider reports delivery. Members unsubscribe from the link in every message or on their
+   profile.
+
+Sending is off until a provider, sender address and secrets are configured; see
+[Email Centre](../how-to/email-centre.md).
 
 ## Sign-in, sessions, sign-out and recovery
 

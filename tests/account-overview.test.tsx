@@ -12,6 +12,9 @@ import { NoAccessState } from "../components/admin/no-access-state";
 import { AdminSidebar } from "../components/admin/admin-sidebar";
 import { SidebarProvider } from "../components/ui/sidebar";
 import { TooltipProvider } from "../components/ui/tooltip";
+import { dashboardNav } from "../components/admin/admin-navigation";
+import { accountAccessView } from "../lib/auth/permissions";
+import { managerContext } from "./support/manager-fixture";
 
 const noop = async () => {};
 
@@ -24,6 +27,12 @@ function visibleText(html: string) {
 }
 
 const committees = [{ id: "events-id", name: "Events" }];
+const manager = managerContext("COMMITTEE_MANAGER", { committees });
+const view = accountAccessView(manager);
+const navFor = (
+  level: "BOARD_ADMIN" | "TECHNICAL" | "COMMITTEE_MANAGER",
+  list: { id: string; name: string; slug?: string }[] = committees
+) => dashboardNav(managerContext(level, { committees: list }));
 
 function profile(
   overrides: Partial<Parameters<typeof AccountProfileSection>[0]> = {}
@@ -32,7 +41,7 @@ function profile(
     <AccountProfileSection
       email="manager@example.test"
       userId="11111111-1111-4111-8111-111111111111"
-      committees={committees}
+      view={view}
       {...overrides}
     />
   );
@@ -53,17 +62,17 @@ describe("admin account profile", () => {
     expect(html).not.toContain('id="account-identity-title"');
   });
 
-  it("lists exactly the assigned committee scope", () => {
+  it("lists exactly where the access comes from", () => {
     const html = profile();
-    expect(html).toContain("Events");
+    expect(html).toContain("Committee Manager");
+    expect(html).toContain("Personal level");
     expect(html).not.toContain("Media");
-    expect(html.match(/>Active</g)).toHaveLength(1);
   });
 
   it("never labels the user an owner", () => {
     expect(visibleText(profile())).not.toMatch(/>Owner</);
     expect(profile()).toMatch(
-      /Application access level, checked on every request/
+      /Where your dashboard access comes from, checked on every request/
     );
   });
 
@@ -77,10 +86,15 @@ describe("admin account profile", () => {
 });
 
 describe("admin account permissions", () => {
-  const html = renderToStaticMarkup(<AccountPermissionsSection />);
+  const html = renderToStaticMarkup(<AccountPermissionsSection view={view} />);
 
-  it("explains that this is not a platform-wide owner role", () => {
-    expect(html).toMatch(/one fixed committee scope/);
+  it("lists each permission with its scope, not a platform-wide owner role", () => {
+    expect(html).toContain("View events");
+    expect(html).toContain("Events and registrations");
+    expect(html).not.toContain("Society-wide");
+    expect(html).toMatch(
+      /permissions assigned to the committees and teams you lead/
+    );
     expect(html).toMatch(/outside this application/);
     expect(html).not.toMatch(/Supabase/);
     expect(html).not.toMatch(/>Owner</);
@@ -100,7 +114,7 @@ describe("admin account security", () => {
   it("links to recovery and offers sign-out", () => {
     expect(html).toContain('href="/admin/recovery"');
     expect(html).toContain("Sign out");
-    expect(html).toMatch(/never changes which\s+committees/);
+    expect(html).toMatch(/never changes your\s+permissions/);
   });
 
   it("has only the recovery link and the sign-out button", () => {
@@ -140,9 +154,8 @@ describe("admin sidebar identity and scope", () => {
     <TooltipProvider>
       <SidebarProvider>
         <AdminSidebar
-          accessLevel="COMMITTEE_MANAGER"
+          nav={navFor("COMMITTEE_MANAGER")}
           email="manager@example.test"
-          committees={committees}
           logoutAction={noop}
           onOpenSettings={() => {}}
         />
@@ -178,9 +191,8 @@ describe("global administration navigation", () => {
       <TooltipProvider>
         <SidebarProvider>
           <AdminSidebar
-            accessLevel={accessLevel}
+            nav={navFor(accessLevel)}
             email="global@example.test"
-            committees={committees}
             logoutAction={noop}
             onOpenSettings={() => {}}
           />
@@ -197,10 +209,26 @@ describe("global administration navigation", () => {
     expect(html).toContain('href="/admin/access"');
   });
 
-  it("separates Technical Administration and access management", () => {
+  it("gives Technical access management, and the permissions page to both (ADR 0027)", () => {
     const html = sidebar("TECHNICAL");
-    expect(html).toContain("Technical Administration");
+    expect(html).toContain("Technical Team");
     expect(html).toContain('href="/admin/access"');
+    expect(html).toContain('href="/admin/administration/permissions"');
+    expect(sidebar("BOARD_ADMIN")).toContain(
+      'href="/admin/administration/permissions"'
+    );
+  });
+
+  it("shows the Email Centre only to holders of its permission", () => {
+    expect(sidebar("BOARD_ADMIN")).toContain(
+      'href="/admin/communications/email"'
+    );
+    expect(sidebar("TECHNICAL")).not.toContain(
+      'href="/admin/communications/email"'
+    );
+    expect(sidebar("COMMITTEE_MANAGER")).not.toContain(
+      'href="/admin/communications/email"'
+    );
   });
 
   it("keeps the Administration section from Committee Managers", () => {
@@ -211,14 +239,25 @@ describe("global administration navigation", () => {
 });
 
 describe("membership navigation", () => {
-  function sidebar(membership: { awaiting: number } | null) {
+  function sidebar(
+    membership: {
+      awaiting: number;
+      squPending: number;
+      leadershipPending: number;
+    } | null
+  ) {
     return renderToStaticMarkup(
       <TooltipProvider>
         <SidebarProvider>
           <AdminSidebar
-            accessLevel="COMMITTEE_MANAGER"
+            nav={navFor("COMMITTEE_MANAGER", [
+              {
+                id: "sa-id",
+                name: "Society Affairs Committee",
+                slug: "society-affairs",
+              },
+            ])}
             email="society-affairs@example.test"
-            committees={[{ id: "sa-id", name: "Society Affairs Committee" }]}
             membership={membership}
             logoutAction={noop}
             onOpenSettings={() => {}}
@@ -229,10 +268,19 @@ describe("membership navigation", () => {
   }
 
   it("shows the section to a committee manager the database confirms as a reviewer", () => {
-    const html = sidebar({ awaiting: 4 });
+    const html = sidebar({ awaiting: 4, squPending: 2, leadershipPending: 3 });
     expect(html).toContain('aria-label="Membership"');
     expect(html).toContain('href="/admin/membership"');
     expect(html).toContain("4 awaiting a decision");
+  });
+
+  it("gives each queue, including Leadership, its own entry and count", () => {
+    const html = sidebar({ awaiting: 4, squPending: 2, leadershipPending: 3 });
+    expect(html).toContain('href="/admin/membership/verifications"');
+    expect(html).toContain('href="/admin/membership/leadership"');
+    expect(html).toContain(">Leadership<");
+    expect(html).toContain("2 awaiting a decision");
+    expect(html).toContain("3 awaiting a decision");
   });
 
   it("hides it whenever the database has not confirmed reviewer access", () => {

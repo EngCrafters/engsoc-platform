@@ -6,7 +6,15 @@ const state = vi.hoisted(() => ({
   replace: vi.fn(),
   revalidate: vi.fn(),
 }));
-vi.mock("../lib/auth/manager", () => ({ getManagerContext: state.context }));
+vi.mock("../lib/auth/manager", async () => {
+  const { withAccess } = await import("./support/manager-fixture");
+  return {
+    getManagerContext: async (...args: unknown[]) =>
+      withAccess(
+        await (state.context as (...a: unknown[]) => unknown)(...args)
+      ),
+  };
+});
 vi.mock("../lib/access/server", () => ({
   changeAccess: state.change,
   replaceManager: state.replace,
@@ -109,7 +117,7 @@ describe("Technical access action", () => {
         form("grant", "BOARD_ADMIN", "")
       );
       expect(result.message).toBe(
-        "Your access level does not allow this change. Board Administration manages Committee Managers; the Technical Team manages every role."
+        "Your permissions do not allow this change. Manage committee access covers Committee Managers; Manage administrator access covers Board Administration and Technical."
       );
     }
     expect(state.change).not.toHaveBeenCalled();

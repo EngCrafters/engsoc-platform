@@ -63,7 +63,7 @@ npm run dev            # http://localhost:3000
 | URL                                 | What you get                                                                                                                                         |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `http://localhost:3000/admin/login` | Dashboard sign-in. You need a staging Auth account and an active `administrative_access` grant to see more than the "no administrative access" page. |
-| `http://localhost:3000/v1/health`   | `{"data":{"status":"ok"}}` when the database is reachable and at schema 32                                                                           |
+| `http://localhost:3000/v1/health`   | `{"data":{"status":"ok"}}` when the database is reachable and at schema 33 or later; `schema-behind` (503) when it is older than the code            |
 | `http://localhost:3000/`            | Core's own minimal public event list                                                                                                                 |
 
 - **Without `APP_RUNTIME_DATABASE_URL`**, pages and routes that query the database fail at the
@@ -98,7 +98,40 @@ requests to `main`, in this order:
 
 The test READMEs in [`tests/`](../../tests/) explain each suite's harness.
 
+## Isolated local stack
+
+To try membership, profiles, SQU verification and leadership end to end without any hosted
+project, run the browser harness's stack and keep it open:
+
+```bash
+# Needs a fresh, empty loopback PostgreSQL 17 database whose name contains uc02_test,
+# and ESWebsite installed next to this repository (../ESWebsite).
+TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:<port>/uc02_test npm run local:stack
+```
+
+| URL                                 | What                                            |
+| ----------------------------------- | ----------------------------------------------- |
+| `http://127.0.0.1:3601`             | The website (`/register`, `/login`, `/profile`) |
+| `http://127.0.0.1:3600/admin/login` | The dashboard                                   |
+| `http://127.0.0.1:3600/v1/health`   | Core health                                     |
+| `http://127.0.0.1:3602`             | Synthetic Auth and S3 (test adapters, no email) |
+
+It replays every migration into that database and prints the synthetic accounts (member, Society
+Affairs, Board, Technical, a committee manager), all with the password `Synthetic-test-password-42!`.
+Ctrl+C stops it; recreate the database before the next run. Ports 3600–3602 must be free, and it
+uses the build folder `.next-event-flow`, so a normal `npm run dev` can run beside it.
+
 ## Run Core with the website locally
+
+Either port layout works as long as the three addresses agree. Two that do:
+
+| Core                     | Website                  | Website `CORE_API_BASE_URL` | Core `CORE_API_ALLOWED_ORIGINS`, `PUBLIC_WEBSITE_ORIGIN` |
+| ------------------------ | ------------------------ | --------------------------- | -------------------------------------------------------- |
+| `npm run dev` (3000)     | `npm run dev -- -p 3001` | `http://localhost:3000/v1`  | `http://localhost:3001`                                  |
+| `npm run dev -- -p 3001` | `npm run dev` (3000)     | `http://127.0.0.1:3001/v1`  | `http://localhost:3000`                                  |
+
+Restart a server after changing its env file. Against a hosted project, the database must be at
+the code's schema version (`/v1/health` says `ok`); otherwise new routes answer 503.
 
 1. Run Core on a port the website does not use, for example `npm run dev -- -p 3001`. The website
    example expects `http://127.0.0.1:3001/v1`.

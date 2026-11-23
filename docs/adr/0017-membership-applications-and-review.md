@@ -88,6 +88,7 @@ single database setting, `NULL` until the owner confirms:
 | `two_step`       | A Society Affairs or Senior Management reviewer verifies; a **different** Senior Management reviewer approves. |
 | `single_step`    | Any reviewer (Society Affairs or Senior Management) may approve a pending or verified application.             |
 
+(Superseded 2026-11-23 by ADR 0030 and migration 0039: Board Administration may record it too.)
 Only a Technical user can record the setting, through an audited routine, after the owner's
 decision.
 

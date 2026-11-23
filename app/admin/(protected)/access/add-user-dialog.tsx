@@ -26,7 +26,7 @@ import { MIN_PASSWORD_LENGTH } from "@/lib/auth/callback";
 import type { AccessLevel } from "@/lib/auth/manager";
 import { createUserAction } from "./user-actions";
 import { initialUserActionState } from "./user-state";
-import { roleLabel, type Committee } from "./user-types";
+import { roleLabel, type Committee, type AccountRights } from "./user-types";
 
 type Method = "invite" | "no_email" | "password";
 
@@ -43,20 +43,21 @@ export function AddUserDialog({
   open,
   onOpenChange,
   committees,
-  actorLevel,
+  rights,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   committees: Committee[];
-  /** Board Administration invites Committee Managers by email only (ADR 0024). */
-  actorLevel: AccessLevel;
+  /** Without administrator-level rights only Committee Managers are offered; without credentials, invitations only. */
+  rights: AccountRights;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
         <AddUserForm
           committees={committees}
-          technical={actorLevel === "TECHNICAL"}
+          technical={rights.adminLevels}
+          credentials={rights.credentials}
           onClose={() => onOpenChange(false)}
         />
       ) : null}
@@ -67,10 +68,12 @@ export function AddUserDialog({
 function AddUserForm({
   committees,
   technical,
+  credentials,
   onClose,
 }: {
   committees: Committee[];
   technical: boolean;
+  credentials: boolean;
   onClose: () => void;
 }) {
   const [level, setLevel] = useState<AccessLevel | "NONE">("COMMITTEE_MANAGER");
@@ -177,7 +180,7 @@ function AddUserForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="invite">Send invitation email</SelectItem>
-              {technical ? (
+              {credentials ? (
                 <>
                   <SelectItem value="no_email">Create without email</SelectItem>
                   <SelectItem value="password">

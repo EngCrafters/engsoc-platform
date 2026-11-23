@@ -3,6 +3,17 @@ import type { AccessLevel } from "@/lib/auth/manager";
 export type Committee = { id: string; name: string };
 
 /**
+ * What the signed-in person may do on this page, from their permissions (ADR 0027): grant or remove
+ * administrator levels (accounts.admin_levels), use account credentials (accounts.credentials) and
+ * delete sign-in accounts (accounts.erase). Without them they manage Committee Manager access only.
+ */
+export type AccountRights = {
+  adminLevels: boolean;
+  credentials: boolean;
+  erase: boolean;
+};
+
+/**
  * One Auth identity joined with its (optional) application access. The two are
  * deliberately separate: an account with `access === null` can sign in but sees
  * nothing in the dashboard.

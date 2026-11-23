@@ -101,6 +101,8 @@ export default async function setup() {
     newEmail?: string;
   }[] = [];
   const links = new Map<string, string>();
+  // ADR 0030: magic-link tokens the Admin API generated (no email is sent for them).
+  const magicLinks = new Map<string, string>();
   let failNextCover = false;
   const session = (person: Person) => {
     const now = Math.floor(Date.now() / 1000);
@@ -236,6 +238,23 @@ export default async function setup() {
       }
       if (url.pathname === "/auth/v1/verify" && req.method === "POST") {
         const body = JSON.parse(bytes.toString());
+        if (body.type === "magiclink") {
+          const person = identities.find(
+            (p) => p.id === magicLinks.get(String(body.token_hash))
+          );
+          if (!person) {
+            json(
+              res,
+              { code: 403, error_code: "otp_expired", msg: "Link expired" },
+              403
+            );
+            return;
+          }
+          magicLinks.delete(String(body.token_hash));
+          await db`UPDATE auth.users SET last_sign_in_at=now() WHERE id=${person.id}`;
+          json(res, session(person));
+          return;
+        }
         const person = identities.find(
           (p) => p.id === links.get(String(body.token_hash))
         );
@@ -249,7 +268,7 @@ export default async function setup() {
         }
         links.delete(String(body.token_hash));
         person.confirmed = true;
-        await db`UPDATE auth.users SET email_confirmed_at=now() WHERE id=${person.id}`;
+        await db`UPDATE auth.users SET email_confirmed_at=now(), last_sign_in_at=now() WHERE id=${person.id}`;
         json(res, session(person));
         return;
       }
@@ -288,14 +307,35 @@ export default async function setup() {
           );
           return;
         }
+        // A password sign-in is a sign-in (GoTrue stamps it); a refresh is not.
+        if (body.password !== undefined)
+          await db`UPDATE auth.users SET last_sign_in_at=now() WHERE id=${person.id}`;
         json(res, session(person));
         return;
       }
       if (url.pathname === "/auth/v1/user") {
         const person = verified(req);
         if (person && req.method === "PUT") {
-          // An email change sends links to both addresses; nothing changes until they are used.
           const body = JSON.parse(bytes.toString());
+          // ADR 0030: the registrant sets the password after the one-time sign-in.
+          if (typeof body.password === "string") {
+            if (body.password.length < 8) {
+              json(
+                res,
+                {
+                  code: 422,
+                  error_code: "weak_password",
+                  msg: "Password too short",
+                },
+                422
+              );
+              return;
+            }
+            person.password = body.password;
+            json(res, user(person));
+            return;
+          }
+          // An email change sends links to both addresses; nothing changes until they are used.
           inbox.push({
             to: person.email,
             type: "email_change",
@@ -365,6 +405,60 @@ export default async function setup() {
           json(res, user(person));
           return;
         }
+        // ADR 0030: Core creates an immediate account with the ID the database reserved.
+        if (url.pathname === "/auth/v1/admin/users" && req.method === "POST") {
+          const body = JSON.parse(bytes.toString());
+          const email = String(body.email).toLowerCase();
+          if (identities.some((p) => p.email === email)) {
+            json(
+              res,
+              {
+                code: 422,
+                error_code: "email_exists",
+                msg: "A user with this email address has already been registered",
+              },
+              422
+            );
+            return;
+          }
+          const person: Person = {
+            id: typeof body.id === "string" ? body.id : randomUUID(),
+            email,
+            name: "",
+            role: "registrant",
+            confirmed: body.email_confirm === true,
+          };
+          identities.push(person);
+          await db`INSERT INTO auth.users(id,email,email_confirmed_at)
+            VALUES(${person.id},${email},${person.confirmed ? new Date() : null})`;
+          json(res, user(person));
+          return;
+        }
+        // ADR 0030: a magic-link token for an existing account; GoTrue sends no email for this.
+        if (
+          url.pathname === "/auth/v1/admin/generate_link" &&
+          req.method === "POST"
+        ) {
+          const body = JSON.parse(bytes.toString());
+          const person = identities.find(
+            (p) => p.email === String(body.email).toLowerCase()
+          );
+          if (!person || body.type !== "magiclink") {
+            json(res, { code: 404, error_code: "user_not_found" }, 404);
+            return;
+          }
+          const token = randomBytes(28).toString("hex");
+          magicLinks.set(token, person.id);
+          json(res, {
+            ...user(person),
+            action_link: `http://127.0.0.1:3602/auth/v1/verify?token=${token}&type=magiclink`,
+            email_otp: "000000",
+            hashed_token: token,
+            redirect_to: "",
+            verification_type: "magiclink",
+          });
+          return;
+        }
         json(res, { message: "Unknown synthetic admin route" }, 404);
         return;
       }
@@ -406,6 +500,10 @@ export default async function setup() {
         url.pathname.startsWith("/storage/v1/s3/photos-test/member-photos/") ||
         url.pathname.startsWith(
           "/storage/v1/s3/identity-test/membership-id-cards/"
+        ) ||
+        // ADR 0025: SQU verification evidence, in the same private bucket.
+        url.pathname.startsWith(
+          "/storage/v1/s3/identity-test/squ-verification/"
         )
       ) {
         if (
@@ -514,6 +612,17 @@ export default async function setup() {
     SUPABASE_S3_PROJECT_BUCKET: "projects-test",
     SUPABASE_S3_MEMBER_PHOTO_BUCKET: "photos-test",
     SUPABASE_SERVICE_ROLE_KEY: serviceKey,
+    // The Email Centre (ADR 0028) sends nothing by default, as with no provider configured. With
+    // EVENT_FLOW_EMAIL=test it uses the recording test adapter and writes each message to the
+    // outbox file instead; no provider is ever contacted.
+    ...(process.env.EVENT_FLOW_EMAIL === "test"
+      ? {
+          EMAIL_TRANSPORT: "test",
+          EMAIL_FROM: "Engineering Society <announcements@example.test>",
+          EMAIL_UNSUBSCRIBE_SECRET: randomBytes(32).toString("hex"),
+          EMAIL_TEST_OUTBOX: join(tmpdir(), "essqu-event-flow-email.jsonl"),
+        }
+      : { EMAIL_TRANSPORT: "", EMAIL_FROM: "", EMAIL_UNSUBSCRIBE_SECRET: "" }),
   };
   const webEnv = {
     ...baseEnv,

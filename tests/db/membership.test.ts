@@ -226,7 +226,9 @@ describe("membership applications", () => {
         "SUCCESS"
       );
     }
-    for (const consent of CONSENT_VERSIONS) {
+    // The 0025 routine knows only the first wording; development-cycle-2.test.ts checks every
+    // version Core sends against the routine Core now calls.
+    for (const consent of CONSENT_VERSIONS.filter((v) => v === "2026-10-v1")) {
       expect((await submit({ consent })).result.code, consent).toBe("SUCCESS");
     }
     expect((await submit({ interests: [] })).result.code).toBe("SUCCESS");
@@ -348,7 +350,8 @@ describe("membership applications", () => {
         allowed
       ).toMatchObject({
         code: "SUCCESS",
-        reviewer: allowed === "societyAffairs" ? "society_affairs" : "senior",
+        // 'senior' can give final approval; Society Affairs reviews as 'reviewer' (ADR 0027).
+        reviewer: allowed === "societyAffairs" ? "reviewer" : "senior",
       });
     }
     for (const denied of ["media", "noAccess", "revoked"]) {
@@ -403,7 +406,7 @@ describe("membership applications", () => {
     expect(status).toBe("verified");
   });
 
-  it("lets only a Technical user record the policy, with audit", async () => {
+  it("lets Technical and Board Administration (0039) record the policy, with audit; nobody else", async () => {
     expect(
       (
         await call(runtime, "set_membership_approval_policy", [
@@ -411,7 +414,8 @@ describe("membership applications", () => {
           "two_step",
         ])
       ).code
-    ).toBe("FORBIDDEN");
+    ).toBe("SUCCESS");
+    await admin`UPDATE private.membership_settings SET approval_policy = NULL`;
     expect(
       (
         await call(runtime, "set_membership_approval_policy", [
@@ -637,7 +641,7 @@ describe("membership applications", () => {
       applicationId: id,
       memberId: applicant,
       invitation: "sent",
-      reviewer: "society_affairs",
+      reviewer: "reviewer",
     });
   });
 

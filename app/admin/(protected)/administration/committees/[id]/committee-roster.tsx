@@ -34,7 +34,7 @@ export type RosterMember = {
   memberId: string;
   name: string;
   email: string;
-  universityId: string;
+  universityId: string | null;
   discipline: string | null;
   year: number | null;
   responsibility: string | null;
@@ -67,14 +67,18 @@ export function CommitteeRoster({
   committeeId,
   archived,
   members,
+  editable = true,
 }: {
   committeeId: string;
   archived: boolean;
   members: RosterMember[];
+  /** committees.manage (ADR 0027); without it the roster is read-only. */
+  editable?: boolean;
 }) {
+  const locked = archived || !editable;
   return (
     <div className="flex flex-col gap-4">
-      {archived ? (
+      {!editable && !archived ? null : archived ? (
         <p className="text-sm text-muted-foreground">
           Archived committees keep their roster but take no changes.
         </p>
@@ -109,7 +113,7 @@ export function CommitteeRoster({
                   key={member.memberId}
                   committeeId={committeeId}
                   member={member}
-                  archived={archived}
+                  archived={locked}
                 />
               ))}
             </TableBody>
@@ -140,7 +144,9 @@ function RosterRow({
           {member.email}
         </span>
       </TableCell>
-      <TableCell className="font-mono text-xs">{member.universityId}</TableCell>
+      <TableCell className="font-mono text-xs">
+        {member.universityId ?? "—"}
+      </TableCell>
       <TableCell className="min-w-56">
         {editing ? (
           <form action={save.action} className="flex items-center gap-2">
@@ -218,7 +224,7 @@ function AddMember({
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<
-    { id: string; name: string; email: string; universityId: string }[]
+    { id: string; name: string; email: string; universityId: string | null }[]
   >([]);
   const [searching, startSearch] = useTransition();
   const [chosen, setChosen] = useState<{ id: string; name: string } | null>(

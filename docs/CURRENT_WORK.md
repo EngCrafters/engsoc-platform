@@ -1,5 +1,53 @@
 # Current work - handoff state
 
+**CURRENT — Board manages the membership settings (November 23, 2026, Muscat):** the Account
+activation card was missing for the owner because `settings.membership_policy` belonged to the
+Technical level only and the owner's account is Board Administration. Migration
+`0039_board_membership_settings` (owner decision, ADR 0030) gives Board that permission, so Board
+and Technical change both the approval policy and account activation on `/admin/membership`.
+Applied to staging on November 23 (post-flight 7 of 7). A live staging check (10 of 10) switched
+the setting through its routine, registered synthetic people through the running website in both
+modes (no real email sent), and erased them afterwards.
+
+**Account activation setting and dashboard error screen (November 23, 2026, Muscat):**
+ADR 0030, migration `0038_account_activation_setting`. Administrators with
+`settings.membership_policy` choose on `/admin/membership` between email confirmation (default)
+and immediate activation, where Core creates the registrant's account with the Auth Admin API
+(no confirmation email) and the browser signs in once with a one-time token and sets its own
+password. Separate from the approval policy; audited; needs `SUPABASE_SERVICE_ROLE_KEY` on Core's
+server, otherwise registrations fall back to email confirmation. `app/admin/error.tsx` replaces
+the generic crash page when the dashboard cannot confirm access. The admin login reload loop of
+November 22 was the Turbopack dev server's "HMR hash mismatch" reload cycle, cleared by restarting
+the dev server (`docs/known-gaps.md`). Tested locally (database, unit and browser). **0038 was applied to staging on November 23**
+with the owner's authorization (pre-flight 11 of 11, post-flight 18 of 18); staging keeps email
+confirmation until an administrator changes the setting. Nothing is committed, pushed or deployed.
+
+**CURRENT — automatic membership approval (November 22, 2026, Muscat):** ADR 0029, migration
+`0037_automatic_membership_approval`. A third approval policy, `automatic`, approves a valid
+registration in the same transaction that stores it; the migration makes it the active policy
+(audited as a migration). The member record still waits for the applicant's confirmed email (the
+confirmation link, then `GET /v1/me/membership`); registration grants no permission, level,
+committee place or leadership. The website shows "Welcome to the society" instead of "Application
+received" and its wording follows `approval` from `GET /v1/membership-options`. Tested on a local
+replay (9 new database tests), in unit tests and in the local browser flow (5 of 5). **0037 was
+applied to staging on November 22** with the owner's authorization (pre-flight 14 of 14,
+post-flight 23 of 23; `docs/how-to/migrations.md`). Production is untouched; nothing is
+committed, pushed or deployed.
+
+**CURRENT — permissions, verification settings and Email Centre (November 22, 2026, Muscat):**
+ADRs 0027 and 0028, migrations `0035_configurable_permissions` and `0036_email_centre`. Every
+protected operation needs a named permission; each committee and team has its own configuration,
+which its approved Chiefs and Assistant Chiefs receive; personal levels keep their access through a
+fixed mapping. Verification and leadership settings are editable by holders of
+`settings.verification`. Communications → Email Centre builds audiences and messages; sending is
+off until the owner chooses a provider and sender address. Summary, URLs, verification and
+performance: `docs/permissions-and-email-centre.md`.
+
+Staging was migrated to 0035 and 0036 on November 22 with the owner's authorization (backup,
+rollback script generated from staging, post-flight 15 of 15). Development Cycle 2 (0033 and 0034,
+November 20) is in `docs/development-cycle-2.md`. Nothing is committed, pushed or deployed;
+production is untouched. Next: owner review, then commit, deploy Core, then the website.
+
 **CURRENT — administration and permanent deletion (October 22, 2026, Muscat):** ADR 0024 and
 forward migration `0032_administration` add a Society administration section for Board
 Administration and the Technical Team: an overview and permission matrix, committees

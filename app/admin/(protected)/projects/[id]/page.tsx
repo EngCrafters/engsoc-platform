@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getManagerContext } from "@/lib/auth/manager";
+import { can } from "@/lib/auth/permissions";
 import { readProjects } from "@/lib/projects/server";
 import { UUID, type Localized } from "@/lib/projects/content";
 import { AdminPageHeader } from "@/components/admin/page-header";
@@ -255,7 +256,7 @@ export default async function ProjectDetail({
           ))}
         </ol>
       </section>
-      {manager.accessLevel !== "COMMITTEE_MANAGER" ? (
+      {can(manager, "projects.delete") ? (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 p-6">
           <div className="flex max-w-xl flex-col gap-1">
             <h2 className="font-semibold">Delete permanently</h2>

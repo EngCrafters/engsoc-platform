@@ -122,37 +122,47 @@ Allowed methods and headers by route group:
 
 ## Endpoint summary
 
-| Method and path                                | Auth                 | Purpose                                     |
-| ---------------------------------------------- | -------------------- | ------------------------------------------- |
-| `GET /v1/health`                               | none                 | Database reachable and schema compatible    |
-| `GET /v1/events`                               | API key              | Published events, paginated                 |
-| `GET /v1/events/{eventId}`                     | API key              | One published event                         |
-| `GET /v1/events/{eventId}/image`               | none                 | Cover image of a public event               |
-| `POST /v1/events/{eventId}/registrations`      | none                 | Guest registration                          |
-| `POST /v1/membership-applications`             | none                 | Membership application with ID card         |
-| `POST /v1/membership-applications/status`      | status token (body)  | Applicant's own status                      |
-| `GET /v1/me/membership`                        | member token         | Own membership and application              |
-| `GET /v1/me/profile`                           | member token         | Own profile and feature switches            |
-| `PATCH /v1/me/profile`                         | member token         | Save the phone, or the editable fields      |
-| `GET`, `PUT`, `DELETE /v1/me/profile/photo`    | member token         | Own photo                                   |
-| `POST /v1/me/profile/changes`                  | member token         | Request a name or student ID correction     |
-| `GET /v1/me/events`                            | member token         | Own registrations                           |
-| `POST /v1/me/events/{eventId}/registrations`   | member token         | Member registration                         |
-| `GET /v1/me/events/{eventId}/attendance`       | member token         | Check-in state for one event                |
-| `POST /v1/me/events/{eventId}/attendance`      | member token         | Confirm attendance with the live code       |
-| `GET /v1/projects`                             | none                 | Published projects, 30 per page             |
-| `GET /v1/projects/{id}`                        | none                 | One published project                       |
-| `GET /v1/projects/{id}/media/{media}`          | none or member token | Project image                               |
-| `GET`, `POST /v1/me/projects`                  | member token         | Own projects; create                        |
-| `GET`, `PATCH /v1/me/projects/{id}`            | member token         | Own project; save or submit                 |
-| `POST /v1/me/projects/{id}/media`              | member token         | Upload a project image                      |
-| `DELETE /v1/me/projects/{id}/media/{media}`    | member token         | Remove an unused image                      |
-| `GET /auth/callback`                           | Auth email link      | Verifies Auth links for the dashboard       |
-| `GET /admin/events/{id}/image`                 | dashboard session    | Cover preview for authorized administrators |
-| `POST /admin/events/{id}/registrations/export` | dashboard session    | Registration CSV                            |
-| `POST /admin/events/{id}/attendance/export`    | dashboard session    | Attendance CSV                              |
-| `GET /admin/membership/{id}/document`          | dashboard session    | SQU ID card for a reviewer                  |
-| `GET /admin/projects/{id}/media/{media}`       | dashboard session    | Project image for reviewers                 |
+| Method and path                                     | Auth                 | Purpose                                     |
+| --------------------------------------------------- | -------------------- | ------------------------------------------- |
+| `GET /v1/health`                                    | none                 | Database reachable and schema compatible    |
+| `GET /v1/events`                                    | API key              | Published events, paginated                 |
+| `GET /v1/events/{eventId}`                          | API key              | One published event                         |
+| `GET /v1/events/{eventId}/image`                    | none                 | Cover image of a public event               |
+| `POST /v1/events/{eventId}/registrations`           | none                 | Guest registration                          |
+| `GET /v1/membership-options`                        | none                 | Categories and institutions for the form    |
+| `POST /v1/membership-applications`                  | none                 | Membership application (no ID, no card)     |
+| `POST /v1/membership-applications/status`           | status token (body)  | Applicant's own status                      |
+| `GET /v1/me/membership`                             | member token         | Own membership and application              |
+| `GET /v1/me/profile`                                | member token         | Own profile and feature switches            |
+| `PATCH /v1/me/profile`                              | member token         | Save the phone, or the editable fields      |
+| `GET`, `PUT`, `DELETE /v1/me/profile/photo`         | member token         | Own photo                                   |
+| `POST /v1/me/profile/changes`                       | member token         | Request a name or student ID correction     |
+| `GET /v1/me/verification`                           | member token         | Own SQU student verification                |
+| `GET /v1/me/leadership`                             | member token         | Own appointments, requests and limits       |
+| `POST /v1/me/verification/squ`                      | member token         | Submit SQU student verification evidence    |
+| `GET /v1/me/leadership/options`                     | member token         | Committees, teams and requestable positions |
+| `POST /v1/me/leadership/requests`                   | member token         | Request a Chief or Assistant Chief position |
+| `GET`, `PATCH /v1/me/email-preferences`             | member token         | Own choice about email announcements        |
+| `GET`, `POST /v1/email/unsubscribe?token=`          | signed token (query) | One-click unsubscribe from announcements    |
+| `GET`, `POST /v1/internal/email-dispatch`           | dispatch secret      | One bounded Email Centre delivery batch     |
+| `GET /v1/me/events`                                 | member token         | Own registrations                           |
+| `POST /v1/me/events/{eventId}/registrations`        | member token         | Member registration                         |
+| `GET /v1/me/events/{eventId}/attendance`            | member token         | Check-in state for one event                |
+| `POST /v1/me/events/{eventId}/attendance`           | member token         | Confirm attendance with the live code       |
+| `GET /v1/projects`                                  | none                 | Published projects, 30 per page             |
+| `GET /v1/projects/{id}`                             | none                 | One published project                       |
+| `GET /v1/projects/{id}/media/{media}`               | none or member token | Project image                               |
+| `GET`, `POST /v1/me/projects`                       | member token         | Own projects; create                        |
+| `GET`, `PATCH /v1/me/projects/{id}`                 | member token         | Own project; save or submit                 |
+| `POST /v1/me/projects/{id}/media`                   | member token         | Upload a project image                      |
+| `DELETE /v1/me/projects/{id}/media/{media}`         | member token         | Remove an unused image                      |
+| `GET /auth/callback`                                | Auth email link      | Verifies Auth links for the dashboard       |
+| `GET /admin/events/{id}/image`                      | dashboard session    | Cover preview for authorized administrators |
+| `POST /admin/events/{id}/registrations/export`      | dashboard session    | Registration CSV                            |
+| `POST /admin/events/{id}/attendance/export`         | dashboard session    | Attendance CSV                              |
+| `GET /admin/membership/{id}/document`               | dashboard session    | Legacy application ID card for a reviewer   |
+| `GET /admin/membership/verifications/{id}/document` | dashboard session    | SQU verification evidence for a reviewer    |
+| `GET /admin/projects/{id}/media/{media}`            | dashboard session    | Project image for reviewers                 |
 
 Every `/v1` route that a browser calls also answers `OPTIONS` (preflight). The public read routes
 (`/health`, `/events/{id}/image`, `/projects`, `/projects/{id}`) do not check `Origin`.
@@ -166,8 +176,8 @@ Every `/v1` route that a browser calls also answers `OPTIONS` (preflight). The p
 - **Location:** [`app/v1/health/route.ts`](../../app/v1/health/route.ts).
 - **Auth:** none. No CORS headers.
 - **Behaviour:** compares `private.core_schema_version()` with the highest migration index in
-  `db/migrations/meta/_journal.json` (`REQUIRED_SCHEMA_VERSION`, currently 32). The version is 0
-  before migration 0030.
+  `db/migrations/meta/_journal.json` (`REQUIRED_SCHEMA_VERSION`, currently 33 with migration
+  0033). A database at that version **or later** is compatible. The version is 0 before migration 0030.
 - **Responses:**
   - `200 {"data":{"status":"ok"}}`;
   - `503 {"data":{"status":"schema-behind"}}` (logs `schema_behind` with both numbers);
@@ -299,47 +309,87 @@ and an unknown ID all return the same 404. Source:
   → [`lib/membership/index.ts`](../../lib/membership/index.ts) (`validateApplication`,
   `submitMembershipApplication`).
 - **Auth:** none. A disallowed `Origin` gets 403.
-- **Body:** `multipart/form-data` (≤ 4,500,000 bytes) with exactly these parts:
-  - `fullName`, `email`, `universityId`, `academicYear`, `discipline`, `consent`,
-    `consentVersion`: one text value each;
-  - `interests`: zero to four repeated values;
-  - `idDocument`: one file.
+- **Body:** `multipart/form-data` with only text parts (ADR 0025):
+  - `fullName`, `email`, `category`, `institution`, `institutionName`, `academicYear`,
+    `discipline`, `consent`, `consentVersion`: at most one value each;
+  - `interests`: zero to four repeated values.
 
   Unknown parts get 422 `unexpected-field`. A repeated scalar or a file in a text field gets 422
   `invalid`.
 
-- **Validation:**
+- **Validation.** Choices come from `GET /v1/membership-options`. Core validates and drops any
+  field the category does not collect; the database validates again.
 
-| Field          | Rule                                                                                                                                                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fullName`     | 1–200 characters, no control characters                                                                                                                                                                     |
-| `email`        | ≤ 254 characters, an `squ.edu.om` address (subdomains allowed), stored lower-cased                                                                                                                          |
-| `universityId` | 6–10 digits                                                                                                                                                                                                 |
-| `academicYear` | `1`–`5`                                                                                                                                                                                                     |
-| `discipline`   | `mechanical`, `electrical`, `civil`, `petroleum`, `chemical`, `mechatronics`, `industrial`                                                                                                                  |
-| `interests`    | At most 4 distinct values from `cad`, `simulation`, `embedded`, `robotics`, `structures`, `process`, `data`, `programming`, `power`, `reservoir`, `quality`, `management`, `sustainability`, `hse`          |
-| `consent`      | `true`; `consentVersion` must be `2026-10-v1`                                                                                                                                                               |
-| `idDocument`   | 1 byte to 4 MiB. JPEG, PNG, WebP or PDF, identified by file signature. PDFs with active content (`/JavaScript`, `/JS`, `/Launch`, `/EmbeddedFile`, `/OpenAction`, `/AA`, `/RichMedia`, `/XFA`) are refused. |
+| Field             | Rule                                                                                                                                                                                               |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fullName`        | 1–200 characters, no control characters                                                                                                                                                            |
+| `email`           | Any valid address, ≤ 254 characters, stored lower-cased                                                                                                                                            |
+| `category`        | `university_student`, `graduate`, `academic`, `industry_professional` or `other` (rows of `private.membership_categories`)                                                                         |
+| `institution`     | Required for `university_student`, optional for `graduate`, ignored otherwise: an active institution slug, or `other` with `institutionName`                                                       |
+| `institutionName` | With `institution=other`: 2–120 characters, no control characters                                                                                                                                  |
+| `academicYear`    | Required for `university_student` only: `1`–`5`                                                                                                                                                    |
+| `discipline`      | `mechanical`, `electrical`, `civil`, `petroleum`, `chemical`, `mechatronics`, `industrial`                                                                                                         |
+| `interests`       | At most 4 distinct values from `cad`, `simulation`, `embedded`, `robotics`, `structures`, `process`, `data`, `programming`, `power`, `reservoir`, `quality`, `management`, `sustainability`, `hse` |
+| `consent`         | `true`; `consentVersion` is `2026-11-v2` (current) or `2026-10-v1` (the previous website)                                                                                                          |
 
-- **Rules** (`private.begin_membership_submission` and
-  `private.submit_membership_application` or `private.submit_stored_membership_application`):
-  - 20 submissions per IP per hour;
-  - 409 `already-member` when a member has the email or student ID;
+- **Previous website, for one release.** A form with no `category` that has `universityId` or
+  `idDocument` is treated as a University Student at SQU. Its student ID and file are read only to
+  be discarded; nothing from them is stored.
+- **Rules** (`private.submit_membership_application_v2`):
+  - five submissions per client IP per hour (unchanged since 0025; the sixth gets 429);
+  - 409 `already-member` when a member has the email;
   - 409 `already-applied` when an application in `pending_review`, `verified` or `approved` has
-    either.
-- **Storage:** when the five `SUPABASE_S3_*` membership variables are set, the card is uploaded
-  to the private membership bucket under `membership-id-cards/<uuid>.<ext>` before the
-  application is written. A failed write queues the object for deletion. When none are set, the
-  card is stored as `bytea` in `private.membership_documents`. A partial configuration refuses
-  submissions with 503. See [Storage](storage.md).
+    it;
+  - under the `automatic` approval policy (ADR 0029, migration 0037) a valid application is stored
+    as `approved` at once, with no reviewer. The member record still waits for the applicant's
+    confirmed sign-in (`GET /v1/me/membership`).
+- **Storage:** none. No ID card is collected at registration. SQU student verification is a
+  separate signed-in flow (`POST /v1/me/verification/squ`).
 - **Response 201:**
-  `{"data":{"status":"pending_review","statusToken":"<43-character base64url token>"}}`. The token
-  is shown once; Core stores only its SHA-256.
+  `{"data":{"status":"pending_review|approved","statusToken":"<43-character base64url token>","accountActivation":"email_confirmation|immediate"}}`.
+  `approved` only under the `automatic` policy. The token is shown once; Core stores only its
+  SHA-256.
 - **Errors:** 409 with `reason`, 413, 415, 422, `429 Retry-After: 3600`, 503.
 - **Side effects:**
-  - inserts `private.membership_applications` and `private.membership_documents`;
+  - inserts `private.membership_applications`, with the category and institution;
   - inserts `private.membership_submission_attempts`;
-  - writes an audit row identified by application ID only.
+  - writes an audit row identified by application ID only (two under `automatic`:
+    `membership.submitted` and `membership.approved`).
+
+### `GET /v1/membership-options`
+
+- **Location:** [`app/v1/membership-options/route.ts`](../../app/v1/membership-options/route.ts)
+  → `lib/membership` `membershipOptions` → `private.get_membership_options`.
+- **Auth:** none. A disallowed `Origin` gets 403.
+- **Response 200:**
+  `{"data":{"categories":[{"id","label":{"en","ar"},"institution":"required|optional|none","academicYear":true|false}],"institutions":[{"id","name":{"en","ar"},"country"}],"consentVersion":"2026-11-v2","approval":"automatic|review"}}`.
+  Only active rows, in display order. `approval` (since 0037) is `automatic` when valid
+  registrations are approved at once, otherwise `review`; `accountActivation` (since 0038) is
+  `immediate` or `email_confirmation`. Both are for the form's wording only: the submission
+  decides. `public, max-age=300`; Core also caches it for five minutes.
+- **Errors:** 403, 503.
+- **Side effects:** none.
+
+### `POST /v1/membership-applications/account`
+
+- **Location:** [`app/v1/membership-applications/account/route.ts`](../../app/v1/membership-applications/account/route.ts)
+  → `lib/membership` `setUpImmediateAccount` → `private.begin_immediate_account`, the Auth
+  Admin module, `private.complete_immediate_account` (ADR 0030).
+- **Auth:** the application's status token only. Exact-origin CORS, POST, no credentials.
+- **Body:** `{"statusToken":"<43-character token>"}` and nothing else.
+- **What it does:** for an application submitted under immediate account activation, less than an
+  hour ago, whose email has no Auth account: creates the account Core reserved (Admin API,
+  confirmed, no password, no email), links it, writes the member record if the application is
+  approved, and returns a one-time magic-link token hash. The browser signs in with it and sets the
+  password with Supabase Auth. A retry signs in to the same account while it has never signed in.
+- **Response 201:** `{"data":{"tokenHash":"<hashed token>","member":true|false}}`, `no-store`.
+- **Errors:** 404 unknown token; 409 with `reason` `confirmation-required` (use Supabase sign-up),
+  `account-exists` (that address already has an account, never signed in to here),
+  `already-set-up` or `expired`; 422; 503, with `reason: "not-configured"` when the server has
+  no service-role key (the website then uses email confirmation).
+- **Side effects:** an Auth user; `membership_applications.immediate_account_id` and
+  `auth_user_id`; possibly a `members` row; audit `membership.account_linked`
+  (`emailVerified: false`) and `membership.activated`.
 
 ### `POST /v1/membership-applications/status`
 
@@ -380,21 +430,30 @@ disallowed `Origin`.
   [`lib/members/profile.ts`](../../lib/members/profile.ts) → `private.get_own_profile`,
   `private.update_member_phone`, `private.update_own_profile`.
 - **GET 200** (`data.code: "SUCCESS"`):
-  - `name`, `email`, `signInEmail`, `universityId`, `academicYear`, `discipline`, `interests`;
+  - `name`, `email`, `signInEmail`, `universityId` (`null` for members admitted after 0033),
+    `academicYear`, `discipline`, `interests`;
+  - `category`, `categoryLabel: {en, ar}`, `institution: {id, name: {en, ar}} | null`,
+    `institutionName` (a typed university), `squVerified` (ADR 0025). `category` is `null` for a
+    legacy member whose category was not recorded;
   - `phone`, `hasPhoto`, `photoVersion`, `status`, `memberSince`, `updatedAt`;
   - `application` (status and dates);
   - `changeRequests` (pending, or decided in the last 30 days, at most 10);
   - `features: {photoUploads, profileEditing}`.
 
   Errors: 403 `MEMBER_REQUIRED` or `EMAIL_UNCONFIRMED`, 404 `NOT_FOUND`. **Side effect:** if the
-  Auth email changed to an SQU address no other member uses, `members.email` is updated
-  (`member.email_synced` audit).
+  Auth email changed to any valid address no other member uses, `members.email` is updated
+  (`member.email_synced` audit). Before 0033 only SQU addresses were synced.
 
 - **PATCH** body is one of:
   - `{"phone":"+96890000000"}`: always allowed. An invalid phone gets 422 `PHONE_REQUIRED`.
-  - `{"phone":null|"+…","academicYear":1-5,"discipline":"<id>","interests":["<id>",…]}`: all
-    four keys required; only when `MEMBER_PROFILE_EDITING` is not `disabled`, otherwise 403
-    `EDITING_DISABLED`.
+  - `{"phone","category","institution","institutionName","academicYear","discipline","interests"}`
+    (ADR 0025, `private.update_own_profile_v2`): all seven keys required. The category's rules
+    are those of registration; values it does not collect are dropped and stored as `null`.
+  - `{"phone":null|"+…","academicYear":1-5,"discipline":"<id>","interests":["<id>",…]}`: the
+    previous website's edit, kept for one release.
+
+  Both edits are allowed only when `MEMBER_PROFILE_EDITING` is not `disabled`, otherwise 403
+  `EDITING_DISABLED`.
 
   Name, email and student ID are never accepted. Returns the whole profile and writes
   `member.profile_updated`.
@@ -422,6 +481,163 @@ disallowed `Origin`.
   if it equals the current value, and 409 `ALREADY_PENDING` if a request for that field is open.
 - **Response:** `201` with the whole profile. Audit `member.change_requested`.
 - A membership reviewer decides the request in the dashboard (`private.decide_profile_change`).
+
+### `GET /v1/me/verification`
+
+SQU student verification and committee leadership are two endpoints on purpose: the profile shows
+them as two cards, and either can fail without hiding the other.
+
+- **Location:** [`app/v1/me/verification/route.ts`](../../app/v1/me/verification/route.ts) →
+  [`lib/verification/member.ts`](../../lib/verification/member.ts) `ownSquVerification` →
+  `private.get_own_squ_verification`.
+- **Auth:** a member token. Members only: anyone else gets 403 `MEMBER_REQUIRED`.
+- **Response 200** (`data.code: "SUCCESS"`), the member's SQU state only:
+  - `status`: `not_verified`, `pending`, `verified`, `rejected` or `revoked`;
+  - `studentNumber`, masked to the last three digits;
+  - `submittedAt`, `decidedAt`, `verifiedAt`, `rejectionReason`, `revokedAt`,
+    `revocationReason`;
+  - `submissionsPer30Days`, `recentSubmissions`, `canSubmit`, `nextSubmissionAt`.
+
+  Never a reviewer note, a reviewer's identity, the full student number or a document key.
+  `private, no-store`.
+
+- **Failure:** 503 `service-unavailable` with the request id; the server log line
+  `member_verification_failed` carries the same id and the PostgreSQL code (`42883` with
+  `schemaMismatch: true` on a database older than 0033).
+- **Side effects:** none.
+
+### `GET /v1/me/leadership`
+
+- **Location:** [`app/v1/me/leadership/route.ts`](../../app/v1/me/leadership/route.ts) →
+  `ownLeadership` → `private.get_own_leadership`.
+- **Auth:** a member token. Members only: anyone else gets 403 `MEMBER_REQUIRED`.
+- **Response 200** (`data.code: "SUCCESS"`):
+  - `requestsOpen`: whether new requests are accepted (ADR 0026). Appointments and requests are
+    listed either way;
+  - `appointments`: each with `id`, `active`, `appointedAt`, `endedAt`, `endReason`,
+    `committee: {id, name, archived}`, `level` (`committee` or `team`), `team` (`null` for
+    committee leadership, otherwise `{id, name: {en, ar}, description, status}`),
+    `position: {id, label: {en, ar}}` and, since 0035, `grantsAccess` (the appointment is active
+    and its committee's or team's configuration grants dashboard permissions, ADR 0027). Active
+    ones, and those ended in the last 180 days;
+  - `requests`: each with `id`, `status` (`pending`, `approved`, `rejected`, `cancelled`),
+    `submittedAt`, `decidedAt`, `rejectionReason`, `cancellationReason` and the same
+    `committee`, `level`, `team` and `position`;
+  - `limits: {requestsPer30Days, recentRequests, maxActiveAppointments, activeAppointments}`.
+    `recentRequests` leaves out requests the structure cancelled (team moved, deactivated or
+    archived), which are not the member's attempts;
+  - `dashboardAccess`: whether the member holds any dashboard permission (a personal level, or a
+    position whose group has permissions; `private.actor_permission_grants`). It is reported,
+    never granted, here.
+
+  Never a reviewer note or a reviewer's identity. `private, no-store`.
+
+- **Failure:** 503 `service-unavailable` with the request id; log line `member_leadership_failed`.
+- **Side effects:** none.
+
+### `GET` and `PATCH /v1/me/email-preferences`
+
+- **Location:** [`app/v1/me/email-preferences/route.ts`](../../app/v1/me/email-preferences/route.ts) →
+  `private.get_own_email_preferences`, `private.set_own_email_preferences` (migration 0036,
+  [ADR 0028](../adr/0028-email-centre.md)).
+- **Auth:** a member token. Members only: anyone else gets 403 `MEMBER_REQUIRED`.
+- **`GET` 200:** `{code: "SUCCESS", announcements}`; `true` when the member never chose (no
+  row means subscribed).
+- **`PATCH`** body `{announcements: boolean}`, no other key (otherwise 422 `VALIDATION_ERROR`,
+  `field: "announcements"`). 200 with the stored value. A change is audited
+  (`email.preferences_changed`).
+- **Failure:** 503 `service-unavailable`; log line `member_email_preferences_failed`.
+- **Side effects:** `PATCH` writes `private.email_preferences`. Every Email Centre message is an
+  optional announcement, so the choice applies to all of them.
+
+### `GET` and `POST /v1/email/unsubscribe?token=…`
+
+- **Location:** [`app/v1/email/unsubscribe/route.ts`](../../app/v1/email/unsubscribe/route.ts) →
+  `private.email_unsubscribe`.
+- **Auth:** the signed token in the link (`<deliveryId>.<HMAC-SHA256>` under
+  `EMAIL_UNSUBSCRIBE_SECRET`, [`lib/email/unsubscribe.ts`](../../lib/email/unsubscribe.ts)). No
+  cookie, no CORS.
+- **`GET`:** an HTML confirmation page (English and Arabic) with a button; it changes nothing, so
+  link scanners cannot unsubscribe anyone.
+- **`POST`:** unsubscribes (the page's button, and mail clients' one-click unsubscribe, RFC 8058,
+  `List-Unsubscribe=One-Click`). 200 HTML. A malformed or forged token: 400 HTML. Idempotent;
+  audited (`email.unsubscribed`) only when the choice changes.
+
+### `GET` and `POST /v1/internal/email-dispatch`
+
+- **Location:** [`app/v1/internal/email-dispatch/route.ts`](../../app/v1/internal/email-dispatch/route.ts) →
+  [`dispatchEmailBatch`](../../lib/email/dispatch.ts).
+- **Auth:** `Authorization: Bearer <secret>`, where the secret is `EMAIL_DISPATCH_SECRET` (or
+  `CRON_SECRET`, which Vercel Cron sends), at least 32 characters. Without a configured secret
+  every call is refused (401).
+- **200:** `{enabled, claimed, accepted, retrying, failed}` for one batch of at most 25 deliveries,
+  completed before the response. `enabled: false` while sending is not configured.
+- **Failure:** 503; log line `email_dispatch_failed`. Not scheduled anywhere yet (the provider is
+  deferred); see [Email Centre](../how-to/email-centre.md).
+
+### `POST /v1/me/verification/squ`
+
+- **Location:** [`app/v1/me/verification/squ/route.ts`](../../app/v1/me/verification/squ/route.ts)
+  → `submitSquVerification` → `private.begin_squ_verification` and
+  `private.submit_squ_verification`.
+- **Body:** `multipart/form-data` with exactly `studentNumber` (6–10 digits) and `document`
+  (one file). The file follows the application rules: 1 byte to 4 MiB; JPEG, PNG, WebP or PDF,
+  identified by signature; PDFs with active content are refused.
+- **Rules:**
+  - members only;
+  - one pending request per member;
+  - no new request while verified;
+  - at most `squ_submissions_per_30_days` (default 3) submissions in 30 days.
+
+  A student number already verified for another member is accepted here and refused at approval
+  (`STUDENT_NUMBER_IN_USE`), so a submission reveals nothing about other members.
+
+- **Storage:** begin → upload to `squ-verification/<uuid>.<ext>` in the membership bucket →
+  submit. A failed submit queues the object for deletion. Without Storage, the bytes are kept in
+  `private.squ_verification_documents`. See [Storage](storage.md).
+- **Responses:**
+  - `201` with the same body as `GET /v1/me/verification`, plus `requestId`;
+  - 409 `ALREADY_PENDING` or `ALREADY_VERIFIED`;
+  - 422 `invalid-fields`;
+  - 429 `RATE_LIMITED` with `Retry-After: 600`;
+  - 403;
+  - 413, 415, 503.
+- **Audit:** `verification.submitted`, with `memberId` and `requestId`.
+
+### `GET /v1/me/leadership/options`
+
+- **Location:** [`app/v1/me/leadership/options/route.ts`](../../app/v1/me/leadership/options/route.ts)
+  → `private.get_leadership_options`.
+- **Response 200:**
+  `{"data":{"code":"SUCCESS","requestsOpen":true,"committees":[{"id","name","teams":[{"id","name":{"en","ar"},"description":{"en","ar"}}]}],"positions":[{"id","label":{"en","ar"}}]}}`.
+  Every active, unarchived committee, with its active teams (often none: committee leadership
+  needs no team), and the requestable positions (ADR 0026).
+
+### `POST /v1/me/leadership/requests`
+
+- **Location:** [`app/v1/me/leadership/requests/route.ts`](../../app/v1/me/leadership/requests/route.ts)
+  → `private.request_leadership`.
+- **Body:** `{"committeeId":"<uuid>","teamId":"<uuid>"|null,"position":"chief|assistant_chief"}`
+  and nothing else. Without a team (`teamId` null or absent) it is **committee leadership**; with
+  one, team leadership (ADR 0026).
+- **Rules:** the database re-checks every part:
+  - new requests are open (`REQUESTS_CLOSED`, 409, when Board Administration or Technical
+    closed them);
+  - the committee exists and, for team leadership, the team too (`NOT_FOUND`, 404);
+  - the team belongs to the committee (`HIERARCHY_MISMATCH`, 422);
+  - the team is active (`TEAM_INACTIVE`, 409) and the committee is not archived
+    (`COMMITTEE_ARCHIVED`, 409);
+  - the position is requestable;
+  - one pending request per member and scope, the committee itself or one team
+    (`ALREADY_PENDING`, 409);
+  - no request in a scope where the member already holds a position (`ALREADY_APPOINTED`, 409);
+  - at most `leadership_requests_per_30_days` (default 5) in 30 days, not counting requests the
+    structure cancelled (429, `Retry-After: 600`).
+- **Responses:** `201` with the same body as `GET /v1/me/leadership`, plus `requestId`. A request
+  grants nothing until a leadership reviewer (Board Administration or Society Affairs) approves it,
+  and an appointment never grants dashboard access. A member may hold one position at committee
+  level and one in each team; two in the same scope are refused.
+- **Audit:** `leadership.requested`.
 
 ### `GET /v1/me/events`
 

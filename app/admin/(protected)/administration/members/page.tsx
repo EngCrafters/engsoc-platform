@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireSenior } from "@/lib/administration/access";
+import { requirePermission } from "@/lib/administration/access";
 import {
   listMembers,
   type MemberFilter,
@@ -28,7 +28,7 @@ const FILTERS: { value: MemberFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "member", label: "Members" },
   { value: "graduate", label: "Graduates" },
-  { value: "admin", label: "With dashboard access" },
+  { value: "admin", label: "With a personal access level" },
 ];
 const PAGE = 30;
 const one = (value: string | string[] | undefined) =>
@@ -42,12 +42,12 @@ const LEVELS: Record<string, string> = {
 export default async function MembersPage({
   searchParams,
 }: PageProps<"/admin/administration/members">) {
-  const actor = await requireSenior();
+  const actor = await requirePermission("members.view");
   if (!actor)
     return (
       <ErrorState
-        title="The member directory is for senior administrators"
-        description="Board Administration and the Technical Team review member records here."
+        title="The member directory needs the View members permission"
+        description="Member records are shown to people whose permissions include them."
       />
     );
   const query = await searchParams;
@@ -181,7 +181,7 @@ export default async function MembersPage({
                       </span>
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {member.universityId}
+                      {member.universityId ?? "—"}
                     </TableCell>
                     <TableCell className="capitalize">
                       {member.discipline ?? "—"}

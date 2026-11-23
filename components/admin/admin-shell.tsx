@@ -8,7 +8,8 @@ import {
   AdminSidebar,
   type MembershipNavigation,
 } from "@/components/admin/admin-sidebar";
-import type { AccessLevel } from "@/lib/auth/manager";
+import type { DashboardNav } from "@/components/admin/admin-navigation";
+import type { AccountAccessView } from "@/lib/auth/permissions";
 import {
   SettingsDialog,
   type SettingsSection,
@@ -18,16 +19,16 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 export function AdminShell({
   email,
   userId,
-  accessLevel,
-  committees,
+  nav,
+  view,
   membership = null,
   logoutAction,
   children,
 }: {
   email: string | null;
   userId: string;
-  accessLevel: AccessLevel;
-  committees: ReadonlyArray<{ id: string; name: string }>;
+  nav: DashboardNav;
+  view: AccountAccessView;
   membership?: MembershipNavigation | null;
   logoutAction: () => void | Promise<void>;
   children: ReactNode;
@@ -60,8 +61,7 @@ export function AdminShell({
           <AdminSidebar
             variant="inset"
             email={email}
-            accessLevel={accessLevel}
-            committees={committees}
+            nav={nav}
             membership={membership}
             logoutAction={logoutAction}
             onOpenSettings={openSettings}
@@ -82,8 +82,7 @@ export function AdminShell({
             restoreFocus={() => settingsTrigger.current?.focus()}
             email={email}
             userId={userId}
-            accessLevel={accessLevel}
-            committees={committees}
+            view={view}
             logoutAction={logoutAction}
           />
         </SidebarProvider>
