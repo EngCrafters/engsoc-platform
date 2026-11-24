@@ -172,9 +172,9 @@ objects.
 
 ### Permissions ([`administration/permissions/actions.ts`](<../../app/admin/(protected)/administration/permissions/actions.ts>))
 
-| Action                       | Who                  | Routine                                                                                                                                                                                 |
-| ---------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `saveGroupPermissionsAction` | `permissions.manage` | `set_group_permissions`: `SELF_CHANGE`, `STALE_REVISION`, `CONFIRMATION_REQUIRED` (full access or `permissions.manage` changes), `LAST_RECOVERY_ACCOUNT`; audited `permissions.changed` |
+| Action                       | Who                  | Routine                                                                                                                                                                                                   |
+| ---------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `saveGroupPermissionsAction` | `permissions.manage` | `set_group_permissions`: `STALE_REVISION` (`SELF_CHANGE` only before 0040), `CONFIRMATION_REQUIRED` (full access or `permissions.manage` changes), `LAST_RECOVERY_ACCOUNT`; audited `permissions.changed` |
 
 ### Email Centre ([`communications/email/actions.ts`](<../../app/admin/(protected)/communications/email/actions.ts>))
 

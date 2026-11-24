@@ -51,7 +51,8 @@ untouched.
 - **Enforced everywhere**: the sidebar, every page and server action, the API routes, and every
   database routine (`private.has_permission` and its scoped forms). No Board-only check remains;
   the migration's self-check fails if any routine still tests the Board level directly.
-- **Safeguards**: nobody edits a group through which they hold access; an outdated editor is
+- **Safeguards**: since migration 0040 (ADR 0031) holders of `permissions.manage` may also edit
+  the groups they hold access through (audited with `ownGroup: true`); an outdated editor is
   refused; changes that grant full access or touch permission management need confirmation; any
   change that would leave no active account able to manage both permissions and administrator
   access society-wide is refused (`LAST_RECOVERY_ACCOUNT`), whether it comes from a permission

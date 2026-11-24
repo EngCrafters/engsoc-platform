@@ -52,6 +52,11 @@ Every member, event, and project is a permanent record. Full explanation:
   to staging on 2026-11-23 with the owner's authorization; production, and
   deploying, need the owner's approval. Migration 0039 (same day, staging)
   lets Board Administration change both membership settings.
+- **Permission management covers your own groups** (owner request,
+  2026-11-24): ADR 0031, migration 0040 removes ADR 0027's self-change
+  restriction for holders of `permissions.manage`. Applied to staging on
+  2026-11-24 with the owner's authorization; production, and deploying, need
+  the owner's approval.
 
 ## Current build decision: event registration without member accounts
 

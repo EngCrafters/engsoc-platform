@@ -281,6 +281,13 @@
       "when": 1793404800000,
       "tag": "0039_board_membership_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793491200000,
+      "tag": "0040_permission_management_own_groups",
+      "breakpoints": true
     }
   ]
 }

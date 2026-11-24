@@ -63,7 +63,9 @@ asked for.
 committee's or team's configuration, including granting full access or `permissions.manage`. There
 is no other Board-only check. Two safeguards:
 
-- **No self-change.** Nobody changes the configuration of a group through which they currently hold
+- **No self-change** (superseded 2026-11-24 by ADR 0031 and migration 0040: holders of
+  `permissions.manage` may change the groups they lead too, audited with `ownGroup`).
+  Nobody changes the configuration of a group through which they currently hold
   access (an active appointment in it, or Committee Manager access to the committee). This matches
   the existing rule that nobody changes their own access.
 - **Recovery account.** A change is refused (`LAST_RECOVERY_ACCOUNT`) if afterwards no active

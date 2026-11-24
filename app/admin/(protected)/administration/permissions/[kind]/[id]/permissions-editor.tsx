@@ -148,16 +148,15 @@ export function PermissionsEditor({
               role="note"
               className="rounded-md border border-dashed p-3 text-sm text-muted-foreground"
             >
-              You hold access through this {kind}, so you cannot change its
-              permissions. Another person with the Manage permissions permission
-              must do it.
+              You hold access through this {kind}: what you save here also
+              changes your own access.
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
-              disabled={self || saving}
+              disabled={saving}
               onClick={() =>
                 setSelection(
                   new Map(catalog.map((entry) => [entry.key, "all"]))
@@ -170,7 +169,7 @@ export function PermissionsEditor({
             <Button
               type="button"
               variant="outline"
-              disabled={self || saving || selection.size === 0}
+              disabled={saving || selection.size === 0}
               onClick={() => setSelection(new Map())}
             >
               <ShieldOff aria-hidden="true" data-icon="inline-start" />
@@ -210,7 +209,7 @@ export function PermissionsEditor({
                           type="checkbox"
                           className="mt-0.5 size-4 shrink-0 accent-primary"
                           checked={checked}
-                          disabled={self || saving}
+                          disabled={saving}
                           onChange={(event) =>
                             toggle(entry.key, event.target.checked)
                           }
@@ -240,7 +239,7 @@ export function PermissionsEditor({
                             id={`${inputId}-scope`}
                             className="h-8 rounded-md border bg-background px-2 text-sm"
                             value={selection.get(entry.key)}
-                            disabled={self || saving}
+                            disabled={saving}
                             onChange={(event) =>
                               setScope(
                                 entry.key,
@@ -290,7 +289,6 @@ export function PermissionsEditor({
                 name="note"
                 maxLength={500}
                 rows={2}
-                disabled={self}
                 placeholder="Why this change is made"
               />
             </div>
@@ -302,7 +300,7 @@ export function PermissionsEditor({
             <div>
               <Button
                 type="button"
-                disabled={self || saving || !changed}
+                disabled={saving || !changed}
                 onClick={() =>
                   critical ? setConfirmOpen(true) : submit(false)
                 }
@@ -470,7 +468,7 @@ export function PermissionsEditor({
                   ? `${groupName}'s leaders will be able to change any committee's or team's permissions, including granting full access.`
                   : `${groupName}'s leaders will no longer be able to manage permissions.`}{" "}
               {holders.length
-                ? `This applies to ${holders.length} ${holders.length === 1 ? "person" : "people"} now.`
+                ? `This applies to ${holders.length} ${holders.length === 1 ? "person" : "people"} now${self ? ", including you" : ""}.`
                 : "Nobody holds access through it yet."}
             </AlertDialogDescription>
           </AlertDialogHeader>

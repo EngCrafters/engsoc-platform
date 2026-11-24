@@ -213,7 +213,8 @@ Under **Administration → Permissions** (`/admin/administration/permissions`), 
 
 Safeguards:
 
-- nobody changes a group through which they hold access (`SELF_CHANGE`);
+- since migration 0040 (ADR 0031) a holder may also change the groups they hold access through;
+  the audit row records `ownGroup: true` (before 0040 this was refused with `SELF_CHANGE`);
 - an editor working from an outdated view is refused (`STALE_REVISION`);
 - a permission change, access revocation or suspension, appointment revocation, team deactivation
   or member deletion that would leave no active account able to manage both permissions and
