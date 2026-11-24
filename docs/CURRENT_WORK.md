@@ -1,5 +1,17 @@
 # Current work - handoff state
 
+**CURRENT — permission management covers the groups you lead (November 24, 2026, Muscat):**
+ADR 0031, migration `0040_permission_management_own_groups`. The owner's Board Administration
+Chief could change every committee and team except the three they lead, because ADR 0027 refused
+`SELF_CHANGE`. The owner removed that restriction: holders of `permissions.manage` change any
+group, their own included, up to full access; the audit marks those changes `ownGroup`. Tested
+locally (database and browser) and **applied to staging on November 24** with the owner's
+authorization (pre-flight 4 of 4, post-flight 9 of 9). Also fixed: dashboard forms submitted before the page's JavaScript was ready sent
+`Origin: null` under the global `no-referrer` policy and Next.js refused them ("Invalid Server
+Actions request", seen on the owner's dev server and reproduced locally); `app/admin/layout.tsx`
+now gives every dashboard page `same-origin` referrer metadata, the registration export's fix.
+Nothing is committed, pushed or deployed.
+
 **CURRENT — Board manages the membership settings (November 23, 2026, Muscat):** the Account
 activation card was missing for the owner because `settings.membership_policy` belonged to the
 Technical level only and the owner's account is Board Administration. Migration

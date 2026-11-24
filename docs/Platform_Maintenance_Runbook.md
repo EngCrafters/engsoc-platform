@@ -15,9 +15,10 @@ Do not derive it from Host, forwarded headers, a preview hostname or `VERCEL_URL
 Missing/invalid production configuration fails closed. Local development without
 the variable supports loopback origins only.
 
-Exports remain authenticated, committee-scoped POSTs. The registration page's
-`same-origin` referrer metadata allows native POSTs to include their real Origin;
-other pages retain `no-referrer`. Do not accept `Origin: null` to work around a
+Exports remain authenticated, committee-scoped POSTs. Every dashboard page (`/admin`,
+`app/admin/layout.tsx`, since 2026-11-24) has `same-origin` referrer metadata, so native POSTs,
+including Server Actions submitted before the page's JavaScript is ready, include their real
+Origin; public pages retain `no-referrer`. Do not accept `Origin: null` to work around a
 policy regression. A supplied Referer must match the configured origin too.
 For a 403, inspect only method, pathname, Origin, Referer **origin**, Host,
 forwarded host/protocol and configured origin; never dump all request headers,

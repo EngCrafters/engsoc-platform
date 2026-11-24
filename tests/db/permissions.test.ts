@@ -375,7 +375,7 @@ describe("configurable permissions (0035, real restricted roles)", () => {
     ).toBe("SUCCESS");
   });
 
-  it("lets a group given permission management manage other groups, but never its own", async () => {
+  it("lets a group given permission management manage other groups and, since 0040, its own", async () => {
     const p = await committee();
     const other = await committee();
     const manager = await member();
@@ -402,9 +402,13 @@ describe("configurable permissions (0035, real restricted roles)", () => {
     expect((await grant("committee", other, full, manager)).code).toBe(
       "SUCCESS"
     );
-    expect((await grant("committee", p, full, manager)).code).toBe(
-      "SELF_CHANGE"
-    );
+    // 0040 (ADR 0031): the groups you hold access through are yours to change too, audited as such.
+    expect((await grant("committee", p, full, manager)).code).toBe("SUCCESS");
+    const [own] =
+      await admin`SELECT actor_user_id, changes FROM private.uc02_audit
+      WHERE action = 'permissions.changed' AND changes ->> 'committeeId' = ${p} ORDER BY occurred_at DESC LIMIT 1`;
+    expect(own.actor_user_id).toBe(manager);
+    expect(own.changes).toMatchObject({ ownGroup: true, fullAccess: true });
     // A stale editor is refused.
     expect(
       (
@@ -432,7 +436,53 @@ describe("configurable permissions (0035, real restricted roles)", () => {
     expect(audit.changes).toMatchObject({
       groupKind: "committee",
       fullAccess: true,
+      ownGroup: false,
     });
+  });
+
+  it("0040: management covers the leader's own team and committee; without it, nothing changes", async () => {
+    const c = await committee();
+    const t = await team(c);
+    const teamChief = await member();
+    const assistant = await member();
+    // A team given permission management: its Chief and Assistant Chief receive exactly that.
+    await grant("team", t, [{ key: "permissions.manage", scope: "all" }]);
+    await appoint(teamChief, c, t);
+    await appoint(assistant, c, t, "assistant_chief");
+    expect(await has(teamChief, "permissions.manage")).toBe(true);
+    expect(await has(assistant, "permissions.manage")).toBe(true);
+    // The Chief grants their own team full access (confirmed), and both leaders receive all of it.
+    const full = PERMISSION_KEYS.map((key) => ({ key, scope: "all" as const }));
+    expect((await grant("team", t, full, teamChief, false)).code).toBe(
+      "CONFIRMATION_REQUIRED"
+    );
+    expect((await grant("team", t, full, teamChief)).code).toBe("SUCCESS");
+    for (const key of PERMISSION_KEYS) {
+      expect(await has(teamChief, key)).toBe(true);
+      expect(await has(assistant, key)).toBe(true);
+    }
+    // The committee does not inherit the team's configuration.
+    const committeeChief = await member();
+    await appoint(committeeChief, c, null);
+    expect(await has(committeeChief, "permissions.manage")).toBe(false);
+    // Without permission management, a leader cannot change their own group either.
+    expect((await grant("committee", c, full, committeeChief)).code).toBe(
+      "FORBIDDEN"
+    );
+    // A delegate may also remove their own group's management; they then lose it.
+    expect(
+      (
+        await grant(
+          "team",
+          t,
+          [{ key: "events.view", scope: "own" }],
+          assistant
+        )
+      ).code
+    ).toBe("SUCCESS");
+    expect(await has(teamChief, "permissions.manage")).toBe(false);
+    expect(await has(assistant, "permissions.manage")).toBe(false);
+    expect((await grant("team", t, full, assistant)).code).toBe("FORBIDDEN");
   });
 
   it("takes revocations and changes into account on the next call", async () => {
