@@ -180,6 +180,9 @@ roles. See [Database security](../reference/database-security.md).
 - **Security headers** ([`next.config.ts`](../../next.config.ts)) on every response:
   `frame-ancestors 'none'; base-uri 'self'; object-src 'none'`, `X-Frame-Options: DENY`, `nosniff`,
   `Referrer-Policy: no-referrer` and a restrictive `Permissions-Policy`. `poweredByHeader` is off.
+  Dashboard pages override the referrer with `same-origin` metadata (`app/admin/layout.tsx`): under
+  `no-referrer` a form submitted before hydration sends `Origin: null` and Next.js refuses the Server
+  Action. Other sites still receive no Referer, and cross-site posts are still refused.
 - **Server actions** accept bodies up to 4 MB (`experimental.serverActions.bodySizeLimit`).
 - **Release gate** (ADR 0022): `npm run build` first runs
   [`scripts/check-schema-compat.mjs`](../../scripts/check-schema-compat.mjs). On Vercel Production
